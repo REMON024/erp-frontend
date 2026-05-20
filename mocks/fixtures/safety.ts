@@ -1,0 +1,48 @@
+import { SafetyIncident } from '@/types'
+
+export const MOCK_INCIDENTS: SafetyIncident[] = [
+  { id: 'si1', project_id: 'p1', title: 'Worker fall from scaffolding',     description: 'Worker fell from 2nd floor scaffolding. Minor injuries. Hospitalized for observation.', severity: 'high',     date: '2025-05-10', reported_by: 'u4', status: 'resolved' },
+  { id: 'si2', project_id: 'p1', title: 'Electrical short circuit',          description: 'Short circuit in temporary site office wiring. No injuries. Fire extinguished quickly.', severity: 'medium',   date: '2025-05-14', reported_by: 'u4', status: 'resolved' },
+  { id: 'si3', project_id: 'p2', title: 'Equipment collision',               description: 'JCB loader grazed boundary wall. No personnel involved. Minor structural damage to wall.', severity: 'low',      date: '2025-05-18', reported_by: 'u4', status: 'investigating' },
+  { id: 'si4', project_id: 'p1', title: 'Chemical exposure – cement dust',   description: 'Three workers reported respiratory irritation due to cement dust without proper masks.', severity: 'medium',   date: '2025-05-20', reported_by: 'u4', status: 'open' },
+  { id: 'si5', project_id: 'p3', title: 'Fire alarm activation',             description: 'Fire alarm triggered by welding sparks. Building evacuated. False alarm confirmed.', severity: 'low',      date: '2025-05-08', reported_by: 'u3', status: 'resolved' },
+]
+
+export interface HazardReport {
+  id: string; project_id: string; title: string; location: string
+  description: string; risk_level: 'low' | 'medium' | 'high'
+  reported_by: string; date: string; status: 'open' | 'mitigated'
+}
+
+export const MOCK_HAZARDS: HazardReport[] = [
+  { id: 'hz1', project_id: 'p1', title: 'Unsecured rebar ends at 3F',        location: 'Floor 3, Grid B',    description: 'Multiple rebar ends protruding without safety caps. Trip and puncture hazard.', risk_level: 'high',   reported_by: 'u4', date: '2025-05-19', status: 'open' },
+  { id: 'hz2', project_id: 'p1', title: 'Waterlogged excavation zone',       location: 'Basement entry',     description: 'Rainwater accumulated near excavation zone. Slip risk for workers.', risk_level: 'medium', reported_by: 'u4', date: '2025-05-20', status: 'open' },
+  { id: 'hz3', project_id: 'p2', title: 'Inadequate site lighting at night', location: 'East boundary area', description: 'Night-shift workers operating without adequate lighting.', risk_level: 'medium', reported_by: 'u4', date: '2025-05-15', status: 'mitigated' },
+  { id: 'hz4', project_id: 'p3', title: 'Temporary electrical wiring',       location: 'Floor 8 corridor',   description: 'Exposed wiring running across walkway. Electrocution and trip hazard.', risk_level: 'high',   reported_by: 'u4', date: '2025-05-12', status: 'mitigated' },
+]
+
+export interface SafetyInspection {
+  id: string; project_id: string; title: string; inspector: string
+  date: string; score: number; status: 'passed' | 'failed' | 'pending'
+  notes: string
+}
+
+export const MOCK_INSPECTIONS: SafetyInspection[] = [
+  { id: 'ins1', project_id: 'p1', title: 'Monthly Site Safety Inspection',  inspector: 'Rahim Uddin',  date: '2025-05-01', score: 82, status: 'passed', notes: 'PPE compliance improved. Fire extinguisher locations need review.' },
+  { id: 'ins2', project_id: 'p1', title: 'Fire Safety Audit',                inspector: 'Karim Hossain',date: '2025-04-15', score: 74, status: 'passed', notes: 'Exit signage adequate. Need to replace 3 expired extinguishers.' },
+  { id: 'ins3', project_id: 'p2', title: 'Scaffolding Integrity Check',      inspector: 'Rahim Uddin',  date: '2025-05-10', score: 55, status: 'failed', notes: 'Section C scaffolding joints loose. Must be re-secured before work resumes.' },
+  { id: 'ins4', project_id: 'p3', title: 'Electrical Installation Review',  inspector: 'Nasrin Akter', date: '2025-05-18', score: 90, status: 'passed', notes: 'All temporary wiring properly insulated. Good compliance.' },
+]
+
+export interface TrainingRecord {
+  id: string; title: string; conducted_by: string; date: string
+  participants: number; validity_months: number; expiry_date: string
+}
+
+export const MOCK_TRAINING: TrainingRecord[] = [
+  { id: 'tr1', title: 'PPE Usage & Maintenance',         conducted_by: 'Safety Officer', date: '2025-03-15', participants: 45, validity_months: 12, expiry_date: '2026-03-15' },
+  { id: 'tr2', title: 'Fire Safety & Evacuation Drill',  conducted_by: 'Fire Dept. BD',  date: '2025-04-01', participants: 62, validity_months: 6,  expiry_date: '2025-10-01' },
+  { id: 'tr3', title: 'Working at Heights Safety',       conducted_by: 'Safety Officer', date: '2025-01-20', participants: 28, validity_months: 12, expiry_date: '2026-01-20' },
+  { id: 'tr4', title: 'Electrical Safety Awareness',     conducted_by: 'DESCO Trainer',  date: '2025-05-05', participants: 18, validity_months: 12, expiry_date: '2026-05-05' },
+  { id: 'tr5', title: 'First Aid & Emergency Response',  conducted_by: 'Red Crescent',   date: '2024-11-10', participants: 20, validity_months: 12, expiry_date: '2025-11-10' },
+]

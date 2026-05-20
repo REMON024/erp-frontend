@@ -1,0 +1,13 @@
+import { Milestone } from '@/types'
+
+export const MOCK_MILESTONES: Milestone[] = [
+  { id: 'ml1', project_id: 'p1', name: 'Foundation Complete',       due_date: '2025-03-31', status: 'achieved' },
+  { id: 'ml2', project_id: 'p1', name: 'Structural Frame (1-5F)',   due_date: '2025-07-31', status: 'pending'  },
+  { id: 'ml3', project_id: 'p1', name: 'MEP Rough-in Complete',     due_date: '2025-10-31', status: 'pending'  },
+  { id: 'ml4', project_id: 'p1', name: 'Finishing & Handover',      due_date: '2026-12-31', status: 'pending'  },
+  { id: 'ml5', project_id: 'p2', name: 'Site Preparation Done',     due_date: '2025-04-15', status: 'achieved' },
+  { id: 'ml6', project_id: 'p2', name: 'Substructure Complete',     due_date: '2025-06-30', status: 'delayed'  },
+  { id: 'ml7', project_id: 'p2', name: 'Superstructure Complete',   due_date: '2025-12-31', status: 'pending'  },
+  { id: 'ml8', project_id: 'p3', name: 'Fit-out Complete',          due_date: '2025-08-31', status: 'pending'  },
+  { id: 'ml9', project_id: 'p3', name: 'Govt. Inspection Passed',   due_date: '2025-09-15', status: 'pending'  },
+]

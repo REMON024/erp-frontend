@@ -1,0 +1,35 @@
+import { DashboardSummary } from '@/types'
+
+export const MOCK_DASHBOARD: DashboardSummary = {
+  active_projects: 3,
+  total_projects: 6,
+  pending_tasks: 12,
+  overdue_tasks: 2,
+  budget_utilized: 126400000,
+  budget_total: 395000000,
+  inventory_alerts: 5,
+  equipment_alerts: 2,
+  cash_inflow: 18500000,
+  cash_outflow: 12300000,
+  cash_flow_monthly: [
+    { month: 'Jan', inflow: 8200000, outflow: 5100000 },
+    { month: 'Feb', inflow: 9400000, outflow: 6800000 },
+    { month: 'Mar', inflow: 11000000, outflow: 7200000 },
+    { month: 'Apr', inflow: 13500000, outflow: 9100000 },
+    { month: 'May', inflow: 18500000, outflow: 12300000 },
+    { month: 'Jun', inflow: 15000000, outflow: 10500000 },
+  ],
+  recent_activities: [
+    { id: 'a1', user: 'Rahim Uddin', action: 'Created purchase order PO-2025-048', module: 'Procurement', time: '2025-05-21T10:30:00Z' },
+    { id: 'a2', user: 'Karim Hossain', action: 'Updated task progress: Concrete pillar construction 60%', module: 'Tasks', time: '2025-05-21T09:15:00Z' },
+    { id: 'a3', user: 'Nasrin Akter', action: 'Received goods for PO-2025-041', module: 'Inventory', time: '2025-05-21T08:45:00Z' },
+    { id: 'a4', user: 'Farida Begum', action: 'Invoice INV-2025-023 marked as paid', module: 'Finance', time: '2025-05-20T17:00:00Z' },
+    { id: 'a5', user: 'Jalal Ahmed', action: 'Stock alert: Steel rebar below reorder level', module: 'Inventory', time: '2025-05-20T14:30:00Z' },
+    { id: 'a6', user: 'Rahim Uddin', action: 'Milestone "Phase 1 Complete" achieved for SKY-001', module: 'Projects', time: '2025-05-20T11:00:00Z' },
+  ],
+  contractor_performance: [
+    { name: 'Babul Construction', attendance: 92, quality: 85, timeliness: 78 },
+    { name: 'Alam Builders', attendance: 88, quality: 90, timeliness: 82 },
+    { name: 'Dhaka Civil Works', attendance: 95, quality: 72, timeliness: 88 },
+  ],
+}

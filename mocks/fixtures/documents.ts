@@ -1,0 +1,16 @@
+import { Document } from '@/types'
+
+export const MOCK_DOCUMENTS: Document[] = [
+  { id: 'doc1',  module_name: 'projects',    reference_id: 'p1', file_name: 'skyline_tower_contract.pdf',      file_url: '#', file_size: 2400000, file_type: 'application/pdf',       version: 2, uploaded_by: 'u2', uploaded_at: '2025-01-15T09:00:00Z' },
+  { id: 'doc2',  module_name: 'projects',    reference_id: 'p1', file_name: 'structural_drawings_rev3.dwg',   file_url: '#', file_size: 8900000, file_type: 'application/octet-stream', version: 3, uploaded_by: 'u3', uploaded_at: '2025-02-10T11:00:00Z' },
+  { id: 'doc3',  module_name: 'compliance',  reference_id: 'p1', file_name: 'rajuk_permit_2025.pdf',           file_url: '#', file_size: 1100000, file_type: 'application/pdf',       version: 1, uploaded_by: 'u2', uploaded_at: '2025-01-20T08:00:00Z' },
+  { id: 'doc4',  module_name: 'safety',      reference_id: 'p1', file_name: 'ppe_training_certificate.pdf',   file_url: '#', file_size: 560000,  file_type: 'application/pdf',       version: 1, uploaded_by: 'u3', uploaded_at: '2025-03-16T10:00:00Z' },
+  { id: 'doc5',  module_name: 'vendors',     reference_id: 'v1', file_name: 'vendor_agreement_steelco.pdf',   file_url: '#', file_size: 1800000, file_type: 'application/pdf',       version: 1, uploaded_by: 'u2', uploaded_at: '2025-01-05T09:00:00Z' },
+  { id: 'doc6',  module_name: 'finance',     reference_id: 'inv1', file_name: 'invoice_INV-2025-001.pdf',     file_url: '#', file_size: 320000,  file_type: 'application/pdf',       version: 1, uploaded_by: 'u2', uploaded_at: '2025-05-01T09:30:00Z' },
+  { id: 'doc7',  module_name: 'projects',    reference_id: 'p2', file_name: 'riverside_site_plan.pdf',        file_url: '#', file_size: 4200000, file_type: 'application/pdf',       version: 1, uploaded_by: 'u3', uploaded_at: '2025-02-20T14:00:00Z' },
+  { id: 'doc8',  module_name: 'compliance',  reference_id: 'p2', file_name: 'environmental_clearance.pdf',    file_url: '#', file_size: 980000,  file_type: 'application/pdf',       version: 1, uploaded_by: 'u2', uploaded_at: '2025-03-01T08:00:00Z' },
+  { id: 'doc9',  module_name: 'equipment',   reference_id: 'eq1', file_name: 'crane_certification_2025.pdf', file_url: '#', file_size: 740000,  file_type: 'application/pdf',       version: 1, uploaded_by: 'u3', uploaded_at: '2025-04-21T11:00:00Z' },
+  { id: 'doc10', module_name: 'contractors', reference_id: 'c1', file_name: 'contractor_nda_signed.pdf',      file_url: '#', file_size: 450000,  file_type: 'application/pdf',       version: 1, uploaded_by: 'u2', uploaded_at: '2025-01-12T10:00:00Z' },
+  { id: 'doc11', module_name: 'finance',     reference_id: 'p1', file_name: 'budget_allocation_q2.xlsx',      file_url: '#', file_size: 210000,  file_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', version: 2, uploaded_by: 'u2', uploaded_at: '2025-04-05T09:00:00Z' },
+  { id: 'doc12', module_name: 'safety',      reference_id: 'p2', file_name: 'scaffolding_inspection_report.pdf', file_url: '#', file_size: 890000, file_type: 'application/pdf',   version: 1, uploaded_by: 'u3', uploaded_at: '2025-05-11T08:30:00Z' },
+]
