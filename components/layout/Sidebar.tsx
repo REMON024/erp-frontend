@@ -5,60 +5,61 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/store/auth.store'
 import {
-  LayoutDashboard, ShieldCheck, Wrench, AlertTriangle,
-  FolderKanban, Users, Package, DollarSign, Settings,
-  ChevronDown, LogOut,
+  LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
+  Package, Receipt, BookOpen, PieChart, Users, Settings,
+  ChevronDown, LogOut, BarChart2,
 } from 'lucide-react'
 
 type SubItem = { label: string; href: string }
-type NavItem = { label: string; href: string; icon: React.ElementType; children?: SubItem[] }
+type NavItem = { label: string; href: string; icon: React.ElementType; children?: SubItem[]; roles?: string[] }
 
 const NAV: NavItem[] = [
   { label: 'Dashboard',   href: '/dashboard',  icon: LayoutDashboard },
-  { label: 'Compliance',  href: '/compliance', icon: ShieldCheck },
-  { label: 'Equipment',   href: '/equipment',  icon: Wrench },
-  { label: 'Safety',      href: '/safety',     icon: AlertTriangle },
+  { label: 'Projects',    href: '/projects',   icon: FolderKanban, roles: ['operations', 'super_admin'] },
   {
-    label: 'Projects', href: '/projects', icon: FolderKanban,
+    label: 'Investors', href: '/investors', icon: TrendingUp, roles: ['operations', 'super_admin'],
     children: [
-      { label: 'Project Management', href: '/projects' },
-      { label: 'Gantt & Milestones', href: '/gantt' },
-      { label: 'Documents & Permits', href: '/documents' },
+      { label: 'Investor Master',     href: '/investors' },
+      { label: 'Investment Records',  href: '/investors/investments' },
     ],
   },
   {
-    label: 'Vendors', href: '/vendors', icon: Users,
+    label: 'Purchase', href: '/purchase', icon: ShoppingCart, roles: ['operations', 'super_admin'],
     children: [
-      { label: 'Manage Contractors',  href: '/vendors' },
-      { label: 'Certifications & Docs', href: '/vendors/certifications' },
-      { label: 'Performance Rating',  href: '/vendors/performance' },
-      { label: 'Invoices & Payments', href: '/vendors/invoices' },
+      { label: 'Purchase List',  href: '/purchase' },
+      { label: 'Vendors',        href: '/purchase/vendors' },
     ],
   },
   {
-    label: 'Inventory', href: '/inventory', icon: Package,
+    label: 'Inventory', href: '/inventory', icon: Package, roles: ['inventory', 'super_admin'],
     children: [
-      { label: 'Stock Levels',        href: '/inventory' },
-      { label: 'Material Requests',   href: '/inventory/requests' },
-      { label: 'Supplier Integration',href: '/inventory/suppliers' },
-      { label: 'Wastage Analysis',    href: '/inventory/wastage' },
+      { label: 'Stock Levels',     href: '/inventory' },
+      { label: 'Material Master',  href: '/inventory/materials' },
+      { label: 'Stock In',         href: '/inventory/stock-in' },
+      { label: 'Issue to Project', href: '/inventory/issue' },
     ],
   },
   {
-    label: 'Finance', href: '/finance', icon: DollarSign,
+    label: 'Sales', href: '/sales', icon: Receipt, roles: ['operations', 'super_admin'],
     children: [
-      { label: 'Budget Tracker',  href: '/finance' },
-      { label: 'Cash Flow',       href: '/finance/cash-flow' },
-      { label: 'Profitability',   href: '/finance/profitability' },
-      { label: 'Overrun Alerts',  href: '/finance/overrun' },
+      { label: 'Clients',              href: '/sales/clients' },
+      { label: 'Invoices',             href: '/sales' },
+      { label: 'Payment Schedules',    href: '/sales/schedules' },
+      { label: 'Collections & Receipts', href: '/sales/collections' },
     ],
   },
   {
-    label: 'Settings', href: '/settings', icon: Settings,
+    label: 'Accounting', href: '/accounting', icon: BookOpen, roles: ['operations', 'super_admin'],
     children: [
-      { label: 'View Profile', href: '/settings' },
+      { label: 'Chart of Accounts', href: '/accounting' },
+      { label: 'Project Ledger',    href: '/accounting/ledger' },
+      { label: 'P&L Statement',     href: '/accounting/pl' },
     ],
   },
+  { label: 'Profit Distribution', href: '/profit-distribution', icon: PieChart,   roles: ['operations', 'super_admin'] },
+  { label: 'Reports',             href: '/reports',             icon: BarChart2,  roles: ['operations', 'super_admin'] },
+  { label: 'Users',     href: '/users',    icon: Users,    roles: ['super_admin'] },
+  { label: 'Settings',  href: '/settings', icon: Settings },
 ]
 
 function isParentActive(item: NavItem, pathname: string): boolean {
@@ -94,9 +95,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       )}
 
       <aside className={cn(
-        'flex flex-col h-full w-52 bg-[#0f172a] text-white shrink-0 z-50',
-        'hidden sm:flex',
-        mobileOpen && 'fixed inset-y-0 left-0 flex sm:relative',
+        'flex flex-col h-full w-64 sm:w-52 bg-[#0f172a] text-white shrink-0 z-50',
+        'fixed inset-y-0 left-0 sm:static',
+        mobileOpen ? 'flex' : 'hidden sm:flex',
       )}>
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800">

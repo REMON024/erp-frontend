@@ -1,5 +1,5 @@
-import { InventoryPage } from '@/modules/inventory/InventoryPage'
+import { StockLevelsPage } from '@/modules/inventory/StockLevelsPage'
 
 export default function Page() {
-  return <InventoryPage />
+  return <StockLevelsPage />
 }
