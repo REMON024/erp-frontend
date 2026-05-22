@@ -1,95 +1,130 @@
 'use client'
-
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { Material, StockTransaction } from '@/types'
-import { formatNumber, formatCurrency } from '@/utils/format'
+import { Material } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { Plus, ShoppingCart, Edit2, Trash2 } from 'lucide-react'
+import { formatDate, formatCurrency } from '@/utils/format'
 
-const CATEGORIES = ['All', 'Cement', 'Steel', 'Brick', 'Sand', 'Aggregate', 'Paint', 'Timber', 'Electrical', 'Plumbing', 'Hardware', 'Safety']
+const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
+const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
-const stockSchema = z.object({
-  material_id: z.string().min(1, 'Required'),
-  warehouse_id: z.string().min(1, 'Required'),
-  quantity: z.coerce.number().positive('Must be positive'),
-  unit_price: z.coerce.number().positive('Must be positive'),
-  notes: z.string().optional(),
+const CATEGORIES = ['Steel & Iron', 'Cement & Other', 'Fire and mining', 'Solid', 'Wood', 'Sand', 'Gravel', 'Other']
+const UNITS = ['Tons', 'Kg', 'Bags', 'Cubic Meter', 'Meter', 'Per Day', 'Pieces']
+
+const matSchema = z.object({
+  name:          z.string().min(1, 'Required'),
+  category:      z.string().min(1, 'Required'),
+  unit:          z.string().min(1, 'Required'),
+  stock_quantity:z.coerce.number().min(0),
+  reorder_level: z.coerce.number().min(0),
+  max_quantity:  z.coerce.number().min(1),
+  supplier:      z.string().optional(),
+  cost_per_unit: z.coerce.number().optional(),
+  avg_consumption: z.string().optional(),
 })
-type StockForm = z.infer<typeof stockSchema>
+type MatForm = z.infer<typeof matSchema>
 
-function StockLevelBar({ quantity, reorder_level }: { quantity: number; reorder_level: number }) {
-  const max = Math.max(reorder_level * 3, quantity * 1.2, 100)
-  const pct = Math.min((quantity / max) * 100, 100)
-  const color = quantity <= reorder_level ? 'bg-red-500' : quantity <= reorder_level * 1.5 ? 'bg-amber-500' : 'bg-emerald-500'
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs text-gray-500 w-16 text-right">{formatNumber(quantity)}</span>
-    </div>
-  )
-}
-
-function StockModal({ type, materials, warehouses, onClose }: {
-  type: 'in' | 'out'
-  materials: Material[]
-  warehouses: { id: string; name: string }[]
-  onClose: () => void
-}) {
+function AddMaterialModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient()
-  const { register, handleSubmit, formState: { errors } } = useForm<StockForm>({
-    resolver: zodResolver(stockSchema) as any,
+  const { register, handleSubmit, formState: { errors } } = useForm<MatForm>({
+    resolver: zodResolver(matSchema) as any,
+    defaultValues: { stock_quantity: 0, reorder_level: 10, max_quantity: 1000 },
   })
-
-  const mutation = useMutation({
-    mutationFn: (data: unknown) => api.post(`/stock/${type}`, data).then((r) => r.data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['materials'] }); qc.invalidateQueries({ queryKey: ['stock-transactions'] }); onClose() },
+  const mut = useMutation({
+    mutationFn: (d: unknown) => api.post('/materials', d).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['materials'] }); onClose() },
   })
-
   return (
-    <Modal open onClose={onClose} title={type === 'in' ? 'Stock In' : 'Stock Out'} size="md">
-      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4 p-1">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Material</label>
-          <select {...register('material_id')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">Select material</option>
-            {materials.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>)}
-          </select>
-          {errors.material_id && <p className="text-xs text-red-600 mt-1">{errors.material_id.message}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
-          <select {...register('warehouse_id')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">Select warehouse</option>
-            {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-          {errors.warehouse_id && <p className="text-xs text-red-600 mt-1">{errors.warehouse_id.message}</p>}
-        </div>
+    <Modal open onClose={onClose} title="Add Material" size="md">
+      <form onSubmit={handleSubmit(d => mut.mutate(d))} className="space-y-4 p-1">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-            <input type="number" step="0.01" {...register('quantity')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            {errors.quantity && <p className="text-xs text-red-600 mt-1">{errors.quantity.message}</p>}
+            <label className={lbl}>Material Name</label>
+            <input {...register('name')} className={inp} placeholder="Steel, Cement..." />
+            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price (BDT)</label>
-            <input type="number" step="0.01" {...register('unit_price')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
-            {errors.unit_price && <p className="text-xs text-red-600 mt-1">{errors.unit_price.message}</p>}
+            <label className={lbl}>Category</label>
+            <select {...register('category')} className={inp}>
+              <option value="">Select category</option>
+              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+            {errors.category && <p className="text-xs text-red-600 mt-1">{errors.category.message}</p>}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className={lbl}>Unit</label>
+            <select {...register('unit')} className={inp}>
+              <option value="">Select unit</option>
+              {UNITS.map(u => <option key={u}>{u}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={lbl}>Current Stock</label>
+            <input type="number" {...register('stock_quantity')} className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>Reorder Level (Min)</label>
+            <input type="number" {...register('reorder_level')} className={inp} />
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className={lbl}>Max Quantity</label>
+            <input type="number" {...register('max_quantity')} className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>Supplier</label>
+            <input {...register('supplier')} className={inp} placeholder="Supplier name" />
+          </div>
+          <div>
+            <label className={lbl}>Cost / Unit</label>
+            <input type="number" {...register('cost_per_unit')} className={inp} placeholder="25" />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-          <input {...register('notes')} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Optional" />
+          <label className={lbl}>Avg. Consumption</label>
+          <input {...register('avg_consumption')} className={inp} placeholder="30 Ton per month" />
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={mutation.isPending} className={`px-4 py-2 text-sm rounded-lg text-white font-medium ${type === 'in' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'} disabled:opacity-60`}>
-            {mutation.isPending ? 'Saving...' : type === 'in' ? 'Record Stock In' : 'Record Stock Out'}
+          <button type="submit" disabled={mut.isPending} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 font-medium">
+            {mut.isPending ? 'Saving...' : 'Add Material'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function StockInModal({ material, onClose }: { material: Material; onClose: () => void }) {
+  const qc = useQueryClient()
+  const { register, handleSubmit } = useForm({ defaultValues: { quantity: 0, warehouse_id: 'wh1', notes: '' } })
+  const mut = useMutation({
+    mutationFn: (d: any) => api.post('/stock-transactions', { ...d, material_id: material.id, transaction_type: 'stock_in' }).then(r => r.data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['materials'] }); onClose() },
+  })
+  return (
+    <Modal open onClose={onClose} title={`Stock In: ${material.name}`} size="sm">
+      <form onSubmit={handleSubmit(d => mut.mutate(d))} className="space-y-4 p-1">
+        <div>
+          <label className={lbl}>Quantity ({material.unit})</label>
+          <input type="number" {...register('quantity')} className={inp} placeholder="100" />
+        </div>
+        <div>
+          <label className={lbl}>Notes</label>
+          <input {...register('notes')} className={inp} placeholder="Delivery from supplier..." />
+        </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button type="submit" disabled={mut.isPending} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60 font-medium">
+            {mut.isPending ? 'Saving...' : 'Confirm Stock In'}
           </button>
         </div>
       </form>
@@ -98,216 +133,162 @@ function StockModal({ type, materials, warehouses, onClose }: {
 }
 
 export function InventoryPage() {
-  const [category, setCategory] = useState('All')
-  const [search, setSearch] = useState('')
-  const [warehouseFilter, setWarehouseFilter] = useState('')
-  const [stockModal, setStockModal] = useState<'in' | 'out' | null>(null)
-  const [activeTab, setActiveTab] = useState<'materials' | 'transactions' | 'alerts'>('materials')
+  const qc = useQueryClient()
+  const [showAdd, setShowAdd]   = useState(false)
+  const [stockIn, setStockIn]   = useState<Material | null>(null)
+  const [search, setSearch]     = useState('')
+  const [category, setCategory] = useState('')
 
-  const { data: materialsData } = useQuery({
-    queryKey: ['materials', category, search, warehouseFilter],
+  const { data } = useQuery({
+    queryKey: ['materials', search, category],
     queryFn: () => {
-      const params = new URLSearchParams()
-      if (category !== 'All') params.set('category', category)
-      if (search) params.set('search', search)
-      if (warehouseFilter) params.set('warehouse_id', warehouseFilter)
-      return api.get(`/materials?${params}`).then((r) => r.data)
+      const p = new URLSearchParams()
+      if (search) p.set('search', search)
+      if (category) p.set('category', category)
+      return api.get(`/materials?${p}`).then(r => r.data)
     },
-  })
-
-  const { data: warehousesData } = useQuery({
-    queryKey: ['warehouses'],
-    queryFn: () => api.get('/warehouses').then((r) => r.data),
-  })
-
-  const { data: alertsData } = useQuery({
-    queryKey: ['stock-alerts'],
-    queryFn: () => api.get('/materials/alerts').then((r) => r.data),
   })
 
   const { data: txData } = useQuery({
     queryKey: ['stock-transactions'],
-    queryFn: () => api.get('/stock/transactions').then((r) => r.data),
-    enabled: activeTab === 'transactions',
+    queryFn: () => api.get('/stock-transactions').then(r => r.data),
   })
 
-  const materials: Material[] = materialsData?.data ?? []
-  const warehouses = warehousesData?.data ?? []
-  const alerts: Material[] = alertsData?.data ?? []
-  const transactions: StockTransaction[] = txData?.data ?? []
+  const del = useMutation({
+    mutationFn: (id: string) => api.delete(`/materials/${id}`).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['materials'] }),
+  })
+
+  const materials: Material[] = data?.data ?? []
+  const transactions = txData?.data ?? []
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Inventory</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage materials, stock levels, and transactions</p>
+          <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Track material stock and manage procurement</p>
         </div>
-        <div className="flex gap-3 flex-wrap">
-          <button onClick={() => setStockModal('out')} className="px-4 py-2 text-sm border border-red-300 text-red-700 rounded-lg hover:bg-red-50 font-medium">
-            Stock Out
+        <div className="flex gap-2">
+          <button className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium flex items-center gap-2">
+            <ShoppingCart className="w-4 h-4" /> Create Order
           </button>
-          <button onClick={() => setStockModal('in')} className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">
-            + Stock In
+          <button onClick={() => setShowAdd(true)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Add Material
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Materials', value: materials.length, color: 'text-blue-600' },
-          { label: 'Low Stock Alerts', value: alerts.length, color: 'text-red-600' },
-          { label: 'Warehouses', value: warehouses.length, color: 'text-purple-600' },
-          { label: 'Total SKUs', value: materials.length, color: 'text-emerald-600' },
-        ].map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">{s.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+      {/* Filters */}
+      <div className="flex gap-3">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search materials..."
+          className={inp + ' max-w-xs'} />
+        <select value={category} onChange={e => setCategory(e.target.value)} className={inp + ' max-w-xs'}>
+          <option value="">All Categories</option>
+          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+        </select>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="flex border-b border-gray-200 px-4">
-          {(['materials', 'transactions', 'alerts'] as const).map((t) => (
-            <button key={t} onClick={() => setActiveTab(t)}
-              className={`px-4 py-3 text-sm font-medium capitalize border-b-2 -mb-px ${activeTab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-              {t}
-              {t === 'alerts' && alerts.length > 0 && (
-                <span className="ml-2 bg-red-100 text-red-700 text-xs px-1.5 py-0.5 rounded-full">{alerts.length}</span>
-              )}
-            </button>
-          ))}
-        </div>
+      {/* Material Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {materials.map(m => {
+          const pct = m.max_quantity ? Math.round((m.stock_quantity / m.max_quantity) * 100) : 0
+          const isLow = m.stock_quantity <= m.reorder_level
+          return (
+            <div key={m.id} className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <p className="font-bold text-gray-900">{m.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{m.category}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${isLow ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                    {isLow ? '⚠ Low Stock' : '✓ Available'}
+                  </span>
+                  <button className="text-gray-400 hover:text-blue-600 p-1"><Edit2 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => del.mutate(m.id)} className="text-gray-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
 
-        {activeTab === 'materials' && (
-          <div>
-            {/* Filters */}
-            <div className="p-4 flex gap-3 flex-wrap border-b border-gray-100">
-              <input
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search materials..."
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-56"
-              />
-              <select value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="">All Warehouses</option>
-                {warehouses.map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
-              <div className="flex gap-1 flex-wrap">
-                {CATEGORIES.map((c) => (
-                  <button key={c} onClick={() => setCategory(c)}
-                    className={`px-3 py-1.5 text-xs rounded-full border font-medium transition-colors ${category === c ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:border-blue-400'}`}>
-                    {c}
-                  </button>
-                ))}
+              {/* Stock bar */}
+              <div className="mb-3">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Stock Level</span>
+                  <span className="font-semibold text-gray-900">{m.stock_quantity} {m.unit}</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${isLow ? 'bg-red-500' : 'bg-blue-500'}`}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                  <span>Min: {m.reorder_level}</span>
+                  <span>Max: {m.max_quantity ?? '—'}</span>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="grid grid-cols-2 gap-y-2 text-xs">
+                <div>
+                  <span className="text-gray-400">Supplier</span>
+                  <p className="font-medium text-gray-700">{m.supplier ?? '—'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Cost/Unit</span>
+                  <p className="font-medium text-gray-700">{m.cost_per_unit ? `৳${m.cost_per_unit}/${m.unit}` : '—'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Avg. Consumption</span>
+                  <p className="font-medium text-gray-700">{m.avg_consumption ?? '—'}</p>
+                </div>
+                <div>
+                  <span className="text-gray-400">Last Delivery</span>
+                  <p className="font-medium text-gray-700">{m.last_delivery_date ? formatDate(m.last_delivery_date) : 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Action */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => setStockIn(m)}
+                  className="w-full py-1.5 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 font-medium"
+                >
+                  + Stock In
+                </button>
               </div>
             </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    {['Material', 'SKU', 'Category', 'Unit', 'Stock Level', 'Reorder Level'].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {materials.map((m) => (
-                    <tr key={m.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{m.name}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs font-mono">{m.sku}</td>
-                      <td className="px-4 py-3">
-                        <span className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-full">{m.category}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{m.unit}</td>
-                      <td className="px-4 py-3 w-40">
-                        <StockLevelBar quantity={m.stock_quantity} reorder_level={m.reorder_level} />
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{formatNumber(m.reorder_level)} {m.unit}</td>
-                    </tr>
-                  ))}
-                  {materials.length === 0 && (
-                    <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No materials found</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'transactions' && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  {['Date', 'Material', 'Type', 'Quantity', 'Reference', 'Project'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-600">{tx.created_at.split('T')[0]}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{tx.material_id}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${tx.type === 'in' ? 'bg-emerald-100 text-emerald-700' : tx.type === 'out' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                        {tx.type.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{formatNumber(tx.quantity)}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{tx.reference_no ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{tx.project_id ?? '—'}</td>
-                  </tr>
-                ))}
-                {transactions.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No transactions found</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'alerts' && (
-          <div className="p-4 space-y-3">
-            {alerts.length === 0 ? (
-              <div className="py-12 text-center text-gray-400">All stock levels are healthy</div>
-            ) : (
-              alerts.map((m) => (
-                <div key={m.id} className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-xl">
-                  <div>
-                    <p className="font-medium text-gray-900">{m.name}</p>
-                    <p className="text-sm text-gray-500 mt-0.5">Category: {m.category}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold text-red-700">{formatNumber(m.stock_quantity)} {m.unit} remaining</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Reorder at {formatNumber(m.reorder_level)} {m.unit}</p>
-                  </div>
-                  <div className="ml-4">
-                    <button onClick={() => setStockModal('in')} className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
-                      Restock
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          )
+        })}
+        {materials.length === 0 && (
+          <div className="col-span-2 py-16 text-center text-gray-400">No materials found</div>
         )}
       </div>
 
-      {stockModal && (
-        <StockModal
-          type={stockModal}
-          materials={materials}
-          warehouses={warehouses}
-          onClose={() => setStockModal(null)}
-        />
+      {/* Recent Orders */}
+      {transactions.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900">Recent Orders</h3>
+            <p className="text-xs text-gray-400">Track recent orders and deliveries</p>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {transactions.slice(0, 5).map((tx: any) => (
+              <div key={tx.id} className="px-5 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{tx.material_id}</p>
+                  <p className="text-xs text-gray-400">{tx.transaction_type} · {formatDate(tx.date ?? tx.created_at)}</p>
+                </div>
+                <span className="text-sm font-semibold text-gray-900">{tx.quantity} units</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
+
+      {showAdd && <AddMaterialModal onClose={() => setShowAdd(false)} />}
+      {stockIn  && <StockInModal material={stockIn} onClose={() => setStockIn(null)} />}
     </div>
   )
 }

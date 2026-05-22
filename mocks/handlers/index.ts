@@ -13,6 +13,14 @@ import { safetyHandlers } from './safety'
 import { complianceHandlers } from './compliance'
 import { financeHandlers } from './finance'
 import { documentHandlers } from './documents'
+import { salesHandlers } from './sales'
+import { ledgerHandlers } from './ledger'
+import { costingHandlers } from './costing'
+import { contractorBillingHandlers } from './contractor-billing'
+import { changeOrderHandlers } from './change-orders'
+import { siteLogHandlers } from './site-logs'
+import { snaggingHandlers } from './snagging'
+import { advancesHandlers } from './advances'
 
 export const handlers = [
   ...authHandlers,
@@ -30,4 +38,12 @@ export const handlers = [
   ...complianceHandlers,
   ...financeHandlers,
   ...documentHandlers,
+  ...salesHandlers,
+  ...ledgerHandlers,
+  ...costingHandlers,
+  ...contractorBillingHandlers,
+  ...changeOrderHandlers,
+  ...siteLogHandlers,
+  ...snaggingHandlers,
+  ...advancesHandlers,
 ]

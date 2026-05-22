@@ -6,8 +6,8 @@ export const timeAgo = (date: string) => formatDistanceToNow(new Date(date), { a
 export const isOverdue = (date: string) => isPast(new Date(date))
 export const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
 
-export const formatCurrency = (amount: number, currency = 'BDT') =>
-  new Intl.NumberFormat('en-BD', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
+export const formatCurrency = (amount: number) =>
+  `৳${new Intl.NumberFormat('en-BD', { maximumFractionDigits: 0 }).format(amount)}`
 
 export const formatNumber = (n: number) => new Intl.NumberFormat('en-BD').format(n)
 

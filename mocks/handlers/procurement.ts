@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { MOCK_PURCHASE_REQUESTS, MOCK_PURCHASE_ORDERS } from '../fixtures/procurement'
 import { PurchaseRequest, PurchaseOrder } from '@/types'
+import { addStockIn, addJournalEntry } from '@/mocks/shared-state'
 
 let prs = [...MOCK_PURCHASE_REQUESTS]
 let pos = [...MOCK_PURCHASE_ORDERS]
@@ -121,11 +122,33 @@ export const procurementHandlers = [
     return HttpResponse.json(pos[idx])
   }),
 
-  // GRN — mark PO as received
+  // GRN — mark PO as received + auto stock-in + auto GL entry
   http.post('/api/purchase-orders/:id/receive', ({ params }) => {
     const idx = pos.findIndex((o) => o.id === params.id)
     if (idx === -1) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
     pos[idx] = { ...pos[idx], status: 'received' }
+    const po = pos[idx]
+    const grnRef = `GRN-AUTO-${po.po_number}`
+
+    // Auto stock-in for each PO item that has a material_id
+    for (const item of po.items) {
+      if (item.material_id) {
+        addStockIn(item.material_id, 'w1', item.quantity, grnRef, po.project_id)
+      }
+    }
+
+    // Auto GL: Debit Material Inventory, Credit Accounts Payable
+    addJournalEntry({
+      project_id: po.project_id,
+      date: new Date().toISOString().slice(0, 10),
+      reference: grnRef,
+      description: `GRN confirmed for ${po.po_number} — materials received into inventory`,
+      created_by: 'system',
+      lines: [
+        { id: `jl-grn-d-${Date.now()}`, journal_id: '', account_id: 'acc4', debit: po.total_amount, credit: 0, description: 'Materials received' },
+        { id: `jl-grn-c-${Date.now()}`, journal_id: '', account_id: 'acc7', debit: 0, credit: po.total_amount, description: `Payable — ${po.vendor_id}` },
+      ],
+    })
     return HttpResponse.json(pos[idx])
   }),
 ]

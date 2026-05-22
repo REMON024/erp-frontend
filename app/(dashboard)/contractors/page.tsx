@@ -1,7 +1,2 @@
-import { ContractorsPage } from '@/modules/contractors/ContractorsPage'
-
-export default function Contractors() {
-  return <ContractorsPage />
-}
-
-
+import { redirect } from 'next/navigation'
+export default function Page() { redirect('/vendors') }

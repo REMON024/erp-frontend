@@ -1,5 +1,2 @@
-import { TasksPage } from '@/modules/tasks/TasksPage'
-
-export default function Tasks() {
-  return <TasksPage />
-}
+import { redirect } from 'next/navigation'
+export default function Page() { redirect('/dashboard') }

@@ -1,9 +1,7 @@
 import { http, HttpResponse } from 'msw'
-import { MOCK_MATERIALS, MOCK_WAREHOUSES, MOCK_STOCK_TRANSACTIONS, MOCK_STOCK_ALERTS } from '../fixtures/inventory'
+import { MOCK_WAREHOUSES, MOCK_STOCK_ALERTS } from '../fixtures/inventory'
+import { sharedMaterials as materials, sharedStockTransactions as transactions } from '@/mocks/shared-state'
 import { StockTransaction } from '@/types'
-
-let materials = [...MOCK_MATERIALS]
-let transactions = [...MOCK_STOCK_TRANSACTIONS]
 
 export const inventoryHandlers = [
   http.get('/api/materials', ({ request }) => {
@@ -37,7 +35,7 @@ export const inventoryHandlers = [
     const mat = materials.find((m) => m.id === body.material_id)
     if (mat) mat.stock_quantity += body.quantity ?? 0
     const tx: StockTransaction = { id: `st${Date.now()}`, type: 'in', material_id: body.material_id!, warehouse_id: body.warehouse_id!, quantity: body.quantity!, reference_no: body.reference_no, created_at: new Date().toISOString() }
-    transactions = [tx, ...transactions]
+    transactions.unshift(tx)
     return HttpResponse.json(tx, { status: 201 })
   }),
 
@@ -46,7 +44,7 @@ export const inventoryHandlers = [
     const mat = materials.find((m) => m.id === body.material_id)
     if (mat) mat.stock_quantity -= body.quantity ?? 0
     const tx: StockTransaction = { id: `st${Date.now()}`, type: 'out', material_id: body.material_id!, warehouse_id: body.warehouse_id!, quantity: body.quantity!, reference_no: body.reference_no, project_id: body.project_id, created_at: new Date().toISOString() }
-    transactions = [tx, ...transactions]
+    transactions.unshift(tx)
     return HttpResponse.json(tx, { status: 201 })
   }),
 ]

@@ -1,6 +1,2 @@
-﻿import { ReportsPage } from '@/modules/reports/ReportsPage'
-
-export default function Page() {
-  return <ReportsPage />
-}
-
+import { redirect } from 'next/navigation'
+export default function Page() { redirect('/dashboard') }

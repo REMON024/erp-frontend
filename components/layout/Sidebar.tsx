@@ -1,116 +1,194 @@
 'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuthStore } from '@/store/auth.store'
 import { cn } from '@/utils/cn'
+import { useAuthStore } from '@/store/auth.store'
 import {
-  LayoutDashboard, FolderKanban, CheckSquare, GanttChartSquare,
-  Users, HardHat, Package, ShoppingCart, Truck, ShieldAlert,
-  FileCheck, DollarSign, FileText, BarChart3, LogOut, Building2,
+  LayoutDashboard, ShieldCheck, Wrench, AlertTriangle,
+  FolderKanban, Users, Package, DollarSign, Settings,
+  ChevronDown, LogOut,
 } from 'lucide-react'
 
-const NAV_ITEMS = [
-  { label: 'Dashboard',    href: '/dashboard',    icon: LayoutDashboard,    module: 'dashboard' },
-  { label: 'Projects',     href: '/projects',     icon: FolderKanban,       module: 'projects' },
-  { label: 'Tasks',        href: '/tasks',        icon: CheckSquare,        module: 'tasks' },
-  { label: 'Gantt',        href: '/gantt',        icon: GanttChartSquare,   module: 'gantt' },
-  { label: 'Vendors',      href: '/vendors',      icon: Truck,              module: 'vendors' },
-  { label: 'Contractors',  href: '/contractors',  icon: HardHat,            module: 'contractors' },
-  { label: 'Inventory',    href: '/inventory',    icon: Package,            module: 'inventory' },
-  { label: 'Procurement',  href: '/procurement',  icon: ShoppingCart,       module: 'procurement' },
-  { label: 'Equipment',    href: '/equipment',    icon: Building2,          module: 'equipment' },
-  { label: 'Safety',       href: '/safety',       icon: ShieldAlert,        module: 'safety' },
-  { label: 'Compliance',   href: '/compliance',   icon: FileCheck,          module: 'compliance' },
-  { label: 'Finance',      href: '/finance',      icon: DollarSign,         module: 'finance' },
-  { label: 'Documents',    href: '/documents',    icon: FileText,           module: 'documents' },
-  { label: 'Reports',      href: '/reports',      icon: BarChart3,          module: 'reports' },
+type SubItem = { label: string; href: string }
+type NavItem = { label: string; href: string; icon: React.ElementType; children?: SubItem[] }
+
+const NAV: NavItem[] = [
+  { label: 'Dashboard',   href: '/dashboard',  icon: LayoutDashboard },
+  { label: 'Compliance',  href: '/compliance', icon: ShieldCheck },
+  { label: 'Equipment',   href: '/equipment',  icon: Wrench },
+  { label: 'Safety',      href: '/safety',     icon: AlertTriangle },
+  {
+    label: 'Projects', href: '/projects', icon: FolderKanban,
+    children: [
+      { label: 'Project Management', href: '/projects' },
+      { label: 'Gantt & Milestones', href: '/gantt' },
+      { label: 'Documents & Permits', href: '/documents' },
+    ],
+  },
+  {
+    label: 'Vendors', href: '/vendors', icon: Users,
+    children: [
+      { label: 'Manage Contractors',  href: '/vendors' },
+      { label: 'Certifications & Docs', href: '/vendors/certifications' },
+      { label: 'Performance Rating',  href: '/vendors/performance' },
+      { label: 'Invoices & Payments', href: '/vendors/invoices' },
+    ],
+  },
+  {
+    label: 'Inventory', href: '/inventory', icon: Package,
+    children: [
+      { label: 'Stock Levels',        href: '/inventory' },
+      { label: 'Material Requests',   href: '/inventory/requests' },
+      { label: 'Supplier Integration',href: '/inventory/suppliers' },
+      { label: 'Wastage Analysis',    href: '/inventory/wastage' },
+    ],
+  },
+  {
+    label: 'Finance', href: '/finance', icon: DollarSign,
+    children: [
+      { label: 'Budget Tracker',  href: '/finance' },
+      { label: 'Cash Flow',       href: '/finance/cash-flow' },
+      { label: 'Profitability',   href: '/finance/profitability' },
+      { label: 'Overrun Alerts',  href: '/finance/overrun' },
+    ],
+  },
+  {
+    label: 'Settings', href: '/settings', icon: Settings,
+    children: [
+      { label: 'View Profile', href: '/settings' },
+    ],
+  },
 ]
 
+function isParentActive(item: NavItem, pathname: string): boolean {
+  if (item.children) return item.children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'))
+  return pathname === item.href || pathname.startsWith(item.href + '/')
+}
+
 interface SidebarProps {
-  collapsed: boolean
   mobileOpen?: boolean
   onMobileClose?: () => void
 }
 
-export function Sidebar({ collapsed, mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
-  const { user, hasAccess, logout } = useAuthStore()
+  const { user, logout } = useAuthStore()
 
-  const visible = NAV_ITEMS.filter((item) => hasAccess(item.module))
+  const initial = NAV.filter(i => i.children && isParentActive(i, pathname)).map(i => i.label)
+  const [open, setOpen] = useState<string[]>(initial)
+
+  useEffect(() => {
+    const active = NAV.filter(i => i.children && isParentActive(i, pathname)).map(i => i.label)
+    setOpen(prev => [...new Set([...prev, ...active])])
+  }, [pathname])
+
+  const toggle = (label: string) =>
+    setOpen(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label])
 
   return (
-    <aside className={cn(
-      'flex flex-col h-full bg-slate-900 text-white transition-all duration-300',
-      // Desktop: show inline, collapsible
-      'hidden sm:flex',
-      collapsed ? 'sm:w-16' : 'sm:w-64',
-      // Mobile: fixed overlay drawer
-      mobileOpen && 'fixed inset-y-0 left-0 z-50 flex w-64 sm:relative sm:z-auto sm:translate-x-0',
-    )}>
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-slate-700">
-        <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center font-bold text-sm shrink-0">
-          ERP
-        </div>
-        {!collapsed && (
-          <span className="font-semibold text-sm leading-tight flex-1">
-            Construction<br />
-            <span className="text-slate-400 text-xs font-normal">ERP System</span>
-          </span>
-        )}
-        {mobileOpen && onMobileClose && (
-          <button onClick={onMobileClose} className="sm:hidden text-slate-400 hover:text-white ml-auto">
-            ✕
-          </button>
-        )}
-      </div>
-
-      {/* User role badge */}
-      {!collapsed && user && (
-        <div className="px-4 py-3 border-b border-slate-700">
-          <p className="text-xs text-slate-400">Logged in as</p>
-          <p className="text-sm font-medium">{user.first_name} {user.last_name}</p>
-          <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-blue-600 rounded-full capitalize">
-            {user.role.replace('_', ' ')}
-          </span>
-        </div>
+    <>
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 sm:hidden" onClick={onMobileClose} />
       )}
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 space-y-0.5 px-2">
-        {visible.map((item) => {
-          const active = pathname.startsWith(item.href)
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={collapsed ? item.label : undefined}
-              onClick={onMobileClose}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                active
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              )}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          )
-        })}
-      </nav>
+      <aside className={cn(
+        'flex flex-col h-full w-52 bg-[#0f172a] text-white shrink-0 z-50',
+        'hidden sm:flex',
+        mobileOpen && 'fixed inset-y-0 left-0 flex sm:relative',
+      )}>
+        {/* Logo */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800">
+          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-sm shrink-0 select-none">
+            1C
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold leading-tight truncate">Construction ERP</p>
+            <p className="text-xs text-slate-400 truncate">Admin Dashboard</p>
+          </div>
+        </div>
 
-      {/* Logout */}
-      <div className="p-2 border-t border-slate-700">
-        <button
-          onClick={logout}
-          className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Logout</span>}
-        </button>
-      </div>
-    </aside>
+        {/* MAIN MENU label */}
+        <p className="px-4 pt-4 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+          Main Menu
+        </p>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
+          {NAV.map(item => {
+            const Icon = item.icon
+            const parentActive = isParentActive(item, pathname)
+            const isOpen = open.includes(item.label)
+
+            if (!item.children) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onMobileClose}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                    parentActive ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                  )}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span>{item.label}</span>
+                </Link>
+              )
+            }
+
+            return (
+              <div key={item.label}>
+                <button
+                  onClick={() => toggle(item.label)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left',
+                    parentActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                  )}
+                >
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  <ChevronDown className={cn('w-3.5 h-3.5 transition-transform shrink-0', isOpen ? '' : '-rotate-90')} />
+                </button>
+
+                {isOpen && (
+                  <div className="ml-3 mt-0.5 space-y-0.5">
+                    {item.children.map(child => {
+                      const active = pathname === child.href
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={onMobileClose}
+                          className={cn(
+                            'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
+                            active ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                          )}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-60" />
+                          <span className="text-[13px]">{child.label}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </nav>
+
+        {/* Logout */}
+        <div className="p-2 border-t border-slate-800">
+          <button
+            onClick={logout}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }

@@ -7,7 +7,6 @@ import { DevRoleSwitcher } from '@/components/ui/DevRoleSwitcher'
 import { useAuthStore } from '@/store/auth.store'
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const router = useRouter()
   const { token } = useAuthStore()
@@ -19,26 +18,16 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   if (!token) return null
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      {/* Mobile backdrop */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 sm:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      <Sidebar collapsed={collapsed} mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
 
       <div className="flex flex-col flex-1 min-w-0">
-        <Topbar
-          onToggleSidebar={() => setCollapsed((c) => !c)}
-          onMobileMenuOpen={() => setMobileOpen((o) => !o)}
-        />
-        <main className="flex-1 overflow-y-auto min-w-0">
+        <Topbar onMobileMenuOpen={() => setMobileOpen(o => !o)} />
+        <main className="flex-1 overflow-y-auto min-w-0 p-6">
           {children}
         </main>
       </div>
+
       {process.env.NODE_ENV === 'development' && <DevRoleSwitcher />}
     </div>
   )
