@@ -6,24 +6,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, FileText, Eye } from 'lucide-react'
 import { CLIENTS } from './ClientsPage'
+import { PROJECTS, UNITS as RAW_UNITS } from './UnitsPage'
 
-const PROJECTS = [
-  { id: 'p1', name: 'Block-A — Mirpur 12' },
-  { id: 'p2', name: 'Block-B — Mohammadpur' },
-  { id: 'p3', name: 'Block-C — Uttara Sector 7' },
-  { id: 'p4', name: 'Block-D — Bashundhara' },
-]
-
-const UNITS = [
-  { id: 'u1', project_id: 'p1', label: 'Block-A / Unit 1A — 1200 sqft' },
-  { id: 'u2', project_id: 'p1', label: 'Block-A / Unit 2B — 1200 sqft' },
-  { id: 'u3', project_id: 'p1', label: 'Block-A / Unit 3C — 1400 sqft' },
-  { id: 'u4', project_id: 'p1', label: 'Block-A / Unit 4B — 1400 sqft' },
-  { id: 'u5', project_id: 'p2', label: 'Block-B / Unit 1A — 1100 sqft' },
-  { id: 'u6', project_id: 'p2', label: 'Block-B / Unit 2A — 1100 sqft' },
-  { id: 'u7', project_id: 'p3', label: 'Block-C / Unit 1B — 1600 sqft' },
-  { id: 'u8', project_id: 'p4', label: 'Block-D / Unit 1A — 900 sqft' },
-]
+// Flatten units to the label shape this page needs
+const UNITS = RAW_UNITS.map(u => ({
+  id:         u.id,
+  project_id: u.project_id,
+  label:      `${u.unit_no} — ${u.area_sqft} sqft`,
+}))
 
 export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue'
 
