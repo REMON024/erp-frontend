@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth.store'
 import {
   LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
   Package, Receipt, BookOpen, PieChart, Users, Settings,
-  ChevronDown, LogOut, BarChart2,
+  ChevronDown, LogOut, BarChart2, Shield, Menu, ClipboardList,
 } from 'lucide-react'
 
 type SubItem = { label: string; href: string }
@@ -58,8 +58,16 @@ const NAV: NavItem[] = [
   },
   { label: 'Profit Distribution', href: '/profit-distribution', icon: PieChart,   roles: ['operations', 'super_admin'] },
   { label: 'Reports',             href: '/reports',             icon: BarChart2,  roles: ['operations', 'super_admin'] },
-  { label: 'Users',     href: '/users',    icon: Users,    roles: ['super_admin'] },
-  { label: 'Settings',  href: '/settings', icon: Settings },
+  {
+    label: 'Administration', href: '/users', icon: Shield, roles: ['super_admin'],
+    children: [
+      { label: 'Users',      href: '/users'  },
+      { label: 'Roles',      href: '/roles'  },
+      { label: 'Menus',      href: '/menus'  },
+      { label: 'Audit Logs', href: '/audit-logs' },
+    ],
+  },
+  { label: 'Settings',    href: '/settings',    icon: Settings },
 ]
 
 function isParentActive(item: NavItem, pathname: string): boolean {
@@ -117,7 +125,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
-          {NAV.map(item => {
+          {NAV.filter(item => !item.roles || (user?.role && item.roles.includes(user.role))).map(item => {
             const Icon = item.icon
             const parentActive = isParentActive(item, pathname)
             const isOpen = open.includes(item.label)
