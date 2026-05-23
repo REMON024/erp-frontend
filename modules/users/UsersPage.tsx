@@ -1,73 +1,82 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Edit2, Trash2, Shield, Eye, EyeOff, Search, ToggleLeft, ToggleRight, UserCheck } from 'lucide-react'
+import { Plus, Edit2, Shield, Eye, EyeOff, Search, ToggleLeft, ToggleRight, UserCheck, RefreshCw, AlertCircle } from 'lucide-react'
+import api from '@/lib/api'
 
-type UserRole = 'super_admin' | 'operations' | 'inventory'
-type UserStatus = 'active' | 'inactive'
-
-interface AppUser {
-  id: string; firstName: string; lastName: string
-  email: string; role: UserRole; phone: string
-  lastLogin: string; status: UserStatus; createdAt: string
+interface UserDto {
+  id: string; firstName: string; lastName: string; fullName: string
+  email: string; phoneNumber: string | null; role: string; roleId: string
+  isActive: boolean; createdAt: string; lastLoginAt: string | null
 }
 
-const MOCK_USERS: AppUser[] = [
-  { id: 'u1', firstName: 'Abdur',  lastName: 'Rahman',  email: 'admin@constructerp.bd',   role: 'super_admin', phone: '+880-171-1234567', lastLogin: '2026-05-22 09:12', status: 'active',   createdAt: '2024-01-01' },
-  { id: 'u2', firstName: 'Kamal',  lastName: 'Hossain', email: 'kamal@constructerp.bd',   role: 'super_admin', phone: '+880-172-2345678', lastLogin: '2026-05-20 14:30', status: 'active',   createdAt: '2024-01-05' },
-  { id: 'u3', firstName: 'Arif',   lastName: 'Ahmed',   email: 'arif@constructerp.bd',    role: 'operations',  phone: '+880-173-1111111', lastLogin: '2026-05-22 11:00', status: 'active',   createdAt: '2024-02-10' },
-  { id: 'u4', firstName: 'Rashed', lastName: 'Khan',    email: 'rashed@constructerp.bd',  role: 'operations',  phone: '+880-174-2222222', lastLogin: '2026-05-21 08:45', status: 'active',   createdAt: '2024-02-15' },
-  { id: 'u5', firstName: 'Salam',  lastName: 'Miah',    email: 'salam@constructerp.bd',   role: 'inventory',   phone: '+880-175-3333333', lastLogin: '2026-05-22 07:30', status: 'active',   createdAt: '2024-03-01' },
-  { id: 'u6', firstName: 'Jamal',  lastName: 'Uddin',   email: 'jamal@constructerp.bd',   role: 'inventory',   phone: '+880-176-4444444', lastLogin: '2026-04-10 16:00', status: 'inactive', createdAt: '2024-03-10' },
-]
+interface RoleDto { id: string; name: string; description: string | null; isActive: boolean; userCount: number }
 
-const ROLE_META: Record<UserRole, { label: string; color: string; bg: string }> = {
+const ROLE_COLORS: Record<string, { label: string; color: string; bg: string }> = {
   super_admin: { label: 'Super Admin', color: 'text-purple-700', bg: 'bg-purple-100' },
   operations:  { label: 'Operations',  color: 'text-blue-700',   bg: 'bg-blue-100'   },
   inventory:   { label: 'Inventory',   color: 'text-orange-700', bg: 'bg-orange-100' },
+}
+const roleMeta = (name: string) => ROLE_COLORS[name] ?? {
+  label: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+  color: 'text-gray-700', bg: 'bg-gray-100',
 }
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
-// ── Add / Edit modal ────────────────────────────────────────────────────────
 const addSchema = z.object({
-  firstName: z.string().min(1, 'Required'),
-  lastName:  z.string().min(1, 'Required'),
-  email:     z.string().email('Invalid email'),
-  role:      z.enum(['super_admin', 'operations', 'inventory']),
-  phone:     z.string().min(1, 'Required'),
-  password:  z.string().min(8, 'Min 8 characters').regex(/[A-Z]/, 'Need uppercase').regex(/[0-9]/, 'Need digit'),
+  firstName:   z.string().min(1, 'Required'),
+  lastName:    z.string().min(1, 'Required'),
+  email:       z.string().email('Invalid email'),
+  role:        z.string().min(1, 'Required'),
+  phoneNumber: z.string().optional(),
+  password:    z.string().min(8, 'Min 8 chars').regex(/[A-Z]/, 'Need uppercase').regex(/[0-9]/, 'Need digit'),
 })
 const editSchema = addSchema.omit({ password: true }).extend({
-  password: z.string().optional().refine(v => !v || v.length >= 8, 'Min 8 characters'),
+  password: z.string().optional().refine(v => !v || v.length >= 8, 'Min 8 chars'),
 })
 type AddForm  = z.infer<typeof addSchema>
-type EditForm = z.infer<typeof editSchema>
 
-function UserModal({
-  user, onClose, onSave,
-}: { user?: AppUser; onClose: () => void; onSave: (u: AppUser) => void }) {
+function UserModal({ user, roles, onClose, onSaved }: {
+  user?: UserDto; roles: RoleDto[]
+  onClose: () => void; onSaved: () => void
+}) {
   const isEdit = !!user
   const [showPass, setShowPass] = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
+
   const { register, handleSubmit, formState: { errors } } = useForm<AddForm>({
     resolver: zodResolver(isEdit ? (editSchema as any) : addSchema) as any,
-    defaultValues: user ? { firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, phone: user.phone, password: '' } : { role: 'operations' },
+    defaultValues: user
+      ? { firstName: user.firstName, lastName: user.lastName, email: user.email, role: user.role, phoneNumber: user.phoneNumber ?? '', password: '' }
+      : { role: roles[0]?.name ?? '' },
   })
 
-  const onSubmit = (d: AddForm) => {
-    onSave(isEdit
-      ? { ...user!, ...d }
-      : { id: `u${Date.now()}`, ...d, lastLogin: '—', status: 'active', createdAt: new Date().toISOString().slice(0,10) })
-    onClose()
+  const onSubmit = async (d: AddForm) => {
+    setSaving(true); setErr('')
+    try {
+      if (isEdit) {
+        await api.put(`/users/${user!.id}`, { firstName: d.firstName, lastName: d.lastName, phone: d.phoneNumber })
+        if (d.role !== user!.role)
+          await api.patch(`/users/${user!.id}/assign-role`, { roleName: d.role })
+      } else {
+        await api.post('/users', d)
+      }
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? e.response?.data?.message ?? 'Save failed')
+    } finally { setSaving(false) }
   }
 
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit User' : 'Add New User'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
+        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={lbl}>First Name</label>
@@ -80,28 +89,23 @@ function UserModal({
             {errors.lastName && <p className="text-xs text-red-600 mt-1">{errors.lastName.message}</p>}
           </div>
         </div>
-
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Email</label>
-            <input type="email" {...register('email')} className={inp} placeholder="user@company.com" />
+            <input type="email" {...register('email')} className={inp} placeholder="user@company.com" disabled={isEdit} />
             {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
           </div>
           <div>
             <label className={lbl}>Phone</label>
-            <input {...register('phone')} className={inp} placeholder="+880-171-0000000" />
+            <input {...register('phoneNumber')} className={inp} placeholder="+880-171-0000000" />
           </div>
         </div>
-
         <div>
           <label className={lbl}>Role</label>
           <select {...register('role')} className={inp}>
-            <option value="super_admin">Super Admin</option>
-            <option value="operations">Operations</option>
-            <option value="inventory">Inventory</option>
+            {roles.map(r => <option key={r.id} value={r.name}>{roleMeta(r.name).label}</option>)}
           </select>
         </div>
-
         <div>
           <label className={lbl}>{isEdit ? 'New Password (leave blank to keep)' : 'Password'}</label>
           <div className="relative">
@@ -114,11 +118,10 @@ function UserModal({
           </div>
           {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>}
         </div>
-
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-            {isEdit ? 'Save Changes' : 'Add User'}
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add User'}
           </button>
         </div>
       </form>
@@ -126,53 +129,90 @@ function UserModal({
   )
 }
 
-// ── Assign Role modal ───────────────────────────────────────────────────────
-function AssignRoleModal({ user, onClose, onSave }: { user: AppUser; onClose: () => void; onSave: (role: UserRole) => void }) {
-  const [role, setRole] = useState<UserRole>(user.role)
+function AssignRoleModal({ user, roles, onClose, onSaved }: {
+  user: UserDto; roles: RoleDto[]; onClose: () => void; onSaved: () => void
+}) {
+  const [role, setRole]     = useState(user.role)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr]       = useState('')
+
+  const save = async () => {
+    setSaving(true); setErr('')
+    try {
+      await api.patch(`/users/${user.id}/assign-role`, { roleName: role })
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? 'Failed to assign role')
+    } finally { setSaving(false) }
+  }
+
   return (
     <Modal open onClose={onClose} title="Assign Role" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">Changing role for <strong>{user.firstName} {user.lastName}</strong></p>
+        <p className="text-sm text-gray-600">Changing role for <strong>{user.fullName}</strong></p>
+        {err && <p className="text-xs text-red-600">{err}</p>}
         <div className="space-y-2">
-          {(Object.keys(ROLE_META) as UserRole[]).map(r => (
-            <label key={r} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${role === r ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-              <input type="radio" value={r} checked={role === r} onChange={() => setRole(r)} className="sr-only" />
-              <Shield className={`w-4 h-4 ${role === r ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span className={`text-sm font-medium ${role === r ? 'text-blue-700' : 'text-gray-700'}`}>{ROLE_META[r].label}</span>
+          {roles.map(r => (
+            <label key={r.id} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${role === r.name ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <input type="radio" value={r.name} checked={role === r.name} onChange={() => setRole(r.name)} className="sr-only" />
+              <Shield className={`w-4 h-4 ${role === r.name ? 'text-blue-600' : 'text-gray-400'}`} />
+              <span className={`text-sm font-medium ${role === r.name ? 'text-blue-700' : 'text-gray-700'}`}>{roleMeta(r.name).label}</span>
             </label>
           ))}
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button onClick={() => { onSave(role); onClose() }} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Assign</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            {saving ? 'Saving…' : 'Assign'}
+          </button>
         </div>
       </div>
     </Modal>
   )
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
 export function UsersPage() {
-  const [users,   setUsers]   = useState<AppUser[]>(MOCK_USERS)
-  const [search,  setSearch]  = useState('')
-  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all')
-  const [modal,   setModal]   = useState<'add' | 'edit' | 'role' | null>(null)
-  const [target,  setTarget]  = useState<AppUser | null>(null)
-  const [delId,   setDelId]   = useState<string | null>(null)
+  const [users,      setUsers]      = useState<UserDto[]>([])
+  const [roles,      setRoles]      = useState<RoleDto[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState('')
+  const [search,     setSearch]     = useState('')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [modal,      setModal]      = useState<'add' | 'edit' | 'role' | null>(null)
+  const [target,     setTarget]     = useState<UserDto | null>(null)
+  const [page,       setPage]       = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 20
 
-  const filtered = users.filter(u => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)
-    const matchRole   = roleFilter === 'all' || u.role === roleFilter
-    return matchSearch && matchRole
-  })
+  const loadUsers = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const [usersRes, rolesRes] = await Promise.all([
+        api.get('/users', { params: { page, pageSize: PAGE_SIZE, search: search || undefined } }),
+        api.get('/roles'),
+      ])
+      setUsers(usersRes.data.items)
+      setTotalCount(usersRes.data.totalCount)
+      setRoles(rolesRes.data)
+    } catch {
+      setError('Failed to load data. Please check your connection and try again.')
+    } finally { setLoading(false) }
+  }, [page, search])
 
-  const openEdit = (u: AppUser) => { setTarget(u); setModal('edit') }
-  const openRole = (u: AppUser) => { setTarget(u); setModal('role') }
+  useEffect(() => { loadUsers() }, [loadUsers])
+
+  const toggleStatus = async (u: UserDto) => {
+    try {
+      await api.patch(`/users/${u.id}/toggle-status`)
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, isActive: !x.isActive } : x))
+    } catch { /* ignore */ }
+  }
+
+  const filtered = roleFilter === 'all' ? users : users.filter(u => u.role === roleFilter)
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
@@ -188,16 +228,16 @@ export function UsersPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Total Users</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{users.length}</p>
+          <p className="text-3xl font-bold text-gray-900 mt-1">{totalCount}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Active</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{users.filter(u => u.status === 'active').length}</p>
+          <p className="text-3xl font-bold text-green-600 mt-1">{users.filter(u => u.isActive).length}</p>
         </div>
-        {(['super_admin', 'operations'] as UserRole[]).map(role => (
-          <div key={role} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{ROLE_META[role].label}</p>
-            <p className={`text-3xl font-bold mt-1 ${ROLE_META[role].color}`}>{users.filter(u => u.role === role).length}</p>
+        {roles.slice(0, 2).map(r => (
+          <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">{roleMeta(r.name).label}</p>
+            <p className={`text-3xl font-bold mt-1 ${roleMeta(r.name).color}`}>{r.userCount}</p>
           </div>
         ))}
       </div>
@@ -206,21 +246,28 @@ export function UsersPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or email…"
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+            placeholder="Search name or email…"
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
         </div>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value as any)}
+        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
           <option value="all">All Roles</option>
-          <option value="super_admin">Super Admin</option>
-          <option value="operations">Operations</option>
-          <option value="inventory">Inventory</option>
+          {roles.map(r => <option key={r.id} value={r.name}>{roleMeta(r.name).label}</option>)}
         </select>
+        <button onClick={loadUsers} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </button>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        {error && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
+            <AlertCircle className="w-4 h-4 shrink-0" />{error}
+          </div>
+        )}
+        <div className="px-4 py-3 border-b border-gray-100">
           <p className="text-sm font-medium text-gray-700">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="overflow-x-auto">
@@ -233,86 +280,91 @@ export function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.map(u => {
-                const rm = ROLE_META[u.role]
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : filtered.map(u => {
+                const rm = roleMeta(u.role)
                 const initials = `${u.firstName[0]}${u.lastName[0]}`
                 return (
-                  <tr key={u.id} className={`hover:bg-gray-50 ${u.status === 'inactive' ? 'opacity-60' : ''}`}>
+                  <tr key={u.id} className={`hover:bg-gray-50 ${!u.isActive ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                           {initials}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{u.firstName} {u.lastName}</p>
-                          <p className="text-xs text-gray-400">Since {u.createdAt}</p>
+                          <p className="font-medium text-gray-900">{u.fullName}</p>
+                          <p className="text-xs text-gray-400">Since {u.createdAt.slice(0, 10)}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{u.email}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{u.phone}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{u.phoneNumber ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${rm.bg} ${rm.color}`}>{rm.label}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{u.lastLogin}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                      {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => setUsers(prev => prev.map(x => x.id === u.id ? { ...x, status: x.status === 'active' ? 'inactive' : 'active' } : x))}
-                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${u.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                      >
-                        {u.status === 'active' ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
-                        {u.status}
+                      <button onClick={() => toggleStatus(u)}
+                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${u.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                        {u.isActive ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                        {u.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(u)} title="Edit" className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <button onClick={() => { setTarget(u); setModal('edit') }} title="Edit"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => openRole(u)} title="Assign role" className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
+                        <button onClick={() => { setTarget(u); setModal('role') }} title="Assign role"
+                          className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
                           <UserCheck className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => setDelId(u.id)} title="Delete" className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
                 )
               })}
-              {filtered.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">No users found</td></tr>
               )}
             </tbody>
           </table>
         </div>
-      </div>
 
-      {/* Modals */}
-      {modal === 'add' && (
-        <UserModal onClose={() => setModal(null)} onSave={u => setUsers(p => [u, ...p])} />
-      )}
-      {modal === 'edit' && target && (
-        <UserModal user={target} onClose={() => { setModal(null); setTarget(null) }}
-          onSave={u => setUsers(p => p.map(x => x.id === u.id ? u : x))} />
-      )}
-      {modal === 'role' && target && (
-        <AssignRoleModal user={target} onClose={() => { setModal(null); setTarget(null) }}
-          onSave={role => setUsers(p => p.map(x => x.id === target.id ? { ...x, role } : x))} />
-      )}
-
-      {/* Delete confirm */}
-      {delId && (
-        <Modal open onClose={() => setDelId(null)} title="Delete User" size="sm">
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">Are you sure you want to delete this user? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setDelId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button onClick={() => { setUsers(p => p.filter(x => x.id !== delId)); setDelId(null) }}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Delete</button>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-500">Page {page} of {totalPages}</span>
+            <div className="flex gap-1">
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 disabled:opacity-40">Previous</button>
+              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 disabled:opacity-40">Next</button>
             </div>
           </div>
-        </Modal>
+        )}
+      </div>
+
+      {modal === 'add' && (
+        <UserModal roles={roles} onClose={() => setModal(null)} onSaved={loadUsers} />
+      )}
+      {modal === 'edit' && target && (
+        <UserModal user={target} roles={roles}
+          onClose={() => { setModal(null); setTarget(null) }} onSaved={loadUsers} />
+      )}
+      {modal === 'role' && target && (
+        <AssignRoleModal user={target} roles={roles}
+          onClose={() => { setModal(null); setTarget(null) }} onSaved={loadUsers} />
       )}
     </div>
   )

@@ -8,7 +8,7 @@ interface TopbarProps {
 
 export function Topbar({ onMobileMenuOpen }: TopbarProps) {
   const { user } = useAuthStore()
-  const name = user ? `${user.first_name} ${user.last_name}` : 'Admin'
+  const name = user ? (user.fullName || `${user.firstName} ${user.lastName}`) : 'Admin'
 
   return (
     <header className="h-14 bg-white border-b border-gray-200 flex items-center gap-3 px-4 shrink-0">

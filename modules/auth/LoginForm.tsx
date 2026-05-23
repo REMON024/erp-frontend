@@ -34,8 +34,8 @@ export function LoginForm() {
       setAuth(data.user ?? data, data.accessToken ?? data.token)
       router.push('/dashboard')
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string; errors?: string[] } } }
-      const msg = e.response?.data?.errors?.[0] ?? e.response?.data?.message ?? 'Invalid email or password.'
+      const e = err as { response?: { data?: { message?: string; title?: string; errors?: string[] } } }
+      const msg = e.response?.data?.errors?.[0] ?? e.response?.data?.message ?? e.response?.data?.title ?? 'Invalid email or password.'
       setError(msg)
     }
   }

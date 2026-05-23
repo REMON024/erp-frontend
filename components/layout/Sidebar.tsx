@@ -4,75 +4,31 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
 import { useAuthStore } from '@/store/auth.store'
+import api from '@/lib/api'
 import {
   LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
   Package, Receipt, BookOpen, PieChart, Users, Settings,
   ChevronDown, LogOut, BarChart2, Shield, Menu, ClipboardList,
+  FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
+  DollarSign, Calendar, type LucideProps,
 } from 'lucide-react'
 
-type SubItem = { label: string; href: string }
-type NavItem = { label: string; href: string; icon: React.ElementType; children?: SubItem[]; roles?: string[] }
+// Map icon name strings (stored in DB) → Lucide components
+const ICON_MAP: Record<string, React.FC<LucideProps>> = {
+  LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
+  Package, Receipt, BookOpen, PieChart, Users, Settings,
+  BarChart2, Shield, Menu, ClipboardList,
+  FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
+  DollarSign, Calendar,
+}
+// Settings stays in ICON_MAP so the DB icon string "Settings" resolves correctly
+const getIcon = (name: string | null): React.FC<LucideProps> =>
+  (name && ICON_MAP[name]) ? ICON_MAP[name] : Menu
 
-const NAV: NavItem[] = [
-  { label: 'Dashboard',   href: '/dashboard',  icon: LayoutDashboard },
-  { label: 'Projects',    href: '/projects',   icon: FolderKanban, roles: ['operations', 'super_admin'] },
-  {
-    label: 'Investors', href: '/investors', icon: TrendingUp, roles: ['operations', 'super_admin'],
-    children: [
-      { label: 'Investor Master',     href: '/investors' },
-      { label: 'Investment Records',  href: '/investors/investments' },
-    ],
-  },
-  {
-    label: 'Purchase', href: '/purchase', icon: ShoppingCart, roles: ['operations', 'super_admin'],
-    children: [
-      { label: 'Purchase List',  href: '/purchase' },
-      { label: 'Vendors',        href: '/purchase/vendors' },
-    ],
-  },
-  {
-    label: 'Inventory', href: '/inventory', icon: Package, roles: ['inventory', 'super_admin'],
-    children: [
-      { label: 'Stock Levels',     href: '/inventory' },
-      { label: 'Material Master',  href: '/inventory/materials' },
-      { label: 'Stock In',         href: '/inventory/stock-in' },
-      { label: 'Issue to Project', href: '/inventory/issue' },
-    ],
-  },
-  {
-    label: 'Sales', href: '/sales', icon: Receipt, roles: ['operations', 'super_admin'],
-    children: [
-      { label: 'Clients',              href: '/sales/clients' },
-      { label: 'Invoices',             href: '/sales' },
-      { label: 'Payment Schedules',    href: '/sales/schedules' },
-      { label: 'Collections & Receipts', href: '/sales/collections' },
-    ],
-  },
-  {
-    label: 'Accounting', href: '/accounting', icon: BookOpen, roles: ['operations', 'super_admin'],
-    children: [
-      { label: 'Chart of Accounts', href: '/accounting' },
-      { label: 'Project Ledger',    href: '/accounting/ledger' },
-      { label: 'P&L Statement',     href: '/accounting/pl' },
-    ],
-  },
-  { label: 'Profit Distribution', href: '/profit-distribution', icon: PieChart,   roles: ['operations', 'super_admin'] },
-  { label: 'Reports',             href: '/reports',             icon: BarChart2,  roles: ['operations', 'super_admin'] },
-  {
-    label: 'Administration', href: '/users', icon: Shield, roles: ['super_admin'],
-    children: [
-      { label: 'Users',      href: '/users'  },
-      { label: 'Roles',      href: '/roles'  },
-      { label: 'Menus',      href: '/menus'  },
-      { label: 'Audit Logs', href: '/audit-logs' },
-    ],
-  },
-  { label: 'Settings',    href: '/settings',    icon: Settings },
-]
-
-function isParentActive(item: NavItem, pathname: string): boolean {
-  if (item.children) return item.children.some(c => pathname === c.href || pathname.startsWith(c.href + '/'))
-  return pathname === item.href || pathname.startsWith(item.href + '/')
+interface MenuDto {
+  id: number; name: string; code: string; route: string | null
+  icon: string | null; parentId: number | null; sortOrder: number
+  isActive: boolean; children: MenuDto[]
 }
 
 interface SidebarProps {
@@ -80,20 +36,35 @@ interface SidebarProps {
   onMobileClose?: () => void
 }
 
+function isRouteActive(route: string | null, pathname: string): boolean {
+  if (!route) return false
+  return pathname === route || pathname.startsWith(route + '/')
+}
+
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
-  const { user, logout } = useAuthStore()
+  const { user, logout, isAuthenticated } = useAuthStore()
 
-  const initial = NAV.filter(i => i.children && isParentActive(i, pathname)).map(i => i.label)
-  const [open, setOpen] = useState<string[]>(initial)
+  const [navMenus, setNavMenus] = useState<MenuDto[]>([])
+  const [open, setOpen]         = useState<string[]>([])
 
+  // Load user-specific menus after authentication
   useEffect(() => {
-    const active = NAV.filter(i => i.children && isParentActive(i, pathname)).map(i => i.label)
-    setOpen(prev => [...new Set([...prev, ...active])])
-  }, [pathname])
+    if (!isAuthenticated) return
+    api.get<MenuDto[]>('/menus/my-menus')
+      .then(res => {
+        setNavMenus(res.data)
+        // Auto-expand parent menus that contain the current active route
+        const active = res.data
+          .filter(m => m.children.some(c => isRouteActive(c.route, pathname)))
+          .map(m => m.code)
+        setOpen(active)
+      })
+      .catch(() => { /* keep nav empty, don't crash */ })
+  }, [isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggle = (label: string) =>
-    setOpen(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label])
+  const toggle = (code: string) =>
+    setOpen(prev => prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code])
 
   return (
     <>
@@ -114,69 +85,64 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold leading-tight truncate">Construction ERP</p>
-            <p className="text-xs text-slate-400 truncate">Admin Dashboard</p>
+            <p className="text-xs text-slate-400 truncate">
+              {user?.role ? user.role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Dashboard'}
+            </p>
           </div>
         </div>
 
-        {/* MAIN MENU label */}
         <p className="px-4 pt-4 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
           Main Menu
         </p>
 
-        {/* Nav */}
+        {/* Dynamic nav */}
         <nav className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
-          {NAV.filter(item => !item.roles || (user?.role && item.roles.includes(user.role))).map(item => {
-            const Icon = item.icon
-            const parentActive = isParentActive(item, pathname)
-            const isOpen = open.includes(item.label)
+          {navMenus.map(item => {
+            const Icon    = getIcon(item.icon)
+            const isOpen  = open.includes(item.code)
+            const hasKids = item.children.length > 0
 
-            if (!item.children) {
+            // Parent active = self or any child matches current path
+            const parentActive = isRouteActive(item.route, pathname) ||
+              item.children.some(c => isRouteActive(c.route, pathname))
+
+            if (!hasKids) {
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onMobileClose}
+                <Link key={item.id} href={item.route ?? '#'} onClick={onMobileClose}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
                     parentActive ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
-                  )}
-                >
+                  )}>
                   <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                  <span>{item.name}</span>
                 </Link>
               )
             }
 
             return (
-              <div key={item.label}>
-                <button
-                  onClick={() => toggle(item.label)}
+              <div key={item.id}>
+                <button onClick={() => toggle(item.code)}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left',
                     parentActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
-                  )}
-                >
+                  )}>
                   <Icon className="w-4 h-4 shrink-0" />
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1">{item.name}</span>
                   <ChevronDown className={cn('w-3.5 h-3.5 transition-transform shrink-0', isOpen ? '' : '-rotate-90')} />
                 </button>
 
                 {isOpen && (
                   <div className="ml-3 mt-0.5 space-y-0.5">
                     {item.children.map(child => {
-                      const active = pathname === child.href
+                      const active = isRouteActive(child.route, pathname)
                       return (
-                        <Link
-                          key={child.href}
-                          href={child.href}
-                          onClick={onMobileClose}
+                        <Link key={child.id} href={child.route ?? '#'} onClick={onMobileClose}
                           className={cn(
                             'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
                             active ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
-                          )}
-                        >
+                          )}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-60" />
-                          <span className="text-[13px]">{child.label}</span>
+                          <span className="text-[13px]">{child.name}</span>
                         </Link>
                       )
                     })}
@@ -185,14 +151,19 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               </div>
             )
           })}
+
         </nav>
 
-        {/* Logout */}
-        <div className="p-2 border-t border-slate-800">
-          <button
-            onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
+        {/* User info + logout */}
+        <div className="p-2 border-t border-slate-800 space-y-1">
+          {user && (
+            <div className="px-3 py-2">
+              <p className="text-xs font-medium text-slate-300 truncate">{user.fullName ?? `${user.firstName} ${user.lastName}`}</p>
+              <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+            </div>
+          )}
+          <button onClick={logout}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
             <LogOut className="w-4 h-4 shrink-0" />
             <span>Logout</span>
           </button>

@@ -1,31 +1,28 @@
 // ─── Auth ───────────────────────────────────────────────────────────────────
 export type Role =
   | 'super_admin'
-  | 'company_admin'
-  | 'project_manager'
-  | 'site_engineer'
-  | 'procurement_officer'
-  | 'accountant'
-  | 'store_manager'
-  | 'contractor'
-  | 'vendor'
-  | 'employee'
+  | 'operations'
+  | 'inventory'
 
 export interface User {
   id: string
-  first_name: string
-  last_name: string
+  firstName: string
+  lastName: string
+  fullName: string
   email: string
   role: Role
-  phone?: string
-  status: boolean
-  created_at: string
+  roleId: string
+  phoneNumber?: string | null
+  isActive: boolean
+  createdAt: string
+  lastLoginAt?: string | null
 }
 
 export interface AuthTokens {
-  token: string
-  refresh_token: string
-  expires_in: number
+  accessToken: string
+  refreshToken: string
+  expiresAt: string
+  user: User
 }
 
 // ─── Project ─────────────────────────────────────────────────────────────────

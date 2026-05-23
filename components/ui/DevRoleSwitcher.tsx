@@ -7,16 +7,9 @@ import { cn } from '@/utils/cn'
 import { ChevronUp, Zap } from 'lucide-react'
 
 const ROLE_COLORS: Record<Role, string> = {
-  super_admin:          'bg-purple-600',
-  company_admin:        'bg-blue-700',
-  project_manager:      'bg-blue-500',
-  site_engineer:        'bg-cyan-600',
-  procurement_officer:  'bg-amber-600',
-  accountant:           'bg-green-600',
-  store_manager:        'bg-orange-500',
-  contractor:           'bg-slate-600',
-  vendor:               'bg-pink-600',
-  employee:             'bg-gray-500',
+  super_admin: 'bg-purple-600',
+  operations:  'bg-blue-600',
+  inventory:   'bg-orange-500',
 }
 
 export function DevRoleSwitcher() {
@@ -46,10 +39,10 @@ export function DevRoleSwitcher() {
                 )}
               >
                 <span className={cn('w-6 h-6 rounded-full text-white text-xs flex items-center justify-center font-bold shrink-0', ROLE_COLORS[cred.user.role])}>
-                  {cred.user.first_name[0]}
+                  {cred.user.firstName[0]}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-slate-800 truncate">{cred.user.first_name} {cred.user.last_name}</p>
+                  <p className="text-xs font-medium text-slate-800 truncate">{cred.user.fullName}</p>
                   <p className="text-xs text-slate-400 capitalize truncate">{cred.user.role.replace(/_/g, ' ')}</p>
                 </div>
                 {user?.id === cred.user.id && (
