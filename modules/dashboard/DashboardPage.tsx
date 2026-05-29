@@ -1,8 +1,16 @@
 'use client'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
-import { FolderKanban, TrendingUp, ShoppingCart, Package, Receipt, PieChart as PieIcon, AlertTriangle, CheckCircle } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { FolderKanban, TrendingUp, ShoppingCart, Package, Receipt, PieChart as PieIcon } from 'lucide-react'
 
-// ── Static summary data ────────────────────────────────────────────────────────
+// Lazy — recharts is heavy; load it after the KPI cards are already visible
+const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading: () => (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {[0, 1].map(i => (
+      <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 h-[320px] animate-pulse" />
+    ))}
+  </div>
+)})
+
 const INVESTMENT_BY_PROJECT = [
   { project: 'Block-A', investment: 12000000, cost: 8500000, revenue: 14000000 },
   { project: 'Block-B', investment: 8000000,  cost: 6200000, revenue: 9500000 },
@@ -17,12 +25,6 @@ const RECENT_ACTIVITY = [
   { id: 4, action: 'Payment collected',     detail: 'Mr. Karim paid ৳5,00,000 installment',         time: '3 hrs ago',   type: 'sales' },
   { id: 5, action: 'Invoice generated',     detail: 'Invoice #INV-2026-012 for Block-A Unit 4B',    time: 'Yesterday',   type: 'sales' },
   { id: 6, action: 'Profit distributed',   detail: 'Block-B profit ৳3,30,000 distributed',         time: '2 days ago',  type: 'profit' },
-]
-
-const COLLECTION_STATUS = [
-  { name: 'Collected', value: 68, color: '#10b981' },
-  { name: 'Pending',   value: 22, color: '#f59e0b' },
-  { name: 'Overdue',   value: 10, color: '#ef4444' },
 ]
 
 const ACTIVITY_COLORS: Record<string, string> = {
@@ -61,13 +63,11 @@ function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor }: {
 export function DashboardPage() {
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-sm text-gray-500 mt-0.5">Welcome back! Here's your construction business overview.</p>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         <KpiCard label="Active Projects"    value="4"             sub="2 in progress · 2 planning" icon={FolderKanban} iconBg="bg-blue-50"   iconColor="text-blue-600" />
         <KpiCard label="Total Investment"   value={fmt(totalInvestment)} sub="Across all projects"   icon={TrendingUp}   iconBg="bg-green-50"  iconColor="text-green-600" />
@@ -77,53 +77,10 @@ export function DashboardPage() {
         <KpiCard label="Stock Items"        value="18"            sub="4 below reorder level"  icon={Package}      iconBg="bg-red-50"    iconColor="text-red-600" />
       </div>
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Investment vs Cost vs Revenue */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">Investment · Cost · Revenue by Project</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={INVESTMENT_BY_PROJECT}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="project" tick={{ fontSize: 12 }} />
-              <YAxis tickFormatter={v => `৳${(v/100000).toFixed(0)}L`} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: any) => `৳${(v/100000).toFixed(1)}L`} />
-              <Legend />
-              <Bar dataKey="investment" name="Investment" fill="#3b82f6" radius={[3,3,0,0]} />
-              <Bar dataKey="cost"       name="Cost"       fill="#f87171" radius={[3,3,0,0]} />
-              <Bar dataKey="revenue"    name="Revenue"    fill="#10b981" radius={[3,3,0,0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Charts load after KPI cards are visible */}
+      <Charts data={INVESTMENT_BY_PROJECT} />
 
-        {/* Collection status */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">Sales Collection Status</h3>
-          <div className="flex items-center gap-6">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={COLLECTION_STATUS} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value"
-                  label={({ name, value }) => `${name} ${value}%`} labelLine={false}>
-                  {COLLECTION_STATUS.map((c, i) => <Cell key={i} fill={c.color} />)}
-                </Pie>
-                <Tooltip formatter={(v: any) => `${v}%`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {COLLECTION_STATUS.map(c => (
-              <div key={c.name} className="text-center">
-                <p className="text-lg font-bold" style={{ color: c.color }}>{c.value}%</p>
-                <p className="text-xs text-gray-500">{c.name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom row: project summary + recent activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project financial summary */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Project Financial Summary</h3>
@@ -154,7 +111,6 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Recent activity */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Recent Activity</h3>

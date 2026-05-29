@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useMemo } from 'react'
 import {
   Search, Filter, ChevronDown, ChevronRight, Clock,
@@ -335,7 +335,7 @@ export function AuditLogsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 {['#', 'Table', 'Entity ID', 'Action', 'Changed By', 'Date & Time', 'IP Address'].map(h => (
@@ -357,6 +357,7 @@ export function AuditLogsPage() {
               )}
             </tbody>
           </table>
+        </div>
         </div>
 
         {/* Pagination */}

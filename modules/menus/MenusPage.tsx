@@ -68,7 +68,7 @@ function MenuModal({ menu, roots, onClose, onSaved }: {
     <Modal open onClose={onClose} title={isEdit ? 'Edit Menu' : 'Add Menu Item'} size="md">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Display Name</label>
             <input {...register('name')} className={inp} placeholder="e.g. Projects" />
@@ -80,7 +80,7 @@ function MenuModal({ menu, roots, onClose, onSaved }: {
             {errors.code && <p className="text-xs text-red-600 mt-1">{errors.code.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Route</label>
             <input {...register('route')} className={inp} placeholder="/projects" />
@@ -91,7 +91,7 @@ function MenuModal({ menu, roots, onClose, onSaved }: {
             <p className="text-xs text-gray-400 mt-1">Lucide icon name</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Parent Menu <span className="text-gray-400 font-normal">(optional)</span></label>
             <select {...register('parentId')} className={inp}>

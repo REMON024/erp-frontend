@@ -1,21 +1,5 @@
-import { Equipment, EquipmentMaintenance } from '@/types'
-
-export const MOCK_EQUIPMENT: Equipment[] = [
-  { id: 'eq1', name: 'Tower Crane TC-01',        code: 'EQ-001', category: 'Crane',     status: 'allocated',    purchase_date: '2023-06-01', allocated_project_id: 'p1' },
-  { id: 'eq2', name: 'Concrete Mixer M-200',     code: 'EQ-002', category: 'Mixer',     status: 'allocated',    purchase_date: '2022-03-15', allocated_project_id: 'p1' },
-  { id: 'eq3', name: 'Excavator CAT 320',        code: 'EQ-003', category: 'Excavator', status: 'maintenance',  purchase_date: '2021-09-10' },
-  { id: 'eq4', name: 'Loader JCB 3CX',           code: 'EQ-004', category: 'Loader',    status: 'available',    purchase_date: '2022-11-20' },
-  { id: 'eq5', name: 'Generator 200KVA',         code: 'EQ-005', category: 'Generator', status: 'allocated',    purchase_date: '2023-01-05', allocated_project_id: 'p2' },
-  { id: 'eq6', name: 'Concrete Pump CP-50',      code: 'EQ-006', category: 'Pump',      status: 'maintenance',  purchase_date: '2020-07-18' },
-  { id: 'eq7', name: 'Scaffolding Set A',        code: 'EQ-007', category: 'Scaffolding', status: 'available',  purchase_date: '2023-04-22' },
-  { id: 'eq8', name: 'Welding Machine WM-300',   code: 'EQ-008', category: 'Welding',   status: 'allocated',    purchase_date: '2024-02-10', allocated_project_id: 'p3' },
-]
-
-export const MOCK_EQUIPMENT_ALERTS = MOCK_EQUIPMENT.filter((e) => e.status === 'maintenance')
-
-export const MOCK_MAINTENANCE: EquipmentMaintenance[] = [
-  { id: 'em1', equipment_id: 'eq3', service_date: '2025-05-15', cost: 85000,  remarks: 'Hydraulic system overhaul',     next_service_date: '2025-08-15' },
-  { id: 'em2', equipment_id: 'eq6', service_date: '2025-05-10', cost: 45000,  remarks: 'Pump seal replacement',          next_service_date: '2025-07-10' },
-  { id: 'em3', equipment_id: 'eq1', service_date: '2025-04-20', cost: 120000, remarks: 'Annual crane certification',     next_service_date: '2026-04-20' },
-  { id: 'em4', equipment_id: 'eq2', service_date: '2025-03-01', cost: 22000,  remarks: 'Drum bearing replacement',       next_service_date: '2025-09-01' },
-]
+import type { Equipment, EquipmentMaintenance } from '@/types'
+import data from './equipment.json'
+export const MOCK_EQUIPMENT       = data.equipment  as unknown as Equipment[]
+export const MOCK_EQUIPMENT_ALERTS = data.equipment.filter((e) => e.status === 'maintenance') as unknown as Equipment[]
+export const MOCK_MAINTENANCE     = data.maintenance as unknown as EquipmentMaintenance[]

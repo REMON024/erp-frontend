@@ -76,7 +76,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (i: Invoice)
         onAdd({ id: `inv${Date.now()}`, invoice_no: `INV-2025-${seq}`, ...d, paid_amount: 0, status: 'issued', notes: d.notes ?? '' })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Client</label>
             <select {...register('client_id')} className={inp}>
@@ -102,7 +102,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (i: Invoice)
           </select>
           {errors.unit_id && <p className="text-xs text-red-600 mt-1">{errors.unit_id.message}</p>}
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Total Amount (৳)</label>
             <input type="number" {...register('total_amount')} className={inp} placeholder="5000000" />

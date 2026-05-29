@@ -106,7 +106,7 @@ function UnitModal({ unit, onClose, onSaved }: {
         onSaved(saved)
         onClose()
       })} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Project</label>
             <select {...register('project_id')} className={inp}>
@@ -121,7 +121,7 @@ function UnitModal({ unit, onClose, onSaved }: {
             {errors.unit_no && <p className="text-xs text-red-600 mt-1">{errors.unit_no.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Type</label>
             <select {...register('type')} className={inp}>
@@ -141,7 +141,7 @@ function UnitModal({ unit, onClose, onSaved }: {
             {errors.area_sqft && <p className="text-xs text-red-600 mt-1">{errors.area_sqft.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Price (৳)</label>
             <input type="number" {...register('price')} className={inp} placeholder="5000000" />

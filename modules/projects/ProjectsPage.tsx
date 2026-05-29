@@ -91,7 +91,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: HousingP
         })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Project Name</label>
             <input {...register('name')} className={inp} placeholder="Block-E Residential" />
@@ -108,7 +108,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: HousingP
           <input {...register('location')} className={inp} placeholder="Area, Dhaka" />
           {errors.location && <p className="text-xs text-red-600 mt-1">{errors.location.message}</p>}
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Total Units</label>
             <input type="number" {...register('units_total')} className={inp} placeholder="10" />
@@ -120,7 +120,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (p: HousingP
             {errors.budget && <p className="text-xs text-red-600 mt-1">{errors.budget.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Start Date</label>
             <input type="date" {...register('start_date')} className={inp} />

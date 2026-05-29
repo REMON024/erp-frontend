@@ -65,7 +65,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: IssueRec
         onAdd({ id: `is${Date.now()}`, ...d, notes: d.notes ?? '' })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Material</label>
             <select {...register('material_id')} className={inp}>
@@ -93,7 +93,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: IssueRec
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Quantity to Issue</label>
             <input type="number" {...register('qty')} className={inp} placeholder="0" />
@@ -104,7 +104,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: IssueRec
             <input type="date" {...register('date')} className={inp} />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Issued By</label>
             <input {...register('issued_by')} className={inp} placeholder="Site Manager" />
@@ -170,7 +170,7 @@ export function IssueToProjectPage() {
       </div>
 
       {/* Per-project material usage summary */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {PROJECTS.map(proj => {
           const projIssues = records.filter(r => r.project_id === proj.id)
           if (projIssues.length === 0) return null

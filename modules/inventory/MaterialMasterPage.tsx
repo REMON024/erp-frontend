@@ -66,7 +66,7 @@ function AddMaterialModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: 
         })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Material Code</label>
             <input {...register('code')} className={inp} placeholder="CEM-OPC-50" />
@@ -88,7 +88,7 @@ function AddMaterialModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: 
           <input {...register('name')} className={inp} placeholder="Full material description" />
           {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Unit of Measure</label>
             <input {...register('unit')} className={inp} placeholder="Bag / Ton / Pcs" />

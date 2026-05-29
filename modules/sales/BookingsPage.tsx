@@ -100,7 +100,7 @@ function BookingModal({ booking, onClose, onSaved }: {
         onSaved(saved, booking?.unit_id)
         onClose()
       })} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Client</label>
             <select {...register('client_id')} className={inp}>
@@ -146,7 +146,7 @@ function BookingModal({ booking, onClose, onSaved }: {
           )}
           {errors.unit_id && <p className="text-xs text-red-600 mt-1">{errors.unit_id.message}</p>}
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Agreed Price (৳)</label>
             <input type="number" {...register('agreed_price')} className={inp} placeholder="Auto-filled from unit" />

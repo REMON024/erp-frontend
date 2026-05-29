@@ -71,7 +71,7 @@ function AddVendorModal({ onClose, onAdd }: { onClose: () => void; onAdd: (v: Ve
         })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="col-span-2">
             <label className={lbl}>Company / Vendor Name</label>
             <input {...register('name')} className={inp} placeholder="Vendor Company Name" />
@@ -92,7 +92,7 @@ function AddVendorModal({ onClose, onAdd }: { onClose: () => void; onAdd: (v: Ve
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Phone</label>
             <input {...register('phone')} className={inp} placeholder="+880-191-0000000" />
@@ -108,7 +108,7 @@ function AddVendorModal({ onClose, onAdd }: { onClose: () => void; onAdd: (v: Ve
           <label className={lbl}>Address</label>
           <input {...register('address')} className={inp} placeholder="Area, Dhaka" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Trade License No.</label>
             <input {...register('trade_license')} className={inp} placeholder="TL-YYYY-XXXX" />

@@ -54,7 +54,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: StockInR
         onAdd({ id: `si${Date.now()}`, ...d, purchase_ref: d.purchase_ref ?? '', notes: d.notes ?? '' })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Material</label>
             <select {...register('material_id')} className={inp}>
@@ -77,7 +77,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: StockInR
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Date</label>
             <input type="date" {...register('date')} className={inp} />
@@ -88,7 +88,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: StockInR
             {errors.supplier && <p className="text-xs text-red-600 mt-1">{errors.supplier.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Purchase Ref / PO No.</label>
             <input {...register('purchase_ref')} className={inp} placeholder="PO-2025-001" />

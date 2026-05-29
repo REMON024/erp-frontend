@@ -102,7 +102,7 @@ export function ProfitLossPage() {
       </div>
 
       {/* Chart + per-project table side by side */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {/* Bar chart */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="font-semibold text-gray-900 mb-4">Revenue vs Cost vs Profit</h3>

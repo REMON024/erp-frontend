@@ -77,7 +77,7 @@ function UserModal({ user, roles, onClose, onSaved }: {
     <Modal open onClose={onClose} title={isEdit ? 'Edit User' : 'Add New User'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>First Name</label>
             <input {...register('firstName')} className={inp} placeholder="First name" />
@@ -89,7 +89,7 @@ function UserModal({ user, roles, onClose, onSaved }: {
             {errors.lastName && <p className="text-xs text-red-600 mt-1">{errors.lastName.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Email</label>
             <input type="email" {...register('email')} className={inp} placeholder="user@company.com" disabled={isEdit} />

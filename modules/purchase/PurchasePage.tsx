@@ -85,7 +85,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: Purchase
         })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Project</label>
             <select {...register('project_id')} className={inp}>
@@ -103,7 +103,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: Purchase
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Item / Description</label>
             <select {...register('item')} className={inp}>
@@ -120,7 +120,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: Purchase
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Quantity</label>
             <input type="number" step="0.01" {...register('quantity')} className={inp} />
@@ -147,7 +147,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: Purchase
             Material purchase will automatically create a Stock-In entry in Inventory.
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Date</label>
             <input type="date" {...register('date')} className={inp} />
@@ -212,7 +212,7 @@ export function PurchasePage() {
       </div>
 
       {/* Per-project breakdown */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {PROJECTS.map(proj => {
           const recs = records.filter(r => r.project_id === proj.id)
           const total = recs.reduce((s, r) => s + r.amount, 0)

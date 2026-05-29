@@ -1,0 +1,25 @@
+{
+  "vendors": [
+    { "id": "v1", "company_name": "National Steel Suppliers",   "contact_person": "Kamal Ahmed",   "email": "kamal@nss.com",       "phone": "01711111111", "address": "Tejgaon, Dhaka",   "rating": 4.5, "status": "active",   "created_at": "2024-01-10T00:00:00Z" },
+    { "id": "v2", "company_name": "Premier Cement Ltd",         "contact_person": "Rafiq Islam",   "email": "rafiq@pcl.com",       "phone": "01722222222", "address": "Chittagong",        "rating": 4.2, "status": "active",   "created_at": "2024-02-05T00:00:00Z" },
+    { "id": "v3", "company_name": "BD Aggregate Works",         "contact_person": "Suman Das",     "email": "suman@bdagg.com",     "phone": "01733333333", "address": "Narayanganj",       "rating": 3.8, "status": "active",   "created_at": "2024-03-12T00:00:00Z" },
+    { "id": "v4", "company_name": "Dhaka Electric Supplies",    "contact_person": "Nadia Parvin",  "email": "nadia@des.com",       "phone": "01744444444", "address": "Mirpur, Dhaka",     "rating": 4.0, "status": "active",   "created_at": "2024-04-20T00:00:00Z" },
+    { "id": "v5", "company_name": "Rupali Plumbing & Fittings", "contact_person": "Hasan Sarker",  "email": "hasan@rupali.com",    "phone": "01755555555", "address": "Demra, Dhaka",      "rating": 3.5, "status": "inactive", "created_at": "2024-05-01T00:00:00Z" },
+    { "id": "v6", "company_name": "Green Tile & Marble Co.",    "contact_person": "Tania Akter",   "email": "tania@greentile.com", "phone": "01766666666", "address": "Uttara, Dhaka",     "rating": 4.7, "status": "active",   "created_at": "2024-06-18T00:00:00Z" }
+  ],
+  "vendorContracts": [
+    { "id": "vc1", "vendor_id": "v1", "title": "Steel Supply – SKY-001",         "value": 12500000, "start_date": "2025-01-15", "end_date": "2026-06-30", "status": "active"  },
+    { "id": "vc2", "vendor_id": "v1", "title": "Steel Supply – MCH-003",         "value": 8000000,  "start_date": "2024-06-01", "end_date": "2025-06-30", "status": "active"  },
+    { "id": "vc3", "vendor_id": "v2", "title": "Cement Supply – All Projects",   "value": 5500000,  "start_date": "2025-01-01", "end_date": "2025-12-31", "status": "active"  },
+    { "id": "vc4", "vendor_id": "v3", "title": "Aggregate Supply – RIV-002",     "value": 3200000,  "start_date": "2025-03-01", "end_date": "2025-09-30", "status": "active"  },
+    { "id": "vc5", "vendor_id": "v4", "title": "Electrical Materials – SKY-001", "value": 4800000,  "start_date": "2025-05-01", "end_date": "2025-12-31", "status": "active"  },
+    { "id": "vc6", "vendor_id": "v5", "title": "Plumbing Supply – GVV-004",      "value": 2100000,  "start_date": "2024-10-01", "end_date": "2025-03-31", "status": "expired" }
+  ],
+  "vendorPayments": [
+    { "id": "vp1", "vendor_id": "v1", "po_number": "PO-2025-031", "amount": 2500000, "paid_date": "2025-04-10", "method": "Bank Transfer" },
+    { "id": "vp2", "vendor_id": "v1", "po_number": "PO-2025-018", "amount": 1800000, "paid_date": "2025-03-05", "method": "Bank Transfer" },
+    { "id": "vp3", "vendor_id": "v2", "po_number": "PO-2025-029", "amount": 950000,  "paid_date": "2025-04-20", "method": "Cheque"        },
+    { "id": "vp4", "vendor_id": "v3", "po_number": "PO-2025-022", "amount": 620000,  "paid_date": "2025-04-01", "method": "Bank Transfer" },
+    { "id": "vp5", "vendor_id": "v4", "po_number": "PO-2025-041", "amount": 1200000, "paid_date": "2025-05-15", "method": "Online"        }
+  ]
+}

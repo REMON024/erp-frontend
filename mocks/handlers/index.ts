@@ -1,4 +1,7 @@
 import { authHandlers } from './auth'
+import { userHandlers } from './users'
+import { roleHandlers } from './roles'
+import { menuHandlers } from './menus'
 import { dashboardHandlers } from './dashboard'
 import { projectHandlers } from './projects'
 import { projectMemberHandlers } from './project-members'
@@ -24,6 +27,9 @@ import { advancesHandlers } from './advances'
 
 export const handlers = [
   ...authHandlers,
+  ...userHandlers,
+  ...roleHandlers,
+  ...menuHandlers,
   ...dashboardHandlers,
   ...projectHandlers,
   ...projectMemberHandlers,

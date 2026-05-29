@@ -70,7 +70,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (a: Account)
         onAdd({ id: `acc${Date.now()}`, ...d, parent_id: '', balance: 0, description: d.description ?? '' })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Account Code</label>
             <input {...register('code')} className={inp} placeholder="5500" />

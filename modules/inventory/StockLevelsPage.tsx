@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState } from 'react'
 import { AlertTriangle, Package } from 'lucide-react'
 
@@ -77,7 +77,7 @@ export function StockLevelsPage() {
       {/* Stock table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
               {['Material', 'Category', 'Unit', 'Current Stock', 'Reorder Level', 'Stock Level', 'Total In', 'Total Out'].map(h => (
@@ -113,6 +113,7 @@ export function StockLevelsPage() {
             })}
           </tbody>
         </table>
+        </div>
         </div>
       </div>
     </div>

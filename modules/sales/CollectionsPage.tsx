@@ -81,7 +81,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Collecti
             {client?.name} · Total: {fmt(inv.total_amount)} · Paid: {fmt(inv.paid_amount)} · <span className="font-bold">Balance: {fmt(balance)}</span>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Amount (৳)</label>
             <input type="number" {...register('amount')} className={inp} placeholder="0" />
@@ -94,7 +94,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Collecti
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Date</label>
             <input type="date" {...register('date')} className={inp} />

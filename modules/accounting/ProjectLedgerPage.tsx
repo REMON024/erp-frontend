@@ -95,7 +95,7 @@ function AddJournalModal({ projectId, onClose, onAdd }: {
         onAdd({ project_id: projectId, date: d.date, description: d.description, type: d.type, ref: d.ref ?? '', debit: d.debit, credit: d.credit })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Date</label>
             <input type="date" {...register('date')} className={inp} />
@@ -122,7 +122,7 @@ function AddJournalModal({ projectId, onClose, onAdd }: {
           <label className={lbl}>Reference No.</label>
           <input {...register('ref')} className={inp} placeholder="PO-001 / INV-2025-001 / JV-001" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Debit Amount (৳)</label>
             <input type="number" {...register('debit')} className={inp} placeholder="0" />

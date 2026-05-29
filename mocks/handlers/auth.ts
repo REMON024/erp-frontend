@@ -10,19 +10,25 @@ export const authHandlers = [
     if (!match) {
       return HttpResponse.json({ message: 'Invalid email or password' }, { status: 401 })
     }
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + 15 * 60 * 1000).toISOString()
     return HttpResponse.json({
-      token: `mock-jwt-token-${match.user.id}-${Date.now()}`,
-      refresh_token: `mock-refresh-${match.user.id}`,
-      expires_in: 900,
+      accessToken:  `mock-jwt-${match.user.role}`,
+      refreshToken: `mock-refresh-${match.user.id}`,
+      expiresAt,
       user: match.user,
     })
   }),
 
   http.post('/api/auth/logout', () => HttpResponse.json({ message: 'Logged out' })),
 
-  http.post('/api/auth/refresh', () =>
-    HttpResponse.json({ token: `mock-jwt-refreshed-${Date.now()}`, expires_in: 900 })
-  ),
+  http.post('/api/auth/refresh', ({ request }) => {
+    const auth = request.headers.get('Authorization') ?? ''
+    const token = auth.replace('Bearer ', '')
+    const role = token.startsWith('mock-jwt-') ? token.replace('mock-jwt-', '') : 'super_admin'
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    return HttpResponse.json({ accessToken: `mock-jwt-${role}`, expiresAt })
+  }),
 
   http.post('/api/auth/forgot-password', async ({ request }) => {
     const body = await request.json() as { email: string }

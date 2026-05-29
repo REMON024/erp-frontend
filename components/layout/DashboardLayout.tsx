@@ -6,6 +6,16 @@ import { Topbar } from './Topbar'
 import { DevRoleSwitcher } from '@/components/ui/DevRoleSwitcher'
 import { useAuthStore } from '@/store/auth.store'
 
+// Pre-warm Turbopack for all routes so first navigation is instant
+const PREFETCH_ROUTES = [
+  '/projects', '/tasks', '/inventory', '/inventory/stock',
+  '/inventory/stock-in', '/inventory/issue',
+  '/contractors', '/vendors', '/procurement',
+  '/finance', '/accounting', '/sales',
+  '/safety', '/equipment', '/documents',
+  '/users', '/roles', '/settings', '/reports',
+]
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const router = useRouter()
@@ -14,6 +24,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token) router.replace('/login')
   }, [token, router])
+
+  // Prefetch all routes in the background after the first render,
+  // with a small delay to avoid competing with the initial page load.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      PREFETCH_ROUTES.forEach(route => router.prefetch(route))
+    }, 2000)
+    return () => clearTimeout(id)
+  }, [router])
 
   if (!token) return null
 

@@ -95,7 +95,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (i: Installm
             Client: <span className="font-bold">{client.name}</span> · Total: {fmt(inv!.total_amount)} · Paid: {fmt(inv!.paid_amount)}
           </div>
         )}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Installment #</label>
             <input type="number" {...register('installment_no')} className={inp} />

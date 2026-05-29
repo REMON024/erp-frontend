@@ -104,7 +104,7 @@ export function SettingsPage() {
           )}
 
           <form onSubmit={profileForm.handleSubmit(onProfileSave)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={lbl}>Full Name</label>
                 <div className="relative">
@@ -122,7 +122,7 @@ export function SettingsPage() {
                 {profileForm.formState.errors.email && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.email.message}</p>}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={lbl}>Phone Number</label>
                 <div className="relative">
@@ -138,7 +138,7 @@ export function SettingsPage() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={lbl}>Role</label>
                 <input {...profileForm.register('role')} className={inp} placeholder="Administrator" />
@@ -180,7 +180,7 @@ export function SettingsPage() {
               <input type="password" {...passwordForm.register('current_password')} className={inp} placeholder="••••••••" />
               {passwordForm.formState.errors.current_password && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.current_password.message}</p>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={lbl}>New Password</label>
                 <input type="password" {...passwordForm.register('new_password')} className={inp} placeholder="••••••••" />

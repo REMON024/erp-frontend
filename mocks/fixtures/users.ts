@@ -1,20 +1,6 @@
-import { User } from '@/types'
+import type { User } from '@/types'
+import data from './users.json'
 
 export interface MockCredential { email: string; password: string; user: User }
-
-export const MOCK_CREDENTIALS: MockCredential[] = [
-  {
-    email: 'admin@constructerp.bd', password: 'Admin@123456',
-    user: { id: 'u1', firstName: 'System', lastName: 'Admin', fullName: 'System Admin', email: 'admin@constructerp.bd', role: 'super_admin', roleId: '', isActive: true, createdAt: '2024-01-01T00:00:00Z' },
-  },
-  {
-    email: 'ops@constructerp.bd', password: 'Ops@123456',
-    user: { id: 'u2', firstName: 'Operations', lastName: 'Manager', fullName: 'Operations Manager', email: 'ops@constructerp.bd', role: 'operations', roleId: '', isActive: true, createdAt: '2024-01-01T00:00:00Z' },
-  },
-  {
-    email: 'store@constructerp.bd', password: 'Store@123456',
-    user: { id: 'u3', firstName: 'Store', lastName: 'Manager', fullName: 'Store Manager', email: 'store@constructerp.bd', role: 'inventory', roleId: '', isActive: true, createdAt: '2024-01-01T00:00:00Z' },
-  },
-]
-
-export const MOCK_USERS: User[] = MOCK_CREDENTIALS.map((c) => c.user)
+export const MOCK_CREDENTIALS = data.credentials as unknown as MockCredential[]
+export const MOCK_USERS       = data.users       as unknown as User[]

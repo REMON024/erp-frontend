@@ -1,0 +1,117 @@
+{
+  "accounts": [
+    { "id": "acc1",  "code": "1000", "name": "Cash & Cash Equivalents",    "type": "asset",     "balance": 12500000, "is_system": true  },
+    { "id": "acc2",  "code": "1100", "name": "Accounts Receivable",        "type": "asset",     "balance": 34200000, "is_system": true  },
+    { "id": "acc3",  "code": "1200", "name": "Advance to Contractors",     "type": "asset",     "balance": 5800000   },
+    { "id": "acc4",  "code": "1300", "name": "Material Inventory",         "type": "asset",     "balance": 8750000   },
+    { "id": "acc5",  "code": "1400", "name": "Equipment",                  "type": "asset",     "balance": 22000000  },
+    { "id": "acc6",  "code": "1500", "name": "Land & Buildings",           "type": "asset",     "balance": 95000000  },
+    { "id": "acc7",  "code": "2000", "name": "Accounts Payable",           "type": "liability", "balance": 9400000,  "is_system": true  },
+    { "id": "acc8",  "code": "2100", "name": "Retention Payable",          "type": "liability", "balance": 3200000   },
+    { "id": "acc9",  "code": "2200", "name": "Security Deposits Received", "type": "liability", "balance": 1500000   },
+    { "id": "acc10", "code": "2300", "name": "Bank Loan",                  "type": "liability", "balance": 45000000  },
+    { "id": "acc11", "code": "3000", "name": "Share Capital",              "type": "equity",    "balance": 50000000, "is_system": true  },
+    { "id": "acc12", "code": "3100", "name": "Retained Earnings",          "type": "equity",    "balance": 28350000  },
+    { "id": "acc13", "code": "4000", "name": "Sales Revenue",              "type": "income",    "balance": 72500000, "is_system": true  },
+    { "id": "acc14", "code": "4100", "name": "Other Income",               "type": "income",    "balance": 1200000   },
+    { "id": "acc15", "code": "5000", "name": "Construction Cost",          "type": "expense",   "balance": 38400000, "is_system": true  },
+    { "id": "acc16", "code": "5100", "name": "Contractor Payments",        "type": "expense",   "balance": 14200000  },
+    { "id": "acc17", "code": "5200", "name": "Material Purchases",         "type": "expense",   "balance": 11500000  },
+    { "id": "acc18", "code": "5300", "name": "Equipment Maintenance",      "type": "expense",   "balance": 890000    },
+    { "id": "acc19", "code": "5400", "name": "Administrative Expenses",    "type": "expense",   "balance": 2100000   },
+    { "id": "acc20", "code": "5500", "name": "Bank Charges & Interest",    "type": "expense",   "balance": 650000    }
+  ],
+  "journalEntries": [
+    {
+      "id": "je1", "project_id": "p1", "date": "2024-06-15", "reference": "JE-2024-001",
+      "description": "Booking money received from Rafiqul Islam — Unit A-101",
+      "created_by": "user1", "created_at": "2024-06-15T10:00:00Z",
+      "lines": [
+        { "id": "jl1", "journal_id": "je1", "account_id": "acc1",  "debit": 700000, "credit": 0,      "description": "Cash received"  },
+        { "id": "jl2", "journal_id": "je1", "account_id": "acc13", "debit": 0,      "credit": 700000, "description": "Sales revenue"  }
+      ]
+    },
+    {
+      "id": "je2", "project_id": "p1", "date": "2024-07-20", "reference": "JE-2024-002",
+      "description": "Booking money — Unit A-102, Nasreen Akhter",
+      "created_by": "user1", "created_at": "2024-07-20T10:00:00Z",
+      "lines": [
+        { "id": "jl3", "journal_id": "je2", "account_id": "acc1",  "debit": 800000, "credit": 0,      "description": "Cheque received" },
+        { "id": "jl4", "journal_id": "je2", "account_id": "acc13", "debit": 0,      "credit": 800000, "description": "Sales revenue"  }
+      ]
+    },
+    {
+      "id": "je3", "project_id": "p1", "date": "2024-07-28", "reference": "JE-2024-003",
+      "description": "Foundation stage payment — sale1, Unit A-101",
+      "created_by": "user1", "created_at": "2024-07-28T10:00:00Z",
+      "lines": [
+        { "id": "jl5", "journal_id": "je3", "account_id": "acc1",  "debit": 1400000, "credit": 0,       "description": "Cheque received CHQ-002" },
+        { "id": "jl6", "journal_id": "je3", "account_id": "acc13", "debit": 0,       "credit": 1400000, "description": "Sales revenue"          }
+      ]
+    },
+    {
+      "id": "je4", "project_id": "p1", "date": "2024-08-05", "reference": "JE-2024-004",
+      "description": "Advance to contractor — ABC Builders for foundation work",
+      "created_by": "user1", "created_at": "2024-08-05T10:00:00Z",
+      "lines": [
+        { "id": "jl7", "journal_id": "je4", "account_id": "acc3", "debit": 2000000, "credit": 0,       "description": "Advance paid"   },
+        { "id": "jl8", "journal_id": "je4", "account_id": "acc1", "debit": 0,       "credit": 2000000, "description": "Bank transfer"  }
+      ]
+    },
+    {
+      "id": "je5", "project_id": "p1", "date": "2024-08-15", "reference": "JE-2024-005",
+      "description": "Material purchase — Cement & Steel for Project p1",
+      "created_by": "user2", "created_at": "2024-08-15T10:00:00Z",
+      "lines": [
+        { "id": "jl9",  "journal_id": "je5", "account_id": "acc17", "debit": 1800000, "credit": 0,       "description": "Material purchase" },
+        { "id": "jl10", "journal_id": "je5", "account_id": "acc7",  "debit": 0,       "credit": 1800000, "description": "Payable to vendor" }
+      ]
+    },
+    {
+      "id": "je6", "project_id": "p2", "date": "2024-09-10", "reference": "JE-2024-006",
+      "description": "Villa V-01 booking — Taslima Begum",
+      "created_by": "user1", "created_at": "2024-09-10T10:00:00Z",
+      "lines": [
+        { "id": "jl11", "journal_id": "je6", "account_id": "acc1",  "debit": 2450000, "credit": 0,       "description": "Bank transfer TXN-011" },
+        { "id": "jl12", "journal_id": "je6", "account_id": "acc13", "debit": 0,       "credit": 2450000, "description": "Sales revenue"        }
+      ]
+    },
+    {
+      "id": "je7", "project_id": "p1", "date": "2024-09-30", "reference": "JE-2024-007",
+      "description": "Lintel stage payment — sale1, Unit A-101",
+      "created_by": "user1", "created_at": "2024-09-30T10:00:00Z",
+      "lines": [
+        { "id": "jl13", "journal_id": "je7", "account_id": "acc1",  "debit": 1400000, "credit": 0,       "description": "Bank transfer TXN-003" },
+        { "id": "jl14", "journal_id": "je7", "account_id": "acc13", "debit": 0,       "credit": 1400000, "description": "Sales revenue"        }
+      ]
+    },
+    {
+      "id": "je8", "project_id": "p1", "date": "2024-10-10", "reference": "JE-2024-008",
+      "description": "Contractor bill payment — ABC Builders bill #3",
+      "created_by": "user2", "created_at": "2024-10-10T10:00:00Z",
+      "lines": [
+        { "id": "jl15", "journal_id": "je8", "account_id": "acc16", "debit": 3500000, "credit": 0,       "description": "Contractor payment" },
+        { "id": "jl16", "journal_id": "je8", "account_id": "acc8",  "debit": 0,       "credit": 350000,  "description": "10% retention held" },
+        { "id": "jl17", "journal_id": "je8", "account_id": "acc1",  "debit": 0,       "credit": 3150000, "description": "Net payment made"   }
+      ]
+    },
+    {
+      "id": "je9", "project_id": "p2", "date": "2024-11-05", "reference": "JE-2024-009",
+      "description": "Villa V-01 2nd installment — Taslima Begum",
+      "created_by": "user1", "created_at": "2024-11-05T10:00:00Z",
+      "lines": [
+        { "id": "jl18", "journal_id": "je9", "account_id": "acc1",  "debit": 4900000, "credit": 0,       "description": "Cheque CHQ-012" },
+        { "id": "jl19", "journal_id": "je9", "account_id": "acc13", "debit": 0,       "credit": 4900000, "description": "Sales revenue"  }
+      ]
+    },
+    {
+      "id": "je10", "project_id": "p1", "date": "2024-11-28", "reference": "JE-2024-010",
+      "description": "Roof stage payment — sale1, Unit A-101",
+      "created_by": "user1", "created_at": "2024-11-28T10:00:00Z",
+      "lines": [
+        { "id": "jl20", "journal_id": "je10", "account_id": "acc1",  "debit": 1400000, "credit": 0,       "description": "Bank transfer TXN-004" },
+        { "id": "jl21", "journal_id": "je10", "account_id": "acc13", "debit": 0,       "credit": 1400000, "description": "Sales revenue"        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,831 @@
+{
+  "contractors": [
+    {
+      "id": "c1",
+      "company_name": "Babul Construction Co.",
+      "contact_person": "Babul Mia",
+      "email": "babul@babulcon.com",
+      "phone": "01811111111",
+      "address": "Keraniganj, Dhaka",
+      "rating": 4.3,
+      "status": "active",
+      "created_at": "2024-01-20T00:00:00Z"
+    },
+    {
+      "id": "c2",
+      "company_name": "Alam Builders Ltd",
+      "contact_person": "Alam Hossain",
+      "email": "alam@alambuilders.com",
+      "phone": "01822222222",
+      "address": "Savar, Dhaka",
+      "rating": 4,
+      "status": "active",
+      "created_at": "2024-02-14T00:00:00Z"
+    },
+    {
+      "id": "c3",
+      "company_name": "Dhaka Civil Works",
+      "contact_person": "Rokib Khan",
+      "email": "rokib@dcw.com",
+      "phone": "01833333333",
+      "address": "Tongi, Gazipur",
+      "rating": 3.7,
+      "status": "active",
+      "created_at": "2024-03-05T00:00:00Z"
+    },
+    {
+      "id": "c4",
+      "company_name": "Modern Steel Fabricators",
+      "contact_person": "Jamal Uddin",
+      "email": "jamal@msf.com",
+      "phone": "01844444444",
+      "address": "Demra, Dhaka",
+      "rating": 4.6,
+      "status": "active",
+      "created_at": "2024-04-10T00:00:00Z"
+    },
+    {
+      "id": "c5",
+      "company_name": "Supreme Finishing Works",
+      "contact_person": "Sumon Biswas",
+      "email": "sumon@sfw.com",
+      "phone": "01855555555",
+      "address": "Mirpur, Dhaka",
+      "rating": 3.9,
+      "status": "inactive",
+      "created_at": "2024-06-01T00:00:00Z"
+    }
+  ],
+  "attendance": [
+    {
+      "id": "att-c1-2025-4-1",
+      "contractor_id": "c1",
+      "date": "2025-04-01",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-2",
+      "contractor_id": "c1",
+      "date": "2025-04-02",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-3",
+      "contractor_id": "c1",
+      "date": "2025-04-03",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-5",
+      "contractor_id": "c1",
+      "date": "2025-04-05",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-6",
+      "contractor_id": "c1",
+      "date": "2025-04-06",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-7",
+      "contractor_id": "c1",
+      "date": "2025-04-07",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-8",
+      "contractor_id": "c1",
+      "date": "2025-04-08",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-9",
+      "contractor_id": "c1",
+      "date": "2025-04-09",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-10",
+      "contractor_id": "c1",
+      "date": "2025-04-10",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-12",
+      "contractor_id": "c1",
+      "date": "2025-04-12",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-13",
+      "contractor_id": "c1",
+      "date": "2025-04-13",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-14",
+      "contractor_id": "c1",
+      "date": "2025-04-14",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-15",
+      "contractor_id": "c1",
+      "date": "2025-04-15",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-16",
+      "contractor_id": "c1",
+      "date": "2025-04-16",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-17",
+      "contractor_id": "c1",
+      "date": "2025-04-17",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-19",
+      "contractor_id": "c1",
+      "date": "2025-04-19",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-20",
+      "contractor_id": "c1",
+      "date": "2025-04-20",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-21",
+      "contractor_id": "c1",
+      "date": "2025-04-21",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-22",
+      "contractor_id": "c1",
+      "date": "2025-04-22",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-23",
+      "contractor_id": "c1",
+      "date": "2025-04-23",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-24",
+      "contractor_id": "c1",
+      "date": "2025-04-24",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-26",
+      "contractor_id": "c1",
+      "date": "2025-04-26",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-27",
+      "contractor_id": "c1",
+      "date": "2025-04-27",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-28",
+      "contractor_id": "c1",
+      "date": "2025-04-28",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-29",
+      "contractor_id": "c1",
+      "date": "2025-04-29",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-4-30",
+      "contractor_id": "c1",
+      "date": "2025-04-30",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-1",
+      "contractor_id": "c1",
+      "date": "2025-05-01",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-3",
+      "contractor_id": "c1",
+      "date": "2025-05-03",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-4",
+      "contractor_id": "c1",
+      "date": "2025-05-04",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-5",
+      "contractor_id": "c1",
+      "date": "2025-05-05",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-6",
+      "contractor_id": "c1",
+      "date": "2025-05-06",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-7",
+      "contractor_id": "c1",
+      "date": "2025-05-07",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-8",
+      "contractor_id": "c1",
+      "date": "2025-05-08",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-10",
+      "contractor_id": "c1",
+      "date": "2025-05-10",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-11",
+      "contractor_id": "c1",
+      "date": "2025-05-11",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-12",
+      "contractor_id": "c1",
+      "date": "2025-05-12",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-13",
+      "contractor_id": "c1",
+      "date": "2025-05-13",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-14",
+      "contractor_id": "c1",
+      "date": "2025-05-14",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-15",
+      "contractor_id": "c1",
+      "date": "2025-05-15",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-17",
+      "contractor_id": "c1",
+      "date": "2025-05-17",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-18",
+      "contractor_id": "c1",
+      "date": "2025-05-18",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-19",
+      "contractor_id": "c1",
+      "date": "2025-05-19",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-20",
+      "contractor_id": "c1",
+      "date": "2025-05-20",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-21",
+      "contractor_id": "c1",
+      "date": "2025-05-21",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-22",
+      "contractor_id": "c1",
+      "date": "2025-05-22",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-24",
+      "contractor_id": "c1",
+      "date": "2025-05-24",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-25",
+      "contractor_id": "c1",
+      "date": "2025-05-25",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-26",
+      "contractor_id": "c1",
+      "date": "2025-05-26",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-27",
+      "contractor_id": "c1",
+      "date": "2025-05-27",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-28",
+      "contractor_id": "c1",
+      "date": "2025-05-28",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-29",
+      "contractor_id": "c1",
+      "date": "2025-05-29",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c1-2025-5-31",
+      "contractor_id": "c1",
+      "date": "2025-05-31",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-1",
+      "contractor_id": "c2",
+      "date": "2025-04-01",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-2",
+      "contractor_id": "c2",
+      "date": "2025-04-02",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-3",
+      "contractor_id": "c2",
+      "date": "2025-04-03",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-5",
+      "contractor_id": "c2",
+      "date": "2025-04-05",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-6",
+      "contractor_id": "c2",
+      "date": "2025-04-06",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-7",
+      "contractor_id": "c2",
+      "date": "2025-04-07",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-8",
+      "contractor_id": "c2",
+      "date": "2025-04-08",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-9",
+      "contractor_id": "c2",
+      "date": "2025-04-09",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-10",
+      "contractor_id": "c2",
+      "date": "2025-04-10",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-12",
+      "contractor_id": "c2",
+      "date": "2025-04-12",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-13",
+      "contractor_id": "c2",
+      "date": "2025-04-13",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-14",
+      "contractor_id": "c2",
+      "date": "2025-04-14",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-15",
+      "contractor_id": "c2",
+      "date": "2025-04-15",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-16",
+      "contractor_id": "c2",
+      "date": "2025-04-16",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-17",
+      "contractor_id": "c2",
+      "date": "2025-04-17",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-19",
+      "contractor_id": "c2",
+      "date": "2025-04-19",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-20",
+      "contractor_id": "c2",
+      "date": "2025-04-20",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-21",
+      "contractor_id": "c2",
+      "date": "2025-04-21",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-22",
+      "contractor_id": "c2",
+      "date": "2025-04-22",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-23",
+      "contractor_id": "c2",
+      "date": "2025-04-23",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-24",
+      "contractor_id": "c2",
+      "date": "2025-04-24",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-26",
+      "contractor_id": "c2",
+      "date": "2025-04-26",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-27",
+      "contractor_id": "c2",
+      "date": "2025-04-27",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-28",
+      "contractor_id": "c2",
+      "date": "2025-04-28",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-29",
+      "contractor_id": "c2",
+      "date": "2025-04-29",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-4-30",
+      "contractor_id": "c2",
+      "date": "2025-04-30",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-1",
+      "contractor_id": "c2",
+      "date": "2025-05-01",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-3",
+      "contractor_id": "c2",
+      "date": "2025-05-03",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-4",
+      "contractor_id": "c2",
+      "date": "2025-05-04",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-5",
+      "contractor_id": "c2",
+      "date": "2025-05-05",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-6",
+      "contractor_id": "c2",
+      "date": "2025-05-06",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-7",
+      "contractor_id": "c2",
+      "date": "2025-05-07",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-8",
+      "contractor_id": "c2",
+      "date": "2025-05-08",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-10",
+      "contractor_id": "c2",
+      "date": "2025-05-10",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-11",
+      "contractor_id": "c2",
+      "date": "2025-05-11",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-12",
+      "contractor_id": "c2",
+      "date": "2025-05-12",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-13",
+      "contractor_id": "c2",
+      "date": "2025-05-13",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-14",
+      "contractor_id": "c2",
+      "date": "2025-05-14",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-15",
+      "contractor_id": "c2",
+      "date": "2025-05-15",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-17",
+      "contractor_id": "c2",
+      "date": "2025-05-17",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-18",
+      "contractor_id": "c2",
+      "date": "2025-05-18",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-19",
+      "contractor_id": "c2",
+      "date": "2025-05-19",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-20",
+      "contractor_id": "c2",
+      "date": "2025-05-20",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-21",
+      "contractor_id": "c2",
+      "date": "2025-05-21",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-22",
+      "contractor_id": "c2",
+      "date": "2025-05-22",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-24",
+      "contractor_id": "c2",
+      "date": "2025-05-24",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-25",
+      "contractor_id": "c2",
+      "date": "2025-05-25",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-26",
+      "contractor_id": "c2",
+      "date": "2025-05-26",
+      "status": "absent",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-27",
+      "contractor_id": "c2",
+      "date": "2025-05-27",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-28",
+      "contractor_id": "c2",
+      "date": "2025-05-28",
+      "status": "half_day",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-29",
+      "contractor_id": "c2",
+      "date": "2025-05-29",
+      "status": "present",
+      "project_id": "p1"
+    },
+    {
+      "id": "att-c2-2025-5-31",
+      "contractor_id": "c2",
+      "date": "2025-05-31",
+      "status": "present",
+      "project_id": "p1"
+    }
+  ],
+  "contractorPayments": [
+    {
+      "id": "cp1",
+      "contractor_id": "c1",
+      "project_id": "p1",
+      "amount": 3500000,
+      "paid_date": "2025-04-30",
+      "description": "Monthly progress payment – April 2025"
+    },
+    {
+      "id": "cp2",
+      "contractor_id": "c1",
+      "project_id": "p1",
+      "amount": 3500000,
+      "paid_date": "2025-03-31",
+      "description": "Monthly progress payment – March 2025"
+    },
+    {
+      "id": "cp3",
+      "contractor_id": "c2",
+      "project_id": "p1",
+      "amount": 2200000,
+      "paid_date": "2025-04-30",
+      "description": "Structural work – April 2025"
+    },
+    {
+      "id": "cp4",
+      "contractor_id": "c3",
+      "project_id": "p2",
+      "amount": 1800000,
+      "paid_date": "2025-04-30",
+      "description": "Boundary wall progress – April 2025"
+    },
+    {
+      "id": "cp5",
+      "contractor_id": "c4",
+      "project_id": "p3",
+      "amount": 4500000,
+      "paid_date": "2025-04-30",
+      "description": "Fit-out works – April 2025"
+    }
+  ]
+}

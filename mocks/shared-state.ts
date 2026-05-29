@@ -4,8 +4,8 @@ import { MOCK_JOURNAL_ENTRIES } from './fixtures/ledger'
 
 // Shared mutable state — handlers import these instead of fixture arrays directly.
 // This enables cross-handler side effects (e.g. GRN → auto stock-in, payment → auto GL posting).
-export const sharedMaterials: Material[] = [...MOCK_MATERIALS]
-export const sharedStockTransactions: StockTransaction[] = [...MOCK_STOCK_TRANSACTIONS]
+export const sharedMaterials: Material[] = [...MOCK_MATERIALS] as Material[]
+export const sharedStockTransactions: StockTransaction[] = [...MOCK_STOCK_TRANSACTIONS] as StockTransaction[]
 export const sharedJournalEntries: JournalEntry[] = [...MOCK_JOURNAL_ENTRIES]
 
 export function addStockIn(materialId: string, warehouseId: string, qty: number, ref: string, projectId?: string) {

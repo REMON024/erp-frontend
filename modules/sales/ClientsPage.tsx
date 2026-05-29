@@ -43,7 +43,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Client) 
         onAdd({ id: `c${Date.now()}`, ...d, address: d.address ?? '', nid: d.nid ?? '', profession: d.profession ?? '', status: 'active' })
         onClose()
       })} className="space-y-4 p-1">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Full Name</label>
             <input {...register('name')} className={inp} placeholder="Mr. Client Name" />
@@ -55,7 +55,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Client) 
             {errors.phone && <p className="text-xs text-red-600 mt-1">{errors.phone.message}</p>}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Email</label>
             <input type="email" {...register('email')} className={inp} />
@@ -66,7 +66,7 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Client) 
             <input {...register('profession')} className={inp} placeholder="Businessman" />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>NID / Passport No.</label>
             <input {...register('nid')} className={inp} placeholder="1991-1234567" />
