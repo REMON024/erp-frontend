@@ -8,6 +8,8 @@ interface AuthState {
   user: User | null
   token: string | null
   isAuthenticated: boolean
+  _hasHydrated: boolean
+  setHasHydrated: (val: boolean) => void
   setAuth: (user: User, token: string) => void
   logout: () => void
   hasAccess: (module: string) => boolean
@@ -19,6 +21,8 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
+      _hasHydrated: false,
+      setHasHydrated: (val) => set({ _hasHydrated: val }),
 
       setAuth: (user, token) => {
         if (typeof window !== 'undefined') {
@@ -45,6 +49,11 @@ export const useAuthStore = create<AuthState>()(
         return canAccess(module, user.role as Role)
       },
     }),
-    { name: 'erp-auth' }
+    {
+      name: 'erp-auth',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+    }
   )
 )

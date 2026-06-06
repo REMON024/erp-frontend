@@ -1,6 +1,7 @@
 // ─── Auth ───────────────────────────────────────────────────────────────────
 export type Role =
   | 'super_admin'
+  | 'company_admin'
   | 'operations'
   | 'inventory'
 
@@ -12,6 +13,7 @@ export interface User {
   email: string
   role: Role
   roleId: string
+  companyId?: number | null
   phoneNumber?: string | null
   isActive: boolean
   createdAt: string

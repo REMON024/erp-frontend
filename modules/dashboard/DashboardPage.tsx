@@ -1,8 +1,8 @@
 'use client'
 import dynamic from 'next/dynamic'
-import { FolderKanban, TrendingUp, ShoppingCart, Package, Receipt, PieChart as PieIcon } from 'lucide-react'
+import { FolderKanban, TrendingUp, ShoppingCart, Package, Receipt, PieChart as PieIcon, RefreshCw } from 'lucide-react'
+import { useApiData } from '@/hooks/useApiData'
 
-// Lazy — recharts is heavy; load it after the KPI cards are already visible
 const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading: () => (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {[0, 1].map(i => (
@@ -11,46 +11,27 @@ const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading:
   </div>
 )})
 
-const INVESTMENT_BY_PROJECT = [
-  { project: 'Block-A', investment: 12000000, cost: 8500000, revenue: 14000000 },
-  { project: 'Block-B', investment: 8000000,  cost: 6200000, revenue: 9500000 },
-  { project: 'Block-C', investment: 15000000, cost: 11000000, revenue: 0 },
-  { project: 'Block-D', investment: 5000000,  cost: 2100000, revenue: 0 },
-]
-
-const RECENT_ACTIVITY = [
-  { id: 1, action: 'Investment recorded',   detail: 'MD invested ৳20,00,000 in Block-C',           time: '10 min ago',  type: 'investment' },
-  { id: 2, action: 'Purchase added',        detail: '500 bags cement purchased for Block-A',        time: '1 hr ago',    type: 'purchase' },
-  { id: 3, action: 'Stock issued',          detail: '200 bags cement issued to Block-B',            time: '2 hrs ago',   type: 'inventory' },
-  { id: 4, action: 'Payment collected',     detail: 'Mr. Karim paid ৳5,00,000 installment',         time: '3 hrs ago',   type: 'sales' },
-  { id: 5, action: 'Invoice generated',     detail: 'Invoice #INV-2026-012 for Block-A Unit 4B',    time: 'Yesterday',   type: 'sales' },
-  { id: 6, action: 'Profit distributed',   detail: 'Block-B profit ৳3,30,000 distributed',         time: '2 days ago',  type: 'profit' },
-]
-
-const ACTIVITY_COLORS: Record<string, string> = {
-  investment: 'bg-blue-100 text-blue-600',
-  purchase:   'bg-orange-100 text-orange-600',
-  inventory:  'bg-purple-100 text-purple-600',
-  sales:      'bg-green-100 text-green-600',
-  profit:     'bg-yellow-100 text-yellow-600',
-}
-
-const totalInvestment = INVESTMENT_BY_PROJECT.reduce((s, p) => s + p.investment, 0)
-const totalCost       = INVESTMENT_BY_PROJECT.reduce((s, p) => s + p.cost, 0)
-const totalRevenue    = INVESTMENT_BY_PROJECT.reduce((s, p) => s + p.revenue, 0)
-const netProfit       = totalRevenue - totalCost
-
 function fmt(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
+function fmtFull(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 
-function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor }: {
+interface Project   { id: number; projectCode: string; projectName: string; status: string; estimatedCost?: number; estimatedRevenue?: number }
+interface Estimate  { id: number; totalEstimated: number; totalActual: number; status: string }
+interface Invoice   { id: number; totalAmount: number; paidAmount: number; dueAmount: number; status: string; invoiceDate: string; customerName: string; invoiceNo: string }
+interface Payment   { id: number; paymentNo: string; customerName: string; amount: number; paymentDate: string; method: string }
+interface Material  { id: number; materialName: string; currentStock: number; minimumStock: number; isLowStock: boolean }
+interface Booking   { id: number; bookingNo: string; customerName: string; netAmount: number; bookingDate: string; unitNo: string }
+
+function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor, loading }: {
   label: string; value: string; sub: string
-  icon: React.ElementType; iconBg: string; iconColor: string
+  icon: React.ElementType; iconBg: string; iconColor: string; loading?: boolean
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
       <div>
         <p className="text-sm text-gray-500 font-medium">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        {loading
+          ? <div className="h-7 w-24 bg-gray-100 rounded animate-pulse mt-1" />
+          : <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>}
         <p className="text-xs text-gray-400 mt-1">{sub}</p>
       </div>
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
@@ -61,74 +42,149 @@ function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor }: {
 }
 
 export function DashboardPage() {
+  const { data: projects = [],  isLoading: loadP  } = useApiData<Project[]>  ({ url: '/projects',  queryKey: ['dash-projects']  })
+  const { data: invoices = [],  isLoading: loadI  } = useApiData<Invoice[]>  ({ url: '/invoices',  queryKey: ['dash-invoices']  })
+  const { data: payments = [],  isLoading: loadPy } = useApiData<Payment[]>  ({ url: '/payments',  queryKey: ['dash-payments']  })
+  const { data: materials = [], isLoading: loadM  } = useApiData<Material[]> ({ url: '/materials', queryKey: ['dash-materials'] })
+  const { data: bookings = [],   isLoading: loadB  } = useApiData<Booking[]>  ({ url: '/bookings',       queryKey: ['dash-bookings']  })
+  const { data: estimates = [],  isLoading: loadE  } = useApiData<Estimate[]> ({ url: '/cost-estimates', params: { status: 'Approved' }, queryKey: ['dash-estimates'] })
+
+  const loading = loadP || loadI || loadM
+
+  const activeProjects = projects.filter(p => p.status === 'Active').length
+  const totalRevenue   = invoices.reduce((s, i) => s + i.totalAmount, 0)
+  const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
+  const totalCost      = projects.reduce((s, p) => s + (p.estimatedCost ?? 0), 0)
+  const lowStockCount  = materials.filter(m => m.isLowStock).length
+  const totalBudget      = estimates.reduce((s, e) => s + e.totalEstimated, 0)
+  const totalActualCost  = estimates.reduce((s, e) => s + e.totalActual, 0)
+  const budgetUtilPct    = totalBudget > 0 ? Math.round(totalActualCost / totalBudget * 100) : 0
+  const overBudgetCount  = estimates.filter(e => e.totalActual > e.totalEstimated && e.totalActual > 0).length
+
+  const collectionStats = {
+    collected: invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + i.paidAmount, 0),
+    pending:   invoices.filter(i => i.status === 'Sent' || i.status === 'Draft').reduce((s, i) => s + i.dueAmount, 0),
+    overdue:   invoices.filter(i => i.status === 'Overdue').reduce((s, i) => s + i.dueAmount, 0),
+  }
+
+  // Build chart data from real projects
+  const chartData = projects.map(p => ({
+    project:    p.projectCode,
+    investment: p.estimatedCost ?? 0,
+    cost:       p.estimatedCost ?? 0,
+    revenue:    p.estimatedRevenue ?? 0,
+  }))
+
+  // Build recent activity from latest payments + bookings
+  const recentPayments = [...payments]
+    .sort((a, b) => b.paymentDate.localeCompare(a.paymentDate))
+    .slice(0, 3)
+    .map(p => ({ key: `pay-${p.id}`, action: 'Payment collected', detail: `${p.customerName} paid ${fmtFull(p.amount)}`, type: 'sales', date: p.paymentDate }))
+
+  const recentBookings = [...bookings]
+    .sort((a, b) => b.bookingDate.localeCompare(a.bookingDate))
+    .slice(0, 3)
+    .map(b => ({ key: `book-${b.id}`, action: 'Booking confirmed', detail: `${b.customerName} booked ${b.unitNo}`, type: 'investment', date: b.bookingDate }))
+
+  const activity = [...recentPayments, ...recentBookings]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 6)
+
+  const ACTIVITY_COLORS: Record<string, string> = {
+    investment: 'bg-blue-100 text-blue-600',
+    sales:      'bg-green-100 text-green-600',
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Welcome back! Here's your construction business overview.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Welcome back! Here's your construction business overview.</p>
+        </div>
+        {loading && <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KpiCard label="Active Projects"    value="4"             sub="2 in progress · 2 planning" icon={FolderKanban} iconBg="bg-blue-50"   iconColor="text-blue-600" />
-        <KpiCard label="Total Investment"   value={fmt(totalInvestment)} sub="Across all projects"   icon={TrendingUp}   iconBg="bg-green-50"  iconColor="text-green-600" />
-        <KpiCard label="Total Purchase Cost"value={fmt(totalCost)}       sub="Materials + contracts" icon={ShoppingCart}  iconBg="bg-orange-50" iconColor="text-orange-600" />
-        <KpiCard label="Total Revenue"      value={fmt(totalRevenue)}    sub="From unit sales"       icon={Receipt}       iconBg="bg-purple-50" iconColor="text-purple-600" />
-        <KpiCard label="Net Profit"         value={fmt(netProfit)}       sub="Revenue minus costs"   icon={PieIcon}       iconBg="bg-yellow-50" iconColor="text-yellow-600" />
-        <KpiCard label="Stock Items"        value="18"            sub="4 below reorder level"  icon={Package}      iconBg="bg-red-50"    iconColor="text-red-600" />
+        <KpiCard label="Active Projects"     value={String(activeProjects)}    sub={`${projects.length} total`}        icon={FolderKanban} iconBg="bg-blue-50"   iconColor="text-blue-600"   loading={loadP} />
+        <KpiCard label="Total Revenue Billed"value={fmt(totalRevenue)}          sub="From all invoices"                 icon={Receipt}      iconBg="bg-green-50"  iconColor="text-green-600"  loading={loadI} />
+        <KpiCard label="Collected"           value={fmt(totalCollected)}        sub={`${totalRevenue > 0 ? Math.round(totalCollected / totalRevenue * 100) : 0}% collection rate`} icon={TrendingUp} iconBg="bg-teal-50" iconColor="text-teal-600" loading={loadI} />
+        <KpiCard label="Budget Utilization"
+          value={totalBudget > 0 ? `${budgetUtilPct}%` : '—'}
+          sub={overBudgetCount > 0 ? `⚠ ${overBudgetCount} estimate(s) over budget` : `${fmt(totalBudget)} total budgeted`}
+          icon={ShoppingCart} iconBg={overBudgetCount > 0 ? 'bg-red-50' : 'bg-orange-50'}
+          iconColor={overBudgetCount > 0 ? 'text-red-600' : 'text-orange-600'} loading={loadE} />
+        <KpiCard label="Outstanding Balance" value={fmt(totalRevenue - totalCollected)} sub="Unpaid invoices"
+          icon={PieIcon} iconBg="bg-yellow-50" iconColor="text-yellow-600" loading={loadI} />
+        <KpiCard label="Low Stock Alerts"    value={String(lowStockCount)}
+          sub={`${materials.length} materials tracked`}
+          icon={Package} iconBg="bg-red-50" iconColor="text-red-600" loading={loadM} />
       </div>
 
-      {/* Charts load after KPI cards are visible */}
-      <Charts data={INVESTMENT_BY_PROJECT} />
+      {chartData.length > 0 && <Charts data={chartData} collectionStats={collectionStats} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Project financial summary */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Project Financial Summary</h3>
+            <h3 className="font-semibold text-gray-900">Project Overview</h3>
           </div>
-          <div className="divide-y divide-gray-100">
-            {INVESTMENT_BY_PROJECT.map(p => {
-              const profit = p.revenue - p.cost
-              const hasRevenue = p.revenue > 0
-              return (
-                <div key={p.project} className="px-5 py-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-medium text-gray-900 text-sm">{p.project}</p>
-                    {hasRevenue
-                      ? <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${profit >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {profit >= 0 ? `+${fmt(profit)}` : fmt(profit)} profit
-                        </span>
-                      : <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">In Progress</span>
-                    }
+          {loadP ? (
+            <div className="divide-y divide-gray-100">
+              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-gray-50" />)}
+            </div>
+          ) : projects.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-gray-400 text-center">No projects yet.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {projects.slice(0, 6).map(p => (
+                <div key={p.id} className="px-5 py-3">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="font-medium text-gray-900 text-sm">{p.projectName}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      p.status === 'Active' ? 'bg-green-100 text-green-700' :
+                      p.status === 'Completed' ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>{p.status}</span>
                   </div>
                   <div className="flex gap-4 text-xs text-gray-500">
-                    <span>Invested: <span className="font-medium text-gray-700">{fmt(p.investment)}</span></span>
-                    <span>Spent: <span className="font-medium text-gray-700">{fmt(p.cost)}</span></span>
-                    {hasRevenue && <span>Revenue: <span className="font-medium text-gray-700">{fmt(p.revenue)}</span></span>}
+                    <span className="font-mono text-gray-400">{p.projectCode}</span>
+                    {p.estimatedCost   && <span>Est. Cost: <strong className="text-gray-700">{fmt(p.estimatedCost)}</strong></span>}
+                    {p.estimatedRevenue && <span>Est. Revenue: <strong className="text-gray-700">{fmt(p.estimatedRevenue)}</strong></span>}
                   </div>
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* Recent activity */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="font-semibold text-gray-900">Recent Activity</h3>
           </div>
-          <div className="divide-y divide-gray-100">
-            {RECENT_ACTIVITY.map(a => (
-              <div key={a.id} className="px-5 py-3 flex items-start gap-3">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${ACTIVITY_COLORS[a.type]}`}>
-                  {a.type === 'investment' ? '₊' : a.type === 'purchase' ? '₱' : a.type === 'inventory' ? '▣' : a.type === 'sales' ? '৳' : '%'}
+          {(loadPy || loadB) ? (
+            <div className="divide-y divide-gray-100">
+              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-gray-50" />)}
+            </div>
+          ) : activity.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-gray-400 text-center">No recent activity.</p>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {activity.map(a => (
+                <div key={a.key} className="px-5 py-3 flex items-start gap-3">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${ACTIVITY_COLORS[a.type] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {a.type === 'sales' ? '৳' : '★'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{a.action}</p>
+                    <p className="text-xs text-gray-500 truncate">{a.detail}</p>
+                  </div>
+                  <p className="text-xs text-gray-400 shrink-0">{a.date}</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{a.action}</p>
-                  <p className="text-xs text-gray-500 truncate">{a.detail}</p>
-                </div>
-                <p className="text-xs text-gray-400 shrink-0">{a.time}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

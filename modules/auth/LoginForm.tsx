@@ -3,27 +3,26 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
-import { Eye, EyeOff, Lock, Mail, ChevronDown, ChevronUp, Building2 } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, Building2 } from 'lucide-react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { useAuthStore } from '@/store/auth.store'
 import api from '@/lib/api'
 
-type FormValues = { email: string; password: string }
-
-const DEMO_ACCOUNTS = [
-  { role: 'Super Admin',  email: 'admin@constructerp.bd', password: 'Admin@123456', color: 'bg-purple-100 text-purple-700' },
-  { role: 'Operations',   email: 'ops@constructerp.bd',   password: 'Ops@123456',   color: 'bg-blue-100 text-blue-700'   },
-  { role: 'Inventory',    email: 'store@constructerp.bd', password: 'Store@123456', color: 'bg-orange-100 text-orange-700' },
-]
+const loginSchema = z.object({
+  email:    z.string().email('Enter a valid email address'),
+  password: z.string().min(1, 'Password is required'),
+})
+type FormValues = z.infer<typeof loginSchema>
 
 export function LoginForm() {
   const router  = useRouter()
   const setAuth = useAuthStore((s) => s.setAuth)
-  const [showPass,     setShowPass]     = useState(false)
-  const [error,        setError]        = useState('')
-  const [showAccounts, setShowAccounts] = useState(false)
+  const [showPass, setShowPass] = useState(false)
+  const [error,    setError]    = useState('')
 
-  const { register, handleSubmit, setValue, formState: { isSubmitting } } = useForm<FormValues>({
-    defaultValues: { email: 'admin@constructerp.bd', password: 'Admin@123456' },
+  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm<FormValues>({
+    resolver: zodResolver(loginSchema),
   })
 
   const onSubmit = async (values: FormValues) => {
@@ -31,8 +30,10 @@ export function LoginForm() {
     try {
       const res = await api.post('/auth/login', values)
       const data = res.data
-      setAuth(data.user ?? data, data.accessToken ?? data.token)
-      router.push('/dashboard')
+      const user = data.user ?? data
+      setAuth(user, data.accessToken ?? data.token)
+      // SuperAdmin manages tenants, not day-to-day operations.
+      router.push(user.role === 'super_admin' ? '/admin/companies' : '/dashboard')
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string; title?: string; errors?: string[] } } }
       const msg = e.response?.data?.errors?.[0] ?? e.response?.data?.message ?? e.response?.data?.title ?? 'Invalid email or password.'
@@ -70,9 +71,10 @@ export function LoginForm() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@company.com"
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-400' : 'border-slate-300'}`}
               />
             </div>
+            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
           </div>
 
           <div>
@@ -87,13 +89,14 @@ export function LoginForm() {
                 type={showPass ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className="w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.password ? 'border-red-400' : 'border-slate-300'}`}
               />
               <button type="button" onClick={() => setShowPass(v => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+            {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>}
           </div>
 
           <button
@@ -110,36 +113,6 @@ export function LoginForm() {
           </button>
         </form>
 
-        {/* Demo accounts */}
-        <div className="mt-6 border border-slate-200 rounded-xl overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowAccounts(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-sm"
-          >
-            <span className="font-medium text-slate-700">Demo accounts</span>
-            <span className="flex items-center gap-1.5 text-xs text-slate-500">
-              Click to fill
-              {showAccounts ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </span>
-          </button>
-          {showAccounts && (
-            <div className="divide-y divide-slate-100">
-              {DEMO_ACCOUNTS.map(acc => (
-                <button key={acc.email} type="button"
-                  onClick={() => { setValue('email', acc.email); setValue('password', acc.password); setError('') }}
-                  className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-blue-50 transition-colors text-left group"
-                >
-                  <div>
-                    <p className="text-xs font-semibold text-slate-800 group-hover:text-blue-700">{acc.role}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{acc.email}</p>
-                  </div>
-                  <span className={`text-xs font-mono px-2 py-0.5 rounded ${acc.color}`}>{acc.password}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )

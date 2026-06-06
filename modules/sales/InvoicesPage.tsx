@@ -1,129 +1,145 @@
 'use client'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { DataState } from '@/components/ui/DataState'
+import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, FileText, Eye } from 'lucide-react'
-import { CLIENTS } from './ClientsPage'
-import { PROJECTS, UNITS as RAW_UNITS } from './UnitsPage'
+import { Plus, FileText, XCircle } from 'lucide-react'
+import api from '@/lib/api'
 
-// Flatten units to the label shape this page needs
-const UNITS = RAW_UNITS.map(u => ({
-  id:         u.id,
-  project_id: u.project_id,
-  label:      `${u.unit_no} — ${u.area_sqft} sqft`,
-}))
-
-export type InvoiceStatus = 'draft' | 'issued' | 'partial' | 'paid' | 'overdue'
-
-export interface Invoice {
-  id: string; invoice_no: string; client_id: string; project_id: string
-  unit_id: string; total_amount: number; paid_amount: number
-  issue_date: string; due_date: string; status: InvoiceStatus; notes: string
+interface Customer { id: number; fullName: string }
+interface Project  { id: number; projectName: string; projectCode: string }
+interface Invoice {
+  id: number; invoiceNo: string; projectId: number; bookingId?: number
+  customerId: number; customerName: string; invoiceType: string
+  invoiceDate: string; dueDate?: string
+  subTotal: number; discountAmount: number; vatAmount: number; taxAmount: number
+  totalAmount: number; paidAmount: number; dueAmount: number; status: string
 }
 
-export const INVOICES: Invoice[] = [
-  { id: 'inv1',  invoice_no: 'INV-2025-001', client_id: 'c1', project_id: 'p1', unit_id: 'u1', total_amount: 5600000, paid_amount: 5600000, issue_date: '2025-01-15', due_date: '2025-04-15', status: 'paid',    notes: '' },
-  { id: 'inv2',  invoice_no: 'INV-2025-002', client_id: 'c2', project_id: 'p1', unit_id: 'u2', total_amount: 5600000, paid_amount: 2800000, issue_date: '2025-02-01', due_date: '2025-05-01', status: 'partial', notes: '' },
-  { id: 'inv3',  invoice_no: 'INV-2025-003', client_id: 'c3', project_id: 'p1', unit_id: 'u3', total_amount: 6500000, paid_amount: 6500000, issue_date: '2025-02-10', due_date: '2025-05-10', status: 'paid',    notes: '' },
-  { id: 'inv4',  invoice_no: 'INV-2025-004', client_id: 'c4', project_id: 'p1', unit_id: 'u4', total_amount: 6500000, paid_amount: 1500000, issue_date: '2025-03-01', due_date: '2025-06-01', status: 'partial', notes: 'Booking amount received' },
-  { id: 'inv5',  invoice_no: 'INV-2025-005', client_id: 'c5', project_id: 'p2', unit_id: 'u5', total_amount: 4800000, paid_amount: 4800000, issue_date: '2025-04-01', due_date: '2025-07-01', status: 'paid',    notes: '' },
-  { id: 'inv6',  invoice_no: 'INV-2025-006', client_id: 'c6', project_id: 'p2', unit_id: 'u6', total_amount: 4800000, paid_amount: 0,       issue_date: '2025-05-01', due_date: '2025-08-01', status: 'overdue', notes: '' },
-  { id: 'inv7',  invoice_no: 'INV-2025-007', client_id: 'c7', project_id: 'p3', unit_id: 'u7', total_amount: 8000000, paid_amount: 2000000, issue_date: '2025-06-01', due_date: '2025-09-01', status: 'partial', notes: '' },
-  { id: 'inv8',  invoice_no: 'INV-2025-008', client_id: 'c8', project_id: 'p4', unit_id: 'u8', total_amount: 3600000, paid_amount: 0,       issue_date: '2025-09-15', due_date: '2025-12-15', status: 'issued',  notes: 'New booking' },
-]
-
-const STATUS_COLORS: Record<InvoiceStatus, string> = {
-  draft:   'bg-gray-100 text-gray-600',
-  issued:  'bg-blue-100 text-blue-700',
-  partial: 'bg-yellow-100 text-yellow-700',
-  paid:    'bg-green-100 text-green-700',
-  overdue: 'bg-red-100 text-red-700',
+const STATUS_COLORS: Record<string, string> = {
+  Draft:     'bg-gray-100 text-gray-600',
+  Sent:      'bg-blue-100 text-blue-700',
+  Paid:      'bg-green-100 text-green-700',
+  Overdue:   'bg-red-100 text-red-700',
+  Cancelled: 'bg-gray-100 text-gray-400',
 }
-
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
-function getClient(id: string)  { return CLIENTS.find(c => c.id === id) }
-function getProject(id: string) { return PROJECTS.find(p => p.id === id) }
-function getUnit(id: string)    { return UNITS.find(u => u.id === id) }
+function isoToday() { return new Date().toISOString().split('T')[0] }
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
 const schema = z.object({
-  client_id:    z.string().min(1, 'Required'),
-  project_id:   z.string().min(1, 'Required'),
-  unit_id:      z.string().min(1, 'Required'),
-  total_amount: z.coerce.number().min(1, 'Required'),
-  issue_date:   z.string().min(1, 'Required'),
-  due_date:     z.string().min(1, 'Required'),
-  notes:        z.string().optional(),
+  customerId:     z.coerce.number().min(1, 'Required'),
+  projectId:      z.coerce.number().min(1, 'Required'),
+  invoiceType:    z.string().min(1, 'Required'),
+  invoiceDate:    z.string().min(1, 'Required'),
+  dueDate:        z.string().optional(),
+  subTotal:       z.coerce.number().min(1, 'Required'),
+  discountAmount: z.coerce.number().min(0),
+  vatAmount:      z.coerce.number().min(0),
+  taxAmount:      z.coerce.number().min(0),
 })
 type Form = z.infer<typeof schema>
 
-function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (i: Invoice) => void }) {
+function InvoiceModal({ customers, projects, onClose, onSaved }: {
+  customers: Customer[]; projects: Project[]; onClose: () => void; onSaved: () => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const [err, setErr]       = useState('')
   const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { issue_date: new Date().toISOString().split('T')[0] },
+    defaultValues: { invoiceType: 'Installment', invoiceDate: isoToday(), discountAmount: 0, vatAmount: 0, taxAmount: 0 },
   })
-  const selectedProject = watch('project_id')
-  const filteredUnits = selectedProject ? UNITS.filter(u => u.project_id === selectedProject) : UNITS
+
+  const sub = Number(watch('subTotal') || 0)
+  const disc = Number(watch('discountAmount') || 0)
+  const vat = Number(watch('vatAmount') || 0)
+  const tax = Number(watch('taxAmount') || 0)
+  const total = sub - disc + vat + tax
+
+  const onSubmit = async (d: Form) => {
+    setSaving(true); setErr('')
+    try {
+      await api.post('/invoices', d)
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? 'Save failed')
+    } finally { setSaving(false) }
+  }
 
   return (
-    <Modal open onClose={onClose} title="Generate Invoice" size="md">
-      <form onSubmit={handleSubmit(d => {
-        const seq = String(INVOICES.length + 1).padStart(3, '0')
-        onAdd({ id: `inv${Date.now()}`, invoice_no: `INV-2025-${seq}`, ...d, paid_amount: 0, status: 'issued', notes: d.notes ?? '' })
-        onClose()
-      })} className="space-y-4 p-1">
+    <Modal open onClose={onClose} title="New Invoice" size="lg">
+      <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
+        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Client</label>
-            <select {...register('client_id')} className={inp}>
+            <label className={lbl}>Client <span className="text-red-500">*</span></label>
+            <select {...register('customerId')} className={inp}>
               <option value="">Select client</option>
-              {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
             </select>
-            {errors.client_id && <p className="text-xs text-red-600 mt-1">{errors.client_id.message}</p>}
+            {errors.customerId && <p className="text-xs text-red-600 mt-1">{errors.customerId.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Project</label>
-            <select {...register('project_id')} className={inp}>
+            <label className={lbl}>Project <span className="text-red-500">*</span></label>
+            <select {...register('projectId')} className={inp}>
               <option value="">Select project</option>
-              {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </select>
-            {errors.project_id && <p className="text-xs text-red-600 mt-1">{errors.project_id.message}</p>}
+            {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
           </div>
-        </div>
-        <div>
-          <label className={lbl}>Unit</label>
-          <select {...register('unit_id')} className={inp}>
-            <option value="">Select unit</option>
-            {filteredUnits.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
-          </select>
-          {errors.unit_id && <p className="text-xs text-red-600 mt-1">{errors.unit_id.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className={lbl}>Total Amount (৳)</label>
-            <input type="number" {...register('total_amount')} className={inp} placeholder="5000000" />
-            {errors.total_amount && <p className="text-xs text-red-600 mt-1">{errors.total_amount.message}</p>}
+            <label className={lbl}>Type</label>
+            <select {...register('invoiceType')} className={inp}>
+              {['Booking', 'Installment', 'Other'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
           </div>
           <div>
-            <label className={lbl}>Issue Date</label>
-            <input type="date" {...register('issue_date')} className={inp} />
+            <label className={lbl}>Invoice Date <span className="text-red-500">*</span></label>
+            <input type="date" {...register('invoiceDate')} className={inp} />
           </div>
           <div>
             <label className={lbl}>Due Date</label>
-            <input type="date" {...register('due_date')} className={inp} />
+            <input type="date" {...register('dueDate')} className={inp} />
           </div>
         </div>
-        <div>
-          <label className={lbl}>Notes</label>
-          <input {...register('notes')} className={inp} placeholder="Optional notes" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <label className={lbl}>Sub Total (৳) <span className="text-red-500">*</span></label>
+            <input type="number" {...register('subTotal')} className={inp} placeholder="0" />
+            {errors.subTotal && <p className="text-xs text-red-600 mt-1">{errors.subTotal.message}</p>}
+          </div>
+          <div>
+            <label className={lbl}>Discount</label>
+            <input type="number" {...register('discountAmount')} className={inp} placeholder="0" />
+          </div>
+          <div>
+            <label className={lbl}>VAT</label>
+            <input type="number" {...register('vatAmount')} className={inp} placeholder="0" />
+          </div>
+          <div>
+            <label className={lbl}>Tax</label>
+            <input type="number" {...register('taxAmount')} className={inp} placeholder="0" />
+          </div>
         </div>
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="bg-gray-50 rounded-lg px-4 py-2 flex justify-between items-center">
+          <span className="text-sm text-gray-600">Total Amount</span>
+          <span className="text-lg font-bold text-gray-900">{fmt(total)}</span>
+        </div>
+        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Generate Invoice</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            {saving ? 'Saving…' : 'Create Invoice'}
+          </button>
         </div>
       </form>
     </Modal>
@@ -131,93 +147,113 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (i: Invoice)
 }
 
 export function InvoicesPage() {
-  const [invoices, setInvoices] = useState<Invoice[]>(INVOICES)
-  const [showAdd, setShowAdd]   = useState(false)
-  const [filterStatus, setFS]   = useState<string>('')
+  const qc = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [showNew, setShowNew] = useState(false)
 
-  const displayed = filterStatus ? invoices.filter(i => i.status === filterStatus) : invoices
+  const { data: customers = [] } = useApiData<Customer[]>({ url: '/customers', queryKey: ['customers-list'] })
+  const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
 
-  const totalRevenue  = invoices.reduce((s, i) => s + i.total_amount, 0)
-  const totalCollected = invoices.reduce((s, i) => s + i.paid_amount, 0)
-  const totalPending  = totalRevenue - totalCollected
-  const overdueCount  = invoices.filter(i => i.status === 'overdue').length
+  const { data: invoices = [], isLoading, error, refetch } = useApiData<Invoice[]>({
+    url: '/invoices',
+    params: { search: search || undefined, status: status || undefined },
+    queryKey: ['invoices', search, status],
+  })
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['invoices'] })
+    qc.invalidateQueries({ queryKey: ['invoices-list'] })
+  }
+
+  const cancelInvoice = async (id: number) => {
+    if (!confirm('Cancel this invoice? This cannot be undone.')) return
+    try { await api.post(`/invoices/${id}/cancel`); invalidate() } catch { /* noop */ }
+  }
+
+  const totalBilled    = invoices.reduce((s, i) => s + i.totalAmount, 0)
+  const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
+  const outstanding    = totalBilled - totalCollected
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Generate and track unit sale invoices</p>
-        </div>
-        <button onClick={() => setShowAdd(true)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Generate Invoice
-        </button>
-      </div>
+      <PageHeader
+        title="Invoices"
+        subtitle="Generate and track customer invoices"
+        action={
+          <button onClick={() => setShowNew(true)}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Invoice
+          </button>
+        }
+      />
 
-      {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Total Revenue</p><p className="text-xl font-bold text-blue-600 mt-1">{fmt(totalRevenue)}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><FileText className="w-5 h-5 text-blue-600" /></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Collected</p><p className="text-xl font-bold text-green-600 mt-1">{fmt(totalCollected)}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><FileText className="w-5 h-5 text-green-600" /></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Pending</p><p className="text-xl font-bold text-yellow-600 mt-1">{fmt(totalPending)}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center"><FileText className="w-5 h-5 text-yellow-600" /></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Overdue</p><p className="text-xl font-bold text-red-600 mt-1">{overdueCount}</p><p className="text-xs text-gray-400 mt-1">Invoices</p></div>
-          <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center"><FileText className="w-5 h-5 text-red-600" /></div>
-        </div>
+        {[
+          { label: 'Total Invoices',  value: invoices.length,      color: 'text-gray-900' },
+          { label: 'Total Billed',    value: fmt(totalBilled),     color: 'text-indigo-600' },
+          { label: 'Collected',       value: fmt(totalCollected),  color: 'text-green-600' },
+          { label: 'Outstanding',     value: fmt(outstanding),     color: 'text-red-600' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">{s.label}</p>
+            <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Filter + table */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-          <h3 className="font-semibold text-gray-900 flex-1">All Invoices</h3>
-          {(['', 'draft', 'issued', 'partial', 'paid', 'overdue'] as const).map(s => (
-            <button key={s} onClick={() => setFS(s)}
-              className={`px-3 py-1.5 text-xs rounded-full border font-medium ${filterStatus === s ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:border-blue-400'}`}>
-              {s === '' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Invoice No.', 'Client', 'Project / Unit', 'Total Amount', 'Paid', 'Balance', 'Issue Date', 'Due Date', 'Status'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {displayed.map(inv => {
-              const balance = inv.total_amount - inv.paid_amount
-              return (
-                <tr key={inv.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs text-blue-600 font-semibold">{inv.invoice_no}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900 text-xs">{getClient(inv.client_id)?.name}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{getUnit(inv.unit_id)?.label}</td>
-                  <td className="px-4 py-3 font-semibold text-gray-900">{fmt(inv.total_amount)}</td>
-                  <td className="px-4 py-3 text-green-700 font-medium">{fmt(inv.paid_amount)}</td>
-                  <td className="px-4 py-3 text-red-600 font-medium">{balance > 0 ? fmt(balance) : '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{inv.issue_date}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{inv.due_date}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${STATUS_COLORS[inv.status]}`}>{inv.status}</span>
-                  </td>
+      <SearchBar value={search} onChange={setSearch} placeholder="Search invoice no or client…" onRefresh={refetch}>
+        <select value={status} onChange={e => setStatus(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">All Status</option>
+          {['Draft', 'Sent', 'Paid', 'Overdue', 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </SearchBar>
+
+      <DataState loading={isLoading} error={error ? 'Failed to load invoices.' : null} onRetry={refetch}
+        empty={invoices.length === 0} emptyMessage="No invoices yet.">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Invoice No.', 'Client', 'Type', 'Date', 'Total', 'Paid', 'Due', 'Status', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {invoices.map(i => (
+                  <tr key={i.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600">
+                      <div className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-gray-400" />{i.invoiceNo}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-900 text-sm">{i.customerName}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{i.invoiceType}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{i.invoiceDate}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(i.totalAmount)}</td>
+                    <td className="px-4 py-3 text-green-700 text-xs">{fmt(i.paidAmount)}</td>
+                    <td className="px-4 py-3 text-red-600 text-xs">{fmt(i.dueAmount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[i.status] ?? 'bg-gray-100 text-gray-600'}`}>{i.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(i.status === 'Draft' || i.status === 'Sent') && (
+                        <button onClick={() => cancelInvoice(i.id)} title="Cancel Invoice"
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <XCircle className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </DataState>
 
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={i => setInvoices(p => [i, ...p])} />}
+      {showNew && <InvoiceModal customers={customers} projects={projects} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }

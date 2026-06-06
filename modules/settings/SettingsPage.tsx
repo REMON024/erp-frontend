@@ -3,46 +3,43 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { User, Mail, Phone, MapPin, Building, Lock, CheckCircle } from 'lucide-react'
+import { User, Phone, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import { useAuthStore } from '@/store/auth.store'
+import api from '@/lib/api'
 
 const profileSchema = z.object({
-  name:     z.string().min(1, 'Required'),
-  email:    z.string().email('Invalid email'),
-  phone:    z.string().optional(),
-  company:  z.string().optional(),
-  role:     z.string().optional(),
-  location: z.string().optional(),
+  firstName: z.string().min(1, 'Required'),
+  lastName:  z.string().min(1, 'Required'),
+  phone:     z.string().optional(),
 })
 
 const passwordSchema = z.object({
-  current_password: z.string().min(6, 'Minimum 6 characters'),
-  new_password:     z.string().min(6, 'Minimum 6 characters'),
-  confirm_password: z.string().min(6, 'Minimum 6 characters'),
-}).refine(d => d.new_password === d.confirm_password, {
+  currentPassword: z.string().min(6, 'Minimum 6 characters'),
+  newPassword:     z.string().min(6, 'Minimum 6 characters'),
+  confirmPassword: z.string().min(6, 'Minimum 6 characters'),
+}).refine(d => d.newPassword === d.confirmPassword, {
   message: 'Passwords do not match',
-  path: ['confirm_password'],
+  path: ['confirmPassword'],
 })
 
-type ProfileForm   = z.infer<typeof profileSchema>
-type PasswordForm  = z.infer<typeof passwordSchema>
+type ProfileForm  = z.infer<typeof profileSchema>
+type PasswordForm = z.infer<typeof passwordSchema>
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
 export function SettingsPage() {
-  const [saved, setSaved]         = useState(false)
-  const [pwSaved, setPwSaved]     = useState(false)
+  const { user, setAuth, token } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications'>('profile')
+  const [profileMsg, setProfileMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [pwMsg,      setPwMsg]      = useState<{ ok: boolean; text: string } | null>(null)
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema) as any,
     defaultValues: {
-      name:     'Admin User',
-      email:    'admin@constructionerp.com',
-      phone:    '+91-98765-43210',
-      company:  'Construction ERP Co.',
-      role:     'Administrator',
-      location: 'Mumbai, Maharashtra',
+      firstName: user?.firstName ?? '',
+      lastName:  user?.lastName  ?? '',
+      phone:     user?.phoneNumber ?? '',
     },
   })
 
@@ -50,16 +47,39 @@ export function SettingsPage() {
     resolver: zodResolver(passwordSchema) as any,
   })
 
-  function onProfileSave(data: ProfileForm) {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+  const onProfileSave = async (data: ProfileForm) => {
+    setProfileMsg(null)
+    try {
+      const res = await api.put(`/users/${user?.id}`, {
+        firstName:   data.firstName,
+        lastName:    data.lastName,
+        phoneNumber: data.phone || undefined,
+      })
+      // Refresh auth store with updated user data
+      if (user && token) {
+        setAuth({ ...user, firstName: data.firstName, lastName: data.lastName, fullName: `${data.firstName} ${data.lastName}`, phoneNumber: data.phone || null }, token)
+      }
+      setProfileMsg({ ok: true, text: 'Profile updated successfully' })
+    } catch (e: any) {
+      setProfileMsg({ ok: false, text: e.response?.data?.errors?.[0] ?? 'Failed to update profile' })
+    }
   }
 
-  function onPasswordSave(data: PasswordForm) {
-    passwordForm.reset()
-    setPwSaved(true)
-    setTimeout(() => setPwSaved(false), 2500)
+  const onPasswordSave = async (data: PasswordForm) => {
+    setPwMsg(null)
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: data.currentPassword,
+        newPassword:     data.newPassword,
+      })
+      passwordForm.reset()
+      setPwMsg({ ok: true, text: 'Password changed successfully' })
+    } catch (e: any) {
+      setPwMsg({ ok: false, text: e.response?.data?.errors?.[0] ?? 'Failed to change password' })
+    }
   }
+
+  const initials = user ? `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase() : 'U'
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -68,7 +88,6 @@ export function SettingsPage() {
         <p className="text-sm text-gray-500 mt-0.5">Manage your account and preferences</p>
       </div>
 
-      {/* Tab nav */}
       <div className="flex gap-2 border-b border-gray-200">
         {([
           { key: 'profile',       label: 'Profile Details' },
@@ -85,75 +104,60 @@ export function SettingsPage() {
       {activeTab === 'profile' && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold">
-              A
+            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold select-none">
+              {initials}
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-lg">Admin User</p>
-              <p className="text-sm text-gray-500">Administrator · admin@constructionerp.com</p>
+              <p className="font-semibold text-gray-900 text-lg">{user?.fullName}</p>
+              <p className="text-sm text-gray-500">{user?.role?.replace(/_/g, ' ')} · {user?.email}</p>
             </div>
           </div>
 
-          <h3 className="font-semibold text-gray-900 mb-4">Your Personal Information</h3>
-
-          {saved && (
-            <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <p className="text-sm text-green-800 font-medium">Profile updated successfully</p>
+          {profileMsg && (
+            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${profileMsg.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+              {profileMsg.ok ? <CheckCircle className="w-4 h-4 text-green-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+              <p className="text-sm font-medium">{profileMsg.text}</p>
             </div>
           )}
 
-          <form onSubmit={profileForm.handleSubmit(onProfileSave)} className="space-y-4">
+          <form onSubmit={profileForm.handleSubmit(onProfileSave as any)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={lbl}>Full Name</label>
+                <label className={lbl}>First Name <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input {...profileForm.register('name')} className={inp + ' pl-9'} />
+                  <input {...profileForm.register('firstName')} className={inp + ' pl-9'} />
                 </div>
-                {profileForm.formState.errors.name && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.name.message}</p>}
+                {profileForm.formState.errors.firstName && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.firstName.message}</p>}
               </div>
               <div>
-                <label className={lbl}>Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input type="email" {...profileForm.register('email')} className={inp + ' pl-9'} />
-                </div>
-                {profileForm.formState.errors.email && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.email.message}</p>}
+                <label className={lbl}>Last Name <span className="text-red-500">*</span></label>
+                <input {...profileForm.register('lastName')} className={inp} />
+                {profileForm.formState.errors.lastName && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.lastName.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={lbl}>Email Address</label>
+                <input value={user?.email ?? ''} disabled className={inp + ' bg-gray-50 text-gray-400 cursor-not-allowed'} />
+                <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+              </div>
               <div>
                 <label className={lbl}>Phone Number</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input {...profileForm.register('phone')} className={inp + ' pl-9'} placeholder="+91-98765-43210" />
-                </div>
-              </div>
-              <div>
-                <label className={lbl}>Company</label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input {...profileForm.register('company')} className={inp + ' pl-9'} />
+                  <input {...profileForm.register('phone')} className={inp + ' pl-9'} placeholder="+880-…" />
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={lbl}>Role</label>
-                <input {...profileForm.register('role')} className={inp} placeholder="Administrator" />
-              </div>
-              <div>
-                <label className={lbl}>Location</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                  <input {...profileForm.register('location')} className={inp + ' pl-9'} placeholder="City, State" />
-                </div>
-              </div>
+            <div>
+              <label className={lbl}>Role</label>
+              <input value={user?.role?.replace(/_/g, ' ') ?? ''} disabled className={inp + ' bg-gray-50 text-gray-400 cursor-not-allowed'} />
             </div>
             <div className="flex justify-end pt-2">
-              <button type="submit" className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-                Save Changes
+              <button type="submit" disabled={profileForm.formState.isSubmitting}
+                className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+                {profileForm.formState.isSubmitting ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
           </form>
@@ -167,34 +171,35 @@ export function SettingsPage() {
           </h3>
           <p className="text-sm text-gray-500 mb-6">Ensure your account uses a strong and secure password</p>
 
-          {pwSaved && (
-            <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <p className="text-sm text-green-800 font-medium">Password changed successfully</p>
+          {pwMsg && (
+            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${pwMsg.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+              {pwMsg.ok ? <CheckCircle className="w-4 h-4 text-green-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+              <p className="text-sm font-medium">{pwMsg.text}</p>
             </div>
           )}
 
-          <form onSubmit={passwordForm.handleSubmit(onPasswordSave)} className="space-y-4">
+          <form onSubmit={passwordForm.handleSubmit(onPasswordSave as any)} className="space-y-4">
             <div>
-              <label className={lbl}>Current Password</label>
-              <input type="password" {...passwordForm.register('current_password')} className={inp} placeholder="••••••••" />
-              {passwordForm.formState.errors.current_password && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.current_password.message}</p>}
+              <label className={lbl}>Current Password <span className="text-red-500">*</span></label>
+              <input type="password" {...passwordForm.register('currentPassword')} className={inp} placeholder="••••••••" />
+              {passwordForm.formState.errors.currentPassword && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.currentPassword.message}</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={lbl}>New Password</label>
-                <input type="password" {...passwordForm.register('new_password')} className={inp} placeholder="••••••••" />
-                {passwordForm.formState.errors.new_password && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.new_password.message}</p>}
+                <label className={lbl}>New Password <span className="text-red-500">*</span></label>
+                <input type="password" {...passwordForm.register('newPassword')} className={inp} placeholder="••••••••" />
+                {passwordForm.formState.errors.newPassword && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.newPassword.message}</p>}
               </div>
               <div>
-                <label className={lbl}>Confirm New Password</label>
-                <input type="password" {...passwordForm.register('confirm_password')} className={inp} placeholder="••••••••" />
-                {passwordForm.formState.errors.confirm_password && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.confirm_password.message}</p>}
+                <label className={lbl}>Confirm New Password <span className="text-red-500">*</span></label>
+                <input type="password" {...passwordForm.register('confirmPassword')} className={inp} placeholder="••••••••" />
+                {passwordForm.formState.errors.confirmPassword && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.confirmPassword.message}</p>}
               </div>
             </div>
             <div className="flex justify-end pt-2">
-              <button type="submit" className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-                Change Password
+              <button type="submit" disabled={passwordForm.formState.isSubmitting}
+                className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+                {passwordForm.formState.isSubmitting ? 'Changing…' : 'Change Password'}
               </button>
             </div>
           </form>
@@ -207,12 +212,12 @@ export function SettingsPage() {
           <p className="text-sm text-gray-500 mb-6">Choose what notifications you receive</p>
           <div className="space-y-4">
             {[
-              { label: 'Budget Overrun Alerts',       desc: 'Notify when project costs exceed budget thresholds',   defaultOn: true },
-              { label: 'Material Request Approvals',  desc: 'Notify when material requests need your approval',     defaultOn: true },
-              { label: 'Safety Incidents',             desc: 'Immediate alerts for new safety incidents reported',   defaultOn: true },
-              { label: 'Project Milestone Updates',   desc: 'Updates when project milestones are completed',        defaultOn: false },
-              { label: 'Vendor Invoice Due Dates',    desc: 'Reminders for upcoming vendor invoice due dates',      defaultOn: true },
-              { label: 'Certification Expiry',        desc: 'Alerts when vendor certifications are about to expire',defaultOn: true },
+              { label: 'Budget Overrun Alerts',       desc: 'Notify when project costs exceed budget thresholds',    defaultOn: true },
+              { label: 'Material Request Approvals',  desc: 'Notify when material requests need your approval',      defaultOn: true },
+              { label: 'Safety Incidents',            desc: 'Immediate alerts for new safety incidents reported',    defaultOn: true },
+              { label: 'Project Milestone Updates',   desc: 'Updates when project milestones are completed',         defaultOn: false },
+              { label: 'Vendor Invoice Due Dates',    desc: 'Reminders for upcoming vendor invoice due dates',       defaultOn: true },
+              { label: 'Certification Expiry',        desc: 'Alerts when vendor certifications are about to expire', defaultOn: true },
             ].map(n => (
               <div key={n.label} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                 <div>
@@ -225,11 +230,6 @@ export function SettingsPage() {
                 </label>
               </div>
             ))}
-          </div>
-          <div className="flex justify-end pt-4">
-            <button className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-              Save Preferences
-            </button>
           </div>
         </div>
       )}

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
-import { DevRoleSwitcher } from '@/components/ui/DevRoleSwitcher'
 import { useAuthStore } from '@/store/auth.store'
 
 // Pre-warm Turbopack for all routes so first navigation is instant
@@ -46,8 +45,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
-
-      {process.env.NODE_ENV === 'development' && <DevRoleSwitcher />}
     </div>
   )
 }

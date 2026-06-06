@@ -1,234 +1,301 @@
 'use client'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { DataState } from '@/components/ui/DataState'
+import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Receipt, Download } from 'lucide-react'
-import { CLIENTS } from './ClientsPage'
-import { INVOICES } from './InvoicesPage'
+import { Plus, Receipt } from 'lucide-react'
+import api from '@/lib/api'
 
-type PaymentMode = 'Bank Transfer' | 'Cheque' | 'Cash' | 'NEFT/RTGS' | 'Mobile Banking'
-
-interface Collection {
-  id: string; receipt_no: string; invoice_id: string; client_id: string
-  amount: number; date: string; payment_mode: PaymentMode; ref_no: string; notes: string
+interface Customer { id: number; fullName: string }
+interface Invoice  { id: number; invoiceNo: string; customerId: number; dueAmount: number }
+interface Payment {
+  id: number; paymentNo: string; invoiceId?: number; invoiceNo?: string
+  customerId: number; customerName: string; paymentDate: string
+  amount: number; method: string; referenceNo?: string; notes?: string
 }
 
-const MOCK: Collection[] = [
-  { id: 'col1',  receipt_no: 'REC-2025-001', invoice_id: 'inv1', client_id: 'c1', amount: 1000000, date: '2025-01-14', payment_mode: 'Bank Transfer', ref_no: 'TXN001',  notes: 'Booking' },
-  { id: 'col2',  receipt_no: 'REC-2025-002', invoice_id: 'inv1', client_id: 'c1', amount: 1500000, date: '2025-02-13', payment_mode: 'Bank Transfer', ref_no: 'TXN002',  notes: '' },
-  { id: 'col3',  receipt_no: 'REC-2025-003', invoice_id: 'inv1', client_id: 'c1', amount: 1500000, date: '2025-03-14', payment_mode: 'Cheque',        ref_no: 'CHQ1234', notes: '' },
-  { id: 'col4',  receipt_no: 'REC-2025-004', invoice_id: 'inv1', client_id: 'c1', amount: 1600000, date: '2025-04-10', payment_mode: 'Bank Transfer', ref_no: 'TXN010',  notes: 'Final payment' },
-  { id: 'col5',  receipt_no: 'REC-2025-005', invoice_id: 'inv2', client_id: 'c2', amount: 1400000, date: '2025-02-01', payment_mode: 'Bank Transfer', ref_no: 'TXN015',  notes: 'Booking' },
-  { id: 'col6',  receipt_no: 'REC-2025-006', invoice_id: 'inv2', client_id: 'c2', amount: 1400000, date: '2025-03-02', payment_mode: 'Mobile Banking', ref_no: 'bKash001',notes: '' },
-  { id: 'col7',  receipt_no: 'REC-2025-007', invoice_id: 'inv3', client_id: 'c3', amount: 3250000, date: '2025-02-10', payment_mode: 'Bank Transfer', ref_no: 'TXN020',  notes: 'First half' },
-  { id: 'col8',  receipt_no: 'REC-2025-008', invoice_id: 'inv3', client_id: 'c3', amount: 3250000, date: '2025-04-15', payment_mode: 'Bank Transfer', ref_no: 'TXN025',  notes: 'Second half' },
-  { id: 'col9',  receipt_no: 'REC-2025-009', invoice_id: 'inv4', client_id: 'c4', amount: 1500000, date: '2025-03-01', payment_mode: 'Cheque',        ref_no: 'CHQ2001', notes: 'Booking amount' },
-  { id: 'col10', receipt_no: 'REC-2025-010', invoice_id: 'inv5', client_id: 'c5', amount: 4800000, date: '2025-04-01', payment_mode: 'Bank Transfer', ref_no: 'TXN030',  notes: 'Full payment' },
-  { id: 'col11', receipt_no: 'REC-2025-011', invoice_id: 'inv7', client_id: 'c7', amount: 2000000, date: '2025-06-01', payment_mode: 'Bank Transfer', ref_no: 'TXN040',  notes: 'Booking' },
-]
-
-const MODES: PaymentMode[] = ['Bank Transfer', 'Cheque', 'Cash', 'NEFT/RTGS', 'Mobile Banking']
-
+const METHOD_COLORS: Record<string, string> = {
+  Cash:   'bg-green-100 text-green-700',
+  Bank:   'bg-blue-100 text-blue-700',
+  Cheque: 'bg-amber-100 text-amber-700',
+  Online: 'bg-purple-100 text-purple-700',
+}
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
-function getClient(id: string)  { return CLIENTS.find(c => c.id === id) }
-function getInvoice(id: string) { return INVOICES.find(i => i.id === id) }
+function isoToday() { return new Date().toISOString().split('T')[0] }
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
 const schema = z.object({
-  invoice_id:   z.string().min(1, 'Required'),
-  amount:       z.coerce.number().min(1, 'Required'),
-  date:         z.string().min(1, 'Required'),
-  payment_mode: z.string().min(1, 'Required'),
-  ref_no:       z.string().optional(),
-  notes:        z.string().optional(),
+  customerId:  z.coerce.number().min(1, 'Required'),
+  invoiceId:   z.coerce.number().optional(),
+  paymentDate: z.string().min(1, 'Required'),
+  amount:      z.coerce.number().min(1, 'Required'),
+  method:      z.string().min(1, 'Required'),
+  chequeNo:    z.string().optional(),
+  bankName:    z.string().optional(),
+  referenceNo: z.string().optional(),
+  notes:       z.string().optional(),
+}).superRefine((d, ctx) => {
+  if (d.method === 'Cheque' && !d.chequeNo?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['chequeNo'], message: 'Cheque number is required' })
+  }
 })
 type Form = z.infer<typeof schema>
 
-function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: Collection) => void }) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
+function PaymentModal({ customers, invoices, onClose, onSaved }: {
+  customers: Customer[]; invoices: Invoice[]; onClose: () => void; onSaved: () => void
+}) {
+  const [saving, setSaving]   = useState(false)
+  const [err, setErr]         = useState('')
+  const [warnUnlinked, setWarnUnlinked] = useState(false)
+
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { date: new Date().toISOString().split('T')[0], payment_mode: 'Bank Transfer' },
+    defaultValues: { paymentDate: isoToday(), method: 'Bank' },
   })
-  const selectedInvoice = watch('invoice_id')
-  const inv = getInvoice(selectedInvoice)
-  const client = inv ? getClient(inv.client_id) : null
-  const balance = inv ? inv.total_amount - inv.paid_amount : 0
+
+  const selectedCustomerId = Number(watch('customerId'))
+  const selectedInvoiceId  = Number(watch('invoiceId') || 0)
+  const selectedMethod     = watch('method')
+  const customerInvoices   = invoices.filter(i => i.customerId === selectedCustomerId && i.dueAmount > 0)
+
+  const handleInvoiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = Number(e.target.value)
+    setValue('invoiceId', id || undefined)
+    if (id) {
+      const inv = customerInvoices.find(i => i.id === id)
+      if (inv) setValue('amount', inv.dueAmount)
+      setWarnUnlinked(false)
+    }
+  }
+
+  const onSubmit = async (d: Form) => {
+    if (customerInvoices.length > 0 && !d.invoiceId) {
+      setWarnUnlinked(true)
+      return
+    }
+    setSaving(true); setErr('')
+    try {
+      const body: Record<string, unknown> = {
+        customerId:  d.customerId,
+        invoiceId:   d.invoiceId || undefined,
+        paymentDate: d.paymentDate,
+        amount:      d.amount,
+        method:      d.method,
+        referenceNo: d.method === 'Cheque' ? d.chequeNo : d.referenceNo || undefined,
+        bankName:    d.bankName || undefined,
+        notes:       d.notes || undefined,
+      }
+      await api.post('/payments', body)
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? 'Save failed')
+    } finally { setSaving(false) }
+  }
 
   return (
-    <Modal open onClose={onClose} title="Record Collection" size="md">
-      <form onSubmit={handleSubmit(d => {
-        const seq = String(MOCK.length + 1).padStart(3, '0')
-        onAdd({ id: `col${Date.now()}`, receipt_no: `REC-2025-${seq}`, ...d, client_id: inv?.client_id ?? '', payment_mode: d.payment_mode as PaymentMode, ref_no: d.ref_no ?? '', notes: d.notes ?? '' })
-        onClose()
-      })} className="space-y-4 p-1">
+    <Modal open onClose={onClose} title="Record Payment" size="md">
+      <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
+        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+
         <div>
-          <label className={lbl}>Invoice</label>
-          <select {...register('invoice_id')} className={inp}>
-            <option value="">Select invoice</option>
-            {INVOICES.map(i => {
-              const c = getClient(i.client_id)
-              return <option key={i.id} value={i.id}>{i.invoice_no} — {c?.name}</option>
-            })}
+          <label className={lbl}>Client <span className="text-red-500">*</span></label>
+          <select {...register('customerId')} className={inp}
+            onChange={e => { setValue('customerId', Number(e.target.value)); setValue('invoiceId', undefined); setWarnUnlinked(false) }}>
+            <option value="">Select client</option>
+            {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
           </select>
-          {errors.invoice_id && <p className="text-xs text-red-600 mt-1">{errors.invoice_id.message}</p>}
+          {errors.customerId && <p className="text-xs text-red-600 mt-1">{errors.customerId.message}</p>}
         </div>
-        {inv && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2.5 text-sm text-blue-800">
-            {client?.name} · Total: {fmt(inv.total_amount)} · Paid: {fmt(inv.paid_amount)} · <span className="font-bold">Balance: {fmt(balance)}</span>
+
+        {selectedCustomerId > 0 && (
+          <div>
+            <label className={lbl}>
+              Against Invoice <span className="text-red-500">*</span>
+              {customerInvoices.length === 0 && <span className="text-gray-400 font-normal ml-1">(no outstanding invoices)</span>}
+            </label>
+            <select
+              value={selectedInvoiceId || ''}
+              onChange={handleInvoiceChange}
+              className={inp}
+              disabled={customerInvoices.length === 0}
+            >
+              <option value="">— Select invoice —</option>
+              {customerInvoices.map(i => (
+                <option key={i.id} value={i.id}>{i.invoiceNo} — due {fmt(i.dueAmount)}</option>
+              ))}
+            </select>
+            {warnUnlinked && (
+              <div className="mt-1 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <p className="text-xs text-amber-700 flex-1">
+                  This client has {customerInvoices.length} outstanding invoice(s). Select one to keep records accurate, or confirm to record an unlinked payment.
+                </p>
+                <button type="button" onClick={() => { setWarnUnlinked(false); setSaving(true); handleSubmit(async (d) => {
+                  setErr('')
+                  try {
+                    await api.post('/payments', { ...d, invoiceId: undefined })
+                    onSaved(); onClose()
+                  } catch (e: any) { setErr(e.response?.data?.errors?.[0] ?? 'Save failed') }
+                  finally { setSaving(false) }
+                })() }}
+                  className="text-xs text-amber-700 underline whitespace-nowrap font-medium">Record anyway</button>
+              </div>
+            )}
           </div>
         )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Amount (৳)</label>
+            <label className={lbl}>Payment Date <span className="text-red-500">*</span></label>
+            <input type="date" {...register('paymentDate')} className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>Amount (৳) <span className="text-red-500">*</span></label>
             <input type="number" {...register('amount')} className={inp} placeholder="0" />
             {errors.amount && <p className="text-xs text-red-600 mt-1">{errors.amount.message}</p>}
           </div>
-          <div>
-            <label className={lbl}>Payment Mode</label>
-            <select {...register('payment_mode')} className={inp}>
-              {MODES.map(m => <option key={m}>{m}</option>)}
-            </select>
+        </div>
+
+        <div>
+          <label className={lbl}>Method <span className="text-red-500">*</span></label>
+          <div className="grid grid-cols-4 gap-2">
+            {['Cash', 'Bank', 'Cheque', 'Online'].map(m => (
+              <label key={m} className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${selectedMethod === m ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                <input type="radio" value={m} {...register('method')} className="sr-only" /> {m}
+              </label>
+            ))}
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Date</label>
-            <input type="date" {...register('date')} className={inp} />
+
+        {selectedMethod === 'Cheque' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={lbl}>Cheque No. <span className="text-red-500">*</span></label>
+              <input {...register('chequeNo')} className={inp} placeholder="e.g. 001234" />
+              {errors.chequeNo && <p className="text-xs text-red-600 mt-1">{errors.chequeNo.message}</p>}
+            </div>
+            <div>
+              <label className={lbl}>Bank Name</label>
+              <input {...register('bankName')} className={inp} placeholder="e.g. Dutch-Bangla Bank" />
+            </div>
           </div>
+        ) : (
           <div>
-            <label className={lbl}>Reference / Cheque No.</label>
-            <input {...register('ref_no')} className={inp} placeholder="TXN001 or CHQ1234" />
+            <label className={lbl}>Reference No.</label>
+            <input {...register('referenceNo')} className={inp} placeholder="Transaction ID / reference…" />
           </div>
-        </div>
+        )}
+
         <div>
           <label className={lbl}>Notes</label>
-          <input {...register('notes')} className={inp} placeholder="Optional notes" />
+          <input {...register('notes')} className={inp} placeholder="Optional…" />
         </div>
-        <div className="flex justify-end gap-3 pt-2">
+
+        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">Record & Generate Receipt</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            {saving ? 'Saving…' : 'Record Payment'}
+          </button>
         </div>
       </form>
     </Modal>
   )
 }
 
-const MODE_COLORS: Record<string, string> = {
-  'Bank Transfer': 'bg-blue-100 text-blue-700',
-  'Cheque':        'bg-purple-100 text-purple-700',
-  'Cash':          'bg-green-100 text-green-700',
-  'NEFT/RTGS':     'bg-indigo-100 text-indigo-700',
-  'Mobile Banking':'bg-orange-100 text-orange-700',
-}
-
 export function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>(MOCK)
-  const [showAdd, setShowAdd]          = useState(false)
-  const [filterClient, setFC]          = useState('')
+  const qc = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [showNew, setShowNew] = useState(false)
 
-  const displayed = filterClient ? collections.filter(c => c.client_id === filterClient) : collections
+  const { data: customers = [] } = useApiData<Customer[]>({ url: '/customers', queryKey: ['customers-list'] })
+  const { data: invoices = [] }  = useApiData<Invoice[]>({ url: '/invoices', queryKey: ['invoices-list'] })
 
-  const totalCollected = collections.reduce((s, c) => s + c.amount, 0)
-  const byMode = MODES.reduce((acc, m) => {
-    acc[m] = collections.filter(c => c.payment_mode === m).reduce((s, c) => s + c.amount, 0)
-    return acc
-  }, {} as Record<string, number>)
+  const { data: payments = [], isLoading, error, refetch } = useApiData<Payment[]>({
+    url: '/payments',
+    params: { search: search || undefined },
+    queryKey: ['payments', search],
+  })
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['payments'] })
+    qc.invalidateQueries({ queryKey: ['invoices'] })
+    qc.invalidateQueries({ queryKey: ['invoices-list'] })
+    qc.invalidateQueries({ queryKey: ['installments'] })
+  }
+
+  const totalCollected = payments.reduce((s, p) => s + p.amount, 0)
+  const thisMonth = payments.filter(p => p.paymentDate.startsWith(isoToday().slice(0, 7))).reduce((s, p) => s + p.amount, 0)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Collections & Receipts</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Record payments received from clients and generate receipts</p>
-        </div>
-        <button onClick={() => setShowAdd(true)} className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Record Collection
-        </button>
-      </div>
+      <PageHeader
+        title="Collections"
+        subtitle="Record and track customer payments"
+        action={
+          <button onClick={() => setShowNew(true)}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Record Payment
+          </button>
+        }
+      />
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Total Collected</p><p className="text-xl font-bold text-green-600 mt-1">{fmt(totalCollected)}</p><p className="text-xs text-gray-400 mt-1">{collections.length} receipts</p></div>
-          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center"><Receipt className="w-5 h-5 text-green-600" /></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500 mb-3">By Payment Mode</p>
-          <div className="space-y-1.5">
-            {MODES.filter(m => byMode[m] > 0).map(m => (
-              <div key={m} className="flex justify-between text-xs">
-                <span className={`px-2 py-0.5 rounded-full font-medium ${MODE_COLORS[m]}`}>{m}</span>
-                <span className="font-semibold text-gray-900">{fmt(byMode[m])}</span>
-              </div>
-            ))}
+        {[
+          { label: 'Total Collected', value: fmt(totalCollected), color: 'text-green-600' },
+          { label: 'This Month',      value: fmt(thisMonth),      color: 'text-blue-600' },
+          { label: 'Payments',        value: payments.length,     color: 'text-gray-900' },
+        ].map(s => (
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs text-gray-500 uppercase tracking-wide">{s.label}</p>
+            <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
           </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-sm text-gray-500 mb-3">Top Clients</p>
-          <div className="space-y-1.5">
-            {CLIENTS.map(c => {
-              const paid = collections.filter(col => col.client_id === c.id).reduce((s, col) => s + col.amount, 0)
-              return paid > 0 ? (
-                <div key={c.id} className="flex justify-between text-xs">
-                  <span className="text-gray-600 truncate max-w-[120px]">{c.name}</span>
-                  <span className="font-semibold text-gray-900">{fmt(paid)}</span>
-                </div>
-              ) : null
-            })}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-          <h3 className="font-semibold text-gray-900 flex-1">Receipt Register</h3>
-          <select value={filterClient} onChange={e => setFC(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">All Clients</option>
-            {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Receipt No.', 'Date', 'Client', 'Invoice', 'Amount', 'Payment Mode', 'Reference', 'Notes', ''].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {displayed.map(col => {
-              const inv = getInvoice(col.invoice_id)
-              const client = getClient(col.client_id)
-              return (
-                <tr key={col.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs text-green-700 font-semibold">{col.receipt_no}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{col.date}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900 text-xs">{client?.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-blue-600">{inv?.invoice_no}</td>
-                  <td className="px-4 py-3 font-bold text-green-700">{fmt(col.amount)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${MODE_COLORS[col.payment_mode] ?? 'bg-gray-100 text-gray-600'}`}>{col.payment_mode}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs font-mono">{col.ref_no || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{col.notes || '—'}</td>
-                  <td className="px-4 py-3">
-                    <button className="text-gray-400 hover:text-blue-600 p-1" title="Download Receipt"><Download className="w-3.5 h-3.5" /></button>
-                  </td>
+      <SearchBar value={search} onChange={setSearch} placeholder="Search payment no or client…" onRefresh={refetch} />
+
+      <DataState loading={isLoading} error={error ? 'Failed to load payments.' : null} onRetry={refetch}
+        empty={payments.length === 0} emptyMessage="No payments recorded yet.">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Payment No.', 'Client', 'Invoice', 'Date', 'Amount', 'Method', 'Reference'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {payments.map(p => (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600">
+                      <div className="flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5 text-gray-400" />{p.paymentNo}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-900 text-sm">{p.customerName}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs font-mono">{p.invoiceNo ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{p.paymentDate}</td>
+                    <td className="px-4 py-3 font-semibold text-green-700">{fmt(p.amount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${METHOD_COLORS[p.method] ?? 'bg-gray-100 text-gray-600'}`}>{p.method}</span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-400 text-xs">{p.referenceNo ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </DataState>
 
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={c => setCollections(p => [c, ...p])} />}
+      {showNew && <PaymentModal customers={customers} invoices={invoices} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }

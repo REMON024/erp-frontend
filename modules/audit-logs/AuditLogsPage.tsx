@@ -4,6 +4,7 @@ import {
   Search, Filter, ChevronDown, ChevronRight, Clock,
   User, Database, RefreshCw, X,
 } from 'lucide-react'
+import { useApiData } from '@/hooks/useApiData'
 
 type AuditAction = 'Create' | 'Update' | 'Delete'
 
@@ -20,91 +21,11 @@ interface AuditLog {
   ipAddress: string
 }
 
-const MOCK_LOGS: AuditLog[] = [
-  {
-    id: 1, tableName: 'Users', entityId: 'usr-001', action: 'Create',
-    oldValues: null,
-    newValues: JSON.stringify({ firstName: 'Alice', lastName: 'Smith', email: 'alice@constructerp.bd', role: 'operations' }),
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-23T10:15:00Z', ipAddress: '192.168.1.1',
-  },
-  {
-    id: 2, tableName: 'Users', entityId: 'usr-002', action: 'Update',
-    oldValues: JSON.stringify({ firstName: 'Bob', status: 'Active' }),
-    newValues: JSON.stringify({ firstName: 'Bob', status: 'Inactive' }),
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-23T09:45:00Z', ipAddress: '192.168.1.1',
-  },
-  {
-    id: 3, tableName: 'Roles', entityId: 'role-003', action: 'Update',
-    oldValues: JSON.stringify({ name: 'inventory', permissionCount: 4 }),
-    newValues: JSON.stringify({ name: 'inventory', permissionCount: 8 }),
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-22T16:30:00Z', ipAddress: '192.168.1.1',
-  },
-  {
-    id: 4, tableName: 'Menus', entityId: 'menu-012', action: 'Create',
-    oldValues: null,
-    newValues: JSON.stringify({ code: 'REPORTS', label: 'Reports', route: '/reports', sortOrder: 15 }),
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-22T14:00:00Z', ipAddress: '192.168.1.2',
-  },
-  {
-    id: 5, tableName: 'Projects', entityId: 'proj-007', action: 'Update',
-    oldValues: JSON.stringify({ status: 'Planning', budget: 5000000 }),
-    newValues: JSON.stringify({ status: 'Active', budget: 5500000 }),
-    changedBy: 'ops@constructerp.bd', changedByName: 'Operations Manager',
-    changedAt: '2026-05-22T11:20:00Z', ipAddress: '192.168.1.5',
-  },
-  {
-    id: 6, tableName: 'RoleMenuPermissions', entityId: 'perm-021', action: 'Delete',
-    oldValues: JSON.stringify({ roleId: 'role-002', menuCode: 'ACCOUNTING', canView: true, canCreate: false }),
-    newValues: null,
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-21T17:45:00Z', ipAddress: '192.168.1.1',
-  },
-  {
-    id: 7, tableName: 'Users', entityId: 'usr-005', action: 'Delete',
-    oldValues: JSON.stringify({ firstName: 'Charlie', email: 'charlie@constructerp.bd', role: 'inventory' }),
-    newValues: null,
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-21T15:10:00Z', ipAddress: '192.168.1.1',
-  },
-  {
-    id: 8, tableName: 'Menus', entityId: 'menu-008', action: 'Update',
-    oldValues: JSON.stringify({ label: 'Stocks', sortOrder: 4 }),
-    newValues: JSON.stringify({ label: 'Inventory', sortOrder: 5 }),
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-20T09:00:00Z', ipAddress: '192.168.1.3',
-  },
-  {
-    id: 9, tableName: 'Purchase', entityId: 'po-031', action: 'Create',
-    oldValues: null,
-    newValues: JSON.stringify({ vendorId: 'ven-002', amount: 120000, status: 'Pending' }),
-    changedBy: 'ops@constructerp.bd', changedByName: 'Operations Manager',
-    changedAt: '2026-05-20T08:30:00Z', ipAddress: '192.168.1.5',
-  },
-  {
-    id: 10, tableName: 'Roles', entityId: 'role-004', action: 'Create',
-    oldValues: null,
-    newValues: JSON.stringify({ name: 'accountant', description: 'Finance team role', isActive: true }),
-    changedBy: 'admin@constructerp.bd', changedByName: 'Super Admin',
-    changedAt: '2026-05-19T13:00:00Z', ipAddress: '192.168.1.1',
-  },
-  {
-    id: 11, tableName: 'Inventory', entityId: 'item-055', action: 'Update',
-    oldValues: JSON.stringify({ quantity: 100, unitPrice: 250 }),
-    newValues: JSON.stringify({ quantity: 85, unitPrice: 250 }),
-    changedBy: 'store@constructerp.bd', changedByName: 'Store Manager',
-    changedAt: '2026-05-19T10:15:00Z', ipAddress: '192.168.1.7',
-  },
-  {
-    id: 12, tableName: 'Accounting', entityId: 'txn-092', action: 'Create',
-    oldValues: null,
-    newValues: JSON.stringify({ type: 'Debit', accountCode: '5001', amount: 75000, narration: 'Material Purchase' }),
-    changedBy: 'ops@constructerp.bd', changedByName: 'Operations Manager',
-    changedAt: '2026-05-18T14:50:00Z', ipAddress: '192.168.1.5',
-  },
+const KNOWN_TABLES = [
+  'Users', 'Roles', 'Menus', 'RoleMenuPermissions', 'Projects', 'Blocks', 'Units',
+  'Customers', 'Bookings', 'Installments', 'Invoices', 'Payments',
+  'Vendors', 'PurchaseOrders', 'GRN', 'Materials', 'StockTransactions',
+  'WorkOrders', 'WorkOrderBills', 'Vouchers', 'Accounts',
 ]
 
 const ACTION_COLORS: Record<AuditAction, string> = {
@@ -113,7 +34,6 @@ const ACTION_COLORS: Record<AuditAction, string> = {
   Delete: 'bg-red-100 text-red-700',
 }
 
-const TABLE_NAMES = [...new Set(MOCK_LOGS.map(l => l.tableName))].sort()
 const PAGE_SIZE = 8
 
 function formatDate(iso: string) {
@@ -204,26 +124,39 @@ function LogRow({ log }: { log: AuditLog }) {
 }
 
 export function AuditLogsPage() {
-  const [search, setSearch]           = useState('')
-  const [tableFilter, setTableFilter] = useState('')
+  const [search, setSearch]             = useState('')
+  const [tableFilter, setTableFilter]   = useState('')
   const [actionFilter, setActionFilter] = useState<AuditAction | ''>('')
-  const [fromDate, setFromDate]       = useState('')
-  const [toDate, setToDate]           = useState('')
-  const [page, setPage]               = useState(1)
+  const [fromDate, setFromDate]         = useState('')
+  const [toDate, setToDate]             = useState('')
+  const [page, setPage]                 = useState(1)
 
-  const filtered = useMemo(() => {
-    return MOCK_LOGS.filter(log => {
-      if (search && !log.changedBy.includes(search) && !log.changedByName.toLowerCase().includes(search.toLowerCase())) return false
-      if (tableFilter && log.tableName !== tableFilter) return false
-      if (actionFilter && log.action !== actionFilter) return false
-      if (fromDate && new Date(log.changedAt) < new Date(fromDate)) return false
-      if (toDate && new Date(log.changedAt) > new Date(toDate + 'T23:59:59Z')) return false
-      return true
-    })
-  }, [search, tableFilter, actionFilter, fromDate, toDate])
+  const { data: logs = [], isLoading, refetch } = useApiData<AuditLog[]>({
+    url: '/audit-logs',
+    params: {
+      search:    search    || undefined,
+      table:     tableFilter  || undefined,
+      action:    actionFilter || undefined,
+      fromDate:  fromDate  || undefined,
+      toDate:    toDate    || undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    },
+    queryKey: ['audit-logs', search, tableFilter, actionFilter, fromDate, toDate, page],
+  })
+
+  // Client-side fallback filtering (in case the backend returns all and ignores params)
+  const filtered = useMemo(() => logs.filter(log => {
+    if (search && !log.changedBy.includes(search) && !log.changedByName.toLowerCase().includes(search.toLowerCase())) return false
+    if (tableFilter  && log.tableName !== tableFilter) return false
+    if (actionFilter && log.action    !== actionFilter) return false
+    if (fromDate && new Date(log.changedAt) < new Date(fromDate)) return false
+    if (toDate   && new Date(log.changedAt) > new Date(toDate + 'T23:59:59Z')) return false
+    return true
+  }), [logs, search, tableFilter, actionFilter, fromDate, toDate])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const clearFilters = () => {
     setSearch(''); setTableFilter(''); setActionFilter(''); setFromDate(''); setToDate(''); setPage(1)
@@ -231,11 +164,11 @@ export function AuditLogsPage() {
   const hasFilter = search || tableFilter || actionFilter || fromDate || toDate
 
   const counts = useMemo(() => ({
-    total: MOCK_LOGS.length,
-    create: MOCK_LOGS.filter(l => l.action === 'Create').length,
-    update: MOCK_LOGS.filter(l => l.action === 'Update').length,
-    delete: MOCK_LOGS.filter(l => l.action === 'Delete').length,
-  }), [])
+    total:  logs.length,
+    create: logs.filter(l => l.action === 'Create').length,
+    update: logs.filter(l => l.action === 'Update').length,
+    delete: logs.filter(l => l.action === 'Delete').length,
+  }), [logs])
 
   return (
     <div className="space-y-5">
@@ -290,7 +223,7 @@ export function AuditLogsPage() {
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           >
             <option value="">All Tables</option>
-            {TABLE_NAMES.map(t => <option key={t} value={t}>{t}</option>)}
+            {KNOWN_TABLES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
 
           <select
@@ -327,10 +260,10 @@ export function AuditLogsPage() {
             {hasFilter ? ' (filtered)' : ''}
           </span>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => refetch()}
             className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
           </button>
         </div>
 

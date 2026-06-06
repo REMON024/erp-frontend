@@ -1,128 +1,135 @@
 'use client'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { DataState } from '@/components/ui/DataState'
+import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, ArrowUpCircle, AlertTriangle } from 'lucide-react'
-import { STOCK_ITEMS } from './StockLevelsPage'
+import { Plus, PackageCheck, AlertTriangle } from 'lucide-react'
+import api from '@/lib/api'
 
-const PROJECTS = [
-  { id: 'p1', name: 'Block-A — Mirpur 12' },
-  { id: 'p2', name: 'Block-B — Mohammadpur' },
-  { id: 'p3', name: 'Block-C — Uttara Sector 7' },
-  { id: 'p4', name: 'Block-D — Bashundhara' },
-]
-
-interface IssueRecord {
-  id: string; material_id: string; project_id: string; qty: number
-  date: string; issued_by: string; purpose: string; notes: string
+interface Material { id: number; materialName: string; unit: string; currentStock: number }
+interface Project  { id: number; projectName: string; projectCode: string }
+interface BudgetLine { materialId: number; budgetedQty: number; issuedQty: number; unit: string }
+interface StockTxn {
+  id: number; materialName: string; unit: string; projectName?: string
+  qty: number; totalCost: number; referenceNo?: string; transactionDate: string
 }
 
-const MOCK: IssueRecord[] = [
-  { id: 'is1',  material_id: 'm1', project_id: 'p1', qty: 200, date: '2025-01-20', issued_by: 'Site Manager',  purpose: 'Foundation work',    notes: '' },
-  { id: 'is2',  material_id: 'm3', project_id: 'p1', qty: 5000,date: '2025-01-22', issued_by: 'Site Manager',  purpose: 'Brick masonry',      notes: '' },
-  { id: 'is3',  material_id: 'm2', project_id: 'p1', qty: 8,   date: '2025-02-01', issued_by: 'Store Keeper',  purpose: 'Column reinforcement',notes: '' },
-  { id: 'is4',  material_id: 'm1', project_id: 'p2', qty: 150, date: '2025-03-10', issued_by: 'Site Manager',  purpose: 'Plaster work',       notes: '' },
-  { id: 'is5',  material_id: 'm4', project_id: 'p1', qty: 700, date: '2025-03-15', issued_by: 'Store Keeper',  purpose: 'Concrete mix',       notes: '' },
-  { id: 'is6',  material_id: 'm5', project_id: 'p2', qty: 300, date: '2025-04-01', issued_by: 'Site Manager',  purpose: 'Concrete mix',       notes: '' },
-  { id: 'is7',  material_id: 'm8', project_id: 'p3', qty: 600, date: '2025-04-20', issued_by: 'Electrician',   purpose: 'Electrical wiring',  notes: 'Floor 1-3' },
-  { id: 'is8',  material_id: 'm6', project_id: 'p1', qty: 300, date: '2025-05-05', issued_by: 'Store Keeper',  purpose: 'Floor tiling',       notes: '' },
-  { id: 'is9',  material_id: 'm9', project_id: 'p2', qty: 180, date: '2025-05-12', issued_by: 'Plumber',       purpose: 'Plumbing install',   notes: '' },
-  { id: 'is10', material_id: 'm7', project_id: 'p3', qty: 80,  date: '2025-06-01', issued_by: 'Site Manager',  purpose: 'Wall painting',      notes: '' },
-]
+function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
+function isoToday() { return new Date().toISOString().split('T')[0] }
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
 const schema = z.object({
-  material_id: z.string().min(1, 'Required'),
-  project_id:  z.string().min(1, 'Required'),
-  qty:         z.coerce.number().min(1, 'Required'),
-  date:        z.string().min(1, 'Required'),
-  issued_by:   z.string().min(1, 'Required'),
-  purpose:     z.string().min(1, 'Required'),
-  notes:       z.string().optional(),
+  materialId:      z.coerce.number().min(1, 'Required'),
+  projectId:       z.coerce.number().min(1, 'Required'),
+  qty:             z.coerce.number().min(0.01, 'Required'),
+  transactionDate: z.string().min(1, 'Required'),
+  referenceNo:     z.string().optional(),
+  notes:           z.string().optional(),
 })
 type Form = z.infer<typeof schema>
 
-function getMaterial(id: string) { return STOCK_ITEMS.find(s => s.id === id) }
-function getProject(id: string)  { return PROJECTS.find(p => p.id === id) }
-
-function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: IssueRecord) => void }) {
+function IssueModal({ materials, projects, onClose, onSaved }: {
+  materials: Material[]; projects: Project[]; onClose: () => void; onSaved: () => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const [err, setErr]       = useState('')
   const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { date: new Date().toISOString().split('T')[0] },
+    defaultValues: { transactionDate: isoToday() },
   })
-  const selectedId = watch('material_id')
-  const qty = watch('qty')
-  const mat = getMaterial(selectedId)
-  const insufficient = mat && qty > mat.current_stock
+
+  const selectedMat  = materials.find(m => m.id === Number(watch('materialId')))
+  const watchedMat   = Number(watch('materialId'))
+  const watchedProj  = Number(watch('projectId'))
+  const watchedQty   = Number(watch('qty')) || 0
+
+  const { data: budgetLines = [] } = useApiData<BudgetLine[]>({
+    url: `/cost-estimates/material-budget/${watchedProj || '0'}`,
+    queryKey: ['material-budget-v2', String(watchedProj)],
+    enabled: !!watchedProj,
+  })
+  const budgetLine   = budgetLines.find(l => l.materialId === watchedMat)
+  const remaining    = budgetLine ? budgetLine.budgetedQty - budgetLine.issuedQty : null
+  const wouldExceed  = budgetLine && budgetLine.budgetedQty > 0 && (budgetLine.issuedQty + watchedQty) > budgetLine.budgetedQty
+
+  const onSubmit = async (d: Form) => {
+    setSaving(true); setErr('')
+    try {
+      await api.post('/stock-transactions/issue', d)
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? 'Save failed')
+    } finally { setSaving(false) }
+  }
 
   return (
     <Modal open onClose={onClose} title="Issue Material to Project" size="md">
-      <form onSubmit={handleSubmit(d => {
-        onAdd({ id: `is${Date.now()}`, ...d, notes: d.notes ?? '' })
-        onClose()
-      })} className="space-y-4 p-1">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Material</label>
-            <select {...register('material_id')} className={inp}>
-              <option value="">Select material</option>
-              {STOCK_ITEMS.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
-            </select>
-            {errors.material_id && <p className="text-xs text-red-600 mt-1">{errors.material_id.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Project</label>
-            <select {...register('project_id')} className={inp}>
-              <option value="">Select project</option>
-              {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            {errors.project_id && <p className="text-xs text-red-600 mt-1">{errors.project_id.message}</p>}
-          </div>
+      <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
+        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        <div>
+          <label className={lbl}>Material <span className="text-red-500">*</span></label>
+          <select {...register('materialId')} className={inp}>
+            <option value="">Select material</option>
+            {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} — {m.currentStock.toLocaleString()} {m.unit} available</option>)}
+          </select>
+          {errors.materialId && <p className="text-xs text-red-600 mt-1">{errors.materialId.message}</p>}
         </div>
-
-        {mat && (
-          <div className={`border rounded-lg px-4 py-2.5 text-sm ${insufficient ? 'bg-red-50 border-red-200 text-red-800' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
-            {insufficient
-              ? <span className="flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" /> Insufficient stock — available: <strong>{mat.current_stock.toLocaleString()} {mat.unit}</strong></span>
-              : <>Available stock: <strong>{mat.current_stock.toLocaleString()} {mat.unit}</strong> · Reorder level: {mat.reorder_level.toLocaleString()}</>
-            }
+        {selectedMat && (
+          <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
+            Available: <strong>{selectedMat.currentStock.toLocaleString()} {selectedMat.unit}</strong>
           </div>
         )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Quantity to Issue</label>
-            <input type="number" {...register('qty')} className={inp} placeholder="0" />
-            {errors.qty && <p className="text-xs text-red-600 mt-1">{errors.qty.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Date</label>
-            <input type="date" {...register('date')} className={inp} />
-          </div>
+        <div>
+          <label className={lbl}>Project <span className="text-red-500">*</span></label>
+          <select {...register('projectId')} className={inp}>
+            <option value="">Select project</option>
+            {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
+          </select>
+          {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Issued By</label>
-            <input {...register('issued_by')} className={inp} placeholder="Site Manager" />
-            {errors.issued_by && <p className="text-xs text-red-600 mt-1">{errors.issued_by.message}</p>}
+            <label className={lbl}>Quantity <span className="text-red-500">*</span></label>
+            <input type="number" step="any" {...register('qty')} className={inp} placeholder="0" />
+            {errors.qty && <p className="text-xs text-red-600 mt-1">{errors.qty.message}</p>}
+            {remaining !== null && !wouldExceed && (
+              <p className="text-xs text-gray-500 mt-1">
+                BOQ remaining: <span className="font-medium text-green-700">{remaining.toLocaleString()} {budgetLine?.unit}</span>
+              </p>
+            )}
+            {wouldExceed && (
+              <div className="flex items-start gap-1.5 mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-800">
+                  This would exceed the BOQ budget by{' '}
+                  <span className="font-semibold">
+                    {((budgetLine!.issuedQty + watchedQty) - budgetLine!.budgetedQty).toLocaleString()} {budgetLine?.unit}
+                  </span>. You can still proceed.
+                </p>
+              </div>
+            )}
           </div>
           <div>
-            <label className={lbl}>Purpose</label>
-            <input {...register('purpose')} className={inp} placeholder="Foundation work" />
-            {errors.purpose && <p className="text-xs text-red-600 mt-1">{errors.purpose.message}</p>}
+            <label className={lbl}>Date <span className="text-red-500">*</span></label>
+            <input type="date" {...register('transactionDate')} className={inp} />
           </div>
         </div>
         <div>
-          <label className={lbl}>Notes</label>
-          <input {...register('notes')} className={inp} placeholder="Optional notes" />
+          <label className={lbl}>Reference / Notes</label>
+          <input {...register('referenceNo')} className={inp} placeholder="ISS-..." />
         </div>
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium">Issue Material</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            {saving ? 'Saving…' : 'Issue Material'}
+          </button>
         </div>
       </form>
     </Modal>
@@ -130,116 +137,72 @@ function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: IssueRec
 }
 
 export function IssueToProjectPage() {
-  const [records, setRecords] = useState<IssueRecord[]>(MOCK)
-  const [showAdd, setShowAdd]  = useState(false)
-  const [filterProject, setFP] = useState('')
-  const [filterMat, setFM]     = useState('')
+  const qc = useQueryClient()
+  const [showNew, setShowNew] = useState(false)
 
-  const displayed = records.filter(r => {
-    if (filterProject && r.project_id !== filterProject) return false
-    if (filterMat && r.material_id !== filterMat) return false
-    return true
+  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
+  const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
+    url: '/stock-transactions',
+    params: { type: 'Out' },
+    queryKey: ['stock-out'],
   })
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['stock-out'] })
+    qc.invalidateQueries({ queryKey: ['materials'] })
+    qc.invalidateQueries({ queryKey: ['materials-list'] })
+    qc.invalidateQueries({ queryKey: ['material-budget-v2'] })
+    qc.invalidateQueries({ queryKey: ['material-budget-summary'] })
+    qc.invalidateQueries({ queryKey: ['cost-estimates'] })
+    qc.invalidateQueries({ queryKey: ['project-setup-checklist'] })
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Issue to Project</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Issue materials from central store to construction projects</p>
-        </div>
-        <button onClick={() => setShowAdd(true)} className="px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Issue Material
-        </button>
-      </div>
+      <PageHeader
+        title="Issue to Project"
+        subtitle="Issue materials from store to project sites"
+        action={
+          <button onClick={() => setShowNew(true)}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Issue Material
+          </button>
+        }
+      />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Total Issues</p><p className="text-2xl font-bold text-orange-600 mt-1">{records.length}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center"><ArrowUpCircle className="w-5 h-5 text-orange-600" /></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Projects Supplied</p><p className="text-2xl font-bold text-blue-600 mt-1">{new Set(records.map(r => r.project_id)).size}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><ArrowUpCircle className="w-5 h-5 text-blue-600" /></div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Materials Issued</p><p className="text-2xl font-bold text-purple-600 mt-1">{new Set(records.map(r => r.material_id)).size}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center"><ArrowUpCircle className="w-5 h-5 text-purple-600" /></div>
-        </div>
-      </div>
-
-      {/* Per-project material usage summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {PROJECTS.map(proj => {
-          const projIssues = records.filter(r => r.project_id === proj.id)
-          if (projIssues.length === 0) return null
-          const matTotals = STOCK_ITEMS.map(mat => {
-            const total = projIssues.filter(r => r.material_id === mat.id).reduce((s, r) => s + r.qty, 0)
-            return { mat, total }
-          }).filter(x => x.total > 0)
-          return (
-            <div key={proj.id} className="bg-white rounded-xl border border-gray-200 p-5">
-              <p className="font-semibold text-gray-900 mb-3">{proj.name}</p>
-              <div className="space-y-1.5">
-                {matTotals.map(({ mat, total }) => (
-                  <div key={mat.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{mat.name}</span>
-                    <span className="font-medium text-gray-900">{total.toLocaleString()} {mat.unit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Filter + table */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-          <h3 className="font-semibold text-gray-900 flex-1">Issue Records</h3>
-          <select value={filterProject} onChange={e => setFP(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">All Projects</option>
-            {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select value={filterMat} onChange={e => setFM(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">All Materials</option>
-            {STOCK_ITEMS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Date', 'Material', 'Project', 'Qty Issued', 'Unit', 'Issued By', 'Purpose', 'Notes'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {displayed.map(r => {
-              const mat = getMaterial(r.material_id)
-              const proj = getProject(r.project_id)
-              return (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-gray-500">{r.date}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{mat?.name}</td>
-                  <td className="px-4 py-3 text-gray-700 text-xs">{proj?.name}</td>
-                  <td className="px-4 py-3 font-bold text-orange-700">{r.qty.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-gray-500">{mat?.unit}</td>
-                  <td className="px-4 py-3 text-gray-500">{r.issued_by}</td>
-                  <td className="px-4 py-3 text-gray-700">{r.purpose}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{r.notes || '—'}</td>
+      <DataState loading={isLoading} error={error ? 'Failed to load issue history.' : null} onRetry={refetch}
+        empty={txns.length === 0} emptyMessage="No material issues yet.">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Material', 'Project', 'Date', 'Qty', 'Value', 'Reference'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {txns.map(t => (
+                  <tr key={t.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      <div className="flex items-center gap-2"><PackageCheck className="w-4 h-4 text-orange-500" />{t.materialName}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{t.projectName ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{t.transactionDate}</td>
+                    <td className="px-4 py-3 text-orange-600 font-semibold">−{t.qty.toLocaleString()} {t.unit}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(t.totalCost)}</td>
+                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{t.referenceNo ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </DataState>
 
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={r => setRecords(p => [r, ...p])} />}
+      {showNew && <IssueModal materials={materials} projects={projects} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }

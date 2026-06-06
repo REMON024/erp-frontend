@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { Search, RefreshCw, AlertCircle, Upload, Trash2, FileText, Download } from 'lucide-react'
 import api from '@/lib/api'
 import type { Document } from '@/types'
+import { useAuthStore } from '@/store/auth.store'
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
@@ -21,37 +22,52 @@ function fmtSize(bytes?: number) {
 }
 
 const uploadSchema = z.object({
-  file_name:    z.string().min(1, 'Required'),
   module_name:  z.string().min(1, 'Required'),
   reference_id: z.string().optional(),
-  file_type:    z.string().optional(),
 })
 type UploadForm = z.infer<typeof uploadSchema>
 
 function UploadModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
-  const [saving, setSaving] = useState(false)
-  const [err, setErr]       = useState('')
+  const { user }    = useAuthStore()
+  const [saving, setSaving]     = useState(false)
+  const [err, setErr]           = useState('')
+  const [file, setFile]         = useState<File | null>(null)
   const { register, handleSubmit, formState: { errors } } = useForm<UploadForm>({
     resolver: zodResolver(uploadSchema) as any,
-    defaultValues: { module_name: 'general', file_type: 'application/pdf' },
+    defaultValues: { module_name: 'general' },
   })
+
   const onSubmit = async (d: UploadForm) => {
+    if (!file) { setErr('Select a file to upload'); return }
     setSaving(true); setErr('')
     try {
-      await api.post('/documents/upload', { ...d, uploaded_by: 'u2', file_size: 102400 })
+      const formData = new FormData()
+      formData.append('file',         file)
+      formData.append('file_name',    file.name)
+      formData.append('module_name',  d.module_name)
+      formData.append('file_type',    file.type || 'application/octet-stream')
+      formData.append('file_size',    String(file.size))
+      formData.append('uploaded_by',  user?.id ?? '')
+      if (d.reference_id) formData.append('reference_id', d.reference_id)
+      await api.post('/documents/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
       onSaved(); onClose()
-    }
-    catch (e: any) { setErr(e.response?.data?.message ?? 'Failed to upload') }
-    finally { setSaving(false) }
+    } catch (e: any) {
+      setErr(e.response?.data?.message ?? 'Failed to upload')
+    } finally { setSaving(false) }
   }
+
   return (
     <Modal open onClose={onClose} title="Upload Document" size="sm">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div>
-          <label className={lbl}>File Name</label>
-          <input {...register('file_name')} className={inp} placeholder="report-q4-2025.pdf" />
-          {errors.file_name && <p className="text-xs text-red-600 mt-1">{errors.file_name.message}</p>}
+          <label className={lbl}>File <span className="text-red-500">*</span></label>
+          <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+            <Upload className="w-6 h-6 text-gray-400 mb-1" />
+            <span className="text-sm text-gray-500">{file ? file.name : 'Click to choose file'}</span>
+            {file && <span className="text-xs text-gray-400 mt-0.5">{fmtSize(file.size)}</span>}
+            <input type="file" className="sr-only" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+          </label>
         </div>
         <div>
           <label className={lbl}>Module</label>
@@ -61,17 +77,7 @@ function UploadModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
         </div>
         <div>
           <label className={lbl}>Reference ID (optional)</label>
-          <input {...register('reference_id')} className={inp} placeholder="p1 / pr1 / …" />
-        </div>
-        <div>
-          <label className={lbl}>File Type</label>
-          <select {...register('file_type')} className={inp}>
-            <option value="application/pdf">PDF</option>
-            <option value="image/jpeg">JPEG Image</option>
-            <option value="image/png">PNG Image</option>
-            <option value="application/vnd.ms-excel">Excel</option>
-            <option value="application/msword">Word</option>
-          </select>
+          <input {...register('reference_id')} className={inp} placeholder="project ID / order ID / …" />
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>

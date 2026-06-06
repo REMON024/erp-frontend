@@ -41,6 +41,11 @@ function isRouteActive(route: string | null, pathname: string): boolean {
   return pathname === route || pathname.startsWith(route + '/')
 }
 
+// SuperAdmin manages tenants, not the operational modules — fixed nav.
+const SUPER_ADMIN_MENUS: MenuDto[] = [
+  { id: -1, name: 'Companies', code: 'COMPANIES', route: '/admin/companies', icon: 'Building2', parentId: null, sortOrder: 1, isActive: true, children: [] },
+]
+
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
   const { user, logout, isAuthenticated } = useAuthStore()
@@ -51,6 +56,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   // Load user-specific menus after authentication
   useEffect(() => {
     if (!isAuthenticated) return
+
+    // SuperAdmin gets a fixed tenant-management nav, not the operational menus.
+    if (user?.role === 'super_admin') {
+      setNavMenus(SUPER_ADMIN_MENUS)
+      return
+    }
+
     api.get<MenuDto[]>('/menus/my-menus')
       .then(res => {
         setNavMenus(res.data)
@@ -61,7 +73,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         setOpen(active)
       })
       .catch(() => { /* keep nav empty, don't crash */ })
-  }, [isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.role]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = (code: string) =>
     setOpen(prev => prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code])

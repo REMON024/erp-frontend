@@ -1,20 +1,22 @@
 import { Role } from '@/types'
 
-// Coarse module access kept for legacy guards; sidebar uses API-driven permissions
+// Coarse module access kept for legacy guards; sidebar uses API-driven permissions.
+// company_admin has full access within its own tenant (data isolation is enforced server-side).
 const MODULE_ACCESS: Record<string, Role[]> = {
-  dashboard:    ['super_admin', 'operations', 'inventory'],
-  projects:     ['super_admin', 'operations', 'inventory'],
-  investors:    ['super_admin', 'operations'],
-  purchase:     ['super_admin', 'operations', 'inventory'],
-  inventory:    ['super_admin', 'operations', 'inventory'],
-  sales:        ['super_admin', 'operations'],
-  accounting:   ['super_admin', 'operations'],
-  reports:      ['super_admin', 'operations', 'inventory'],
-  users:        ['super_admin'],
-  roles:        ['super_admin'],
-  menus:        ['super_admin'],
-  'audit-logs': ['super_admin'],
-  settings:     ['super_admin', 'operations', 'inventory'],
+  dashboard:    ['company_admin', 'operations', 'inventory'],
+  projects:     ['company_admin', 'operations', 'inventory'],
+  investors:    ['company_admin', 'operations'],
+  purchase:     ['company_admin', 'operations', 'inventory'],
+  inventory:    ['company_admin', 'operations', 'inventory'],
+  sales:        ['company_admin', 'operations'],
+  accounting:   ['company_admin', 'operations'],
+  reports:      ['company_admin', 'operations', 'inventory'],
+  users:        ['company_admin'],
+  roles:        ['company_admin'],
+  menus:        ['company_admin'],
+  'audit-logs': ['company_admin'],
+  settings:     ['company_admin', 'operations', 'inventory'],
+  companies:    ['super_admin'],
 }
 
 export function canAccess(module: string, role: Role): boolean {

@@ -1,301 +1,342 @@
 'use client'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Plus, ShoppingCart, FileText } from 'lucide-react'
+import { PageHeader } from '@/components/ui/PageHeader'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { DataState } from '@/components/ui/DataState'
+import { useApiData } from '@/hooks/useApiData'
+import { useForm, useFieldArray } from 'react-hook-form'
+import { Plus, Trash2, ShoppingCart, Eye, CheckCircle, AlertTriangle } from 'lucide-react'
+import api from '@/lib/api'
 
-const PROJECTS = [
-  { id: 'p1', name: 'Block-A — Mirpur 12' },
-  { id: 'p2', name: 'Block-B — Mohammadpur' },
-  { id: 'p3', name: 'Block-C — Uttara Sector 7' },
-  { id: 'p4', name: 'Block-D — Bashundhara' },
-]
-
-const VENDORS = ['Bashundhara Cement', 'BSRM Steel', 'Meghna Bricks', 'Unique Tiles', 'Legal Aid BD', 'Supervisor Alam & Co', 'Prime Electric', 'Other']
-const MATERIAL_ITEMS = ['Cement (Bag)', 'Steel Rod (Ton)', 'Bricks (Pcs)', 'Sand (CFT)', 'Tiles (Sqft)', 'Gravel (CFT)', 'Paint (Litre)', 'Plumbing Pipe (Ft)', 'Electric Wire (Mtr)', 'Glass (Sqft)']
-const CONTRACT_ITEMS = ['Masonry Contract', 'Plumbing Contract', 'Electrical Contract', 'Painting Contract', 'Supervisor Contract', 'Legal Fees', 'Architect Fees', 'Design Fees']
-const OTHER_ITEMS    = ['Land Registration', 'Utility Connection', 'Transport & Logistics', 'Equipment Rental', 'Security Service', 'Miscellaneous']
-
-export type PurchaseCategory = 'material' | 'contract' | 'other'
-
-export interface PurchaseRecord {
-  id: string; project_id: string; category: PurchaseCategory
-  item: string; quantity: number; unit: string; rate: number; amount: number
-  vendor: string; date: string; notes: string; posted_to_inventory: boolean
+interface Vendor   { id: number; vendorName: string }
+interface Project  { id: number; projectName: string; projectCode: string }
+interface Material { id: number; materialName: string; unit: string; averageCost: number }
+interface PoItem   { id: number; materialId: number; materialName: string; qty: number; unitPrice: number; amount: number }
+interface PurchaseOrder {
+  id: number; poNumber: string; projectId?: number; projectName?: string
+  vendorId: number; vendorName: string; poDate: string; deliveryDate?: string
+  totalAmount: number; status: string; items: PoItem[]
 }
 
-export const PURCHASES: PurchaseRecord[] = [
-  { id: 'pur1', project_id: 'p1', category: 'material',  item: 'Cement (Bag)',         quantity: 500,  unit: 'Bag',  rate: 480,    amount: 240000,   vendor: 'Bashundhara Cement', date: '2025-11-01', notes: 'Foundation work',   posted_to_inventory: true },
-  { id: 'pur2', project_id: 'p1', category: 'material',  item: 'Steel Rod (Ton)',       quantity: 10,   unit: 'Ton',  rate: 80000,  amount: 800000,   vendor: 'BSRM Steel',         date: '2025-11-03', notes: 'Column reinforcement', posted_to_inventory: true },
-  { id: 'pur3', project_id: 'p1', category: 'contract',  item: 'Masonry Contract',      quantity: 1,    unit: 'Job',  rate: 350000, amount: 350000,   vendor: 'Supervisor Alam & Co', date: '2025-11-10', notes: 'Phase 1 masonry', posted_to_inventory: false },
-  { id: 'pur4', project_id: 'p1', category: 'other',     item: 'Land Registration',     quantity: 1,    unit: 'Job',  rate: 120000, amount: 120000,   vendor: 'Legal Aid BD',       date: '2025-10-20', notes: '',                  posted_to_inventory: false },
-  { id: 'pur5', project_id: 'p2', category: 'material',  item: 'Bricks (Pcs)',          quantity: 10000,unit: 'Pcs',  rate: 12,     amount: 120000,   vendor: 'Meghna Bricks',      date: '2025-11-15', notes: 'Wall construction',  posted_to_inventory: true },
-  { id: 'pur6', project_id: 'p2', category: 'material',  item: 'Sand (CFT)',            quantity: 500,  unit: 'CFT',  rate: 35,     amount: 17500,    vendor: 'Other',              date: '2025-11-16', notes: '',                  posted_to_inventory: true },
-  { id: 'pur7', project_id: 'p3', category: 'contract',  item: 'Electrical Contract',   quantity: 1,    unit: 'Job',  rate: 600000, amount: 600000,   vendor: 'Prime Electric',     date: '2025-12-01', notes: 'Full electrical',   posted_to_inventory: false },
-  { id: 'pur8', project_id: 'p3', category: 'material',  item: 'Cement (Bag)',          quantity: 800,  unit: 'Bag',  rate: 480,    amount: 384000,   vendor: 'Bashundhara Cement', date: '2025-12-05', notes: '',                  posted_to_inventory: true },
-]
-
-const UNITS: Record<PurchaseCategory, string[]> = {
-  material: ['Bag', 'Ton', 'Pcs', 'CFT', 'Sqft', 'Litre', 'Mtr', 'Ft', 'Kg'],
-  contract: ['Job', 'Lump Sum', 'Month'],
-  other:    ['Job', 'Lump Sum', 'Unit'],
+const STATUS_COLORS: Record<string, string> = {
+  Draft:     'bg-gray-100 text-gray-600',
+  Approved:  'bg-green-100 text-green-700',
+  Received:  'bg-blue-100 text-blue-700',
+  Cancelled: 'bg-red-100 text-red-600',
 }
-
-const CAT_COLORS: Record<PurchaseCategory, string> = {
-  material: 'bg-blue-100 text-blue-700',
-  contract: 'bg-purple-100 text-purple-700',
-  other:    'bg-gray-100 text-gray-600',
-}
+function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
+function isoToday() { return new Date().toISOString().split('T')[0] }
 
 const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
 const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
-const schema = z.object({
-  project_id: z.string().min(1, 'Required'),
-  category:   z.enum(['material', 'contract', 'other']),
-  item:       z.string().min(1, 'Required'),
-  quantity:   z.coerce.number().min(0.01, 'Required'),
-  unit:       z.string().min(1, 'Required'),
-  rate:       z.coerce.number().min(1, 'Required'),
-  vendor:     z.string().min(1, 'Required'),
-  date:       z.string().min(1, 'Required'),
-  notes:      z.string().optional(),
-})
-type Form = z.infer<typeof schema>
+interface MaterialBudgetV2Line {
+  materialId: number; budgetedCost: number; committedCost: number; actualCost: number
+}
 
-function AddModal({ onClose, onAdd }: { onClose: () => void; onAdd: (r: PurchaseRecord) => void }) {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
-    resolver: zodResolver(schema) as any,
-    defaultValues: { category: 'material', date: new Date().toISOString().split('T')[0] },
+interface PoForm {
+  vendorId: string; projectId: string; poDate: string; deliveryDate: string
+  items: { materialId: string; qty: string; unitPrice: string }[]
+}
+
+function PoModal({ vendors, projects, materials, onClose, onSaved }: {
+  vendors: Vendor[]; projects: Project[]; materials: Material[]; onClose: () => void; onSaved: () => void
+}) {
+  const [err, setErr] = useState('')
+  const [saving, setSaving] = useState(false)
+  const { register, control, handleSubmit, watch } = useForm<PoForm>({
+    defaultValues: { poDate: isoToday(), deliveryDate: '', items: [{ materialId: '', qty: '', unitPrice: '' }] },
   })
-  const cat = watch('category') as PurchaseCategory
-  const qty = watch('quantity') || 0
-  const rate = watch('rate') || 0
-  const itemList = cat === 'material' ? MATERIAL_ITEMS : cat === 'contract' ? CONTRACT_ITEMS : OTHER_ITEMS
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' })
+  const items      = watch('items')
+  const projectId  = watch('projectId')
+  const total      = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0)
+
+  const { data: budgetLines = [] } = useApiData<MaterialBudgetV2Line[]>({
+    url: `/cost-estimates/material-budget/${projectId || '0'}`,
+    queryKey: ['material-budget-v2', projectId],
+    enabled: !!projectId,
+  })
+
+  const budgetByMaterial = Object.fromEntries(budgetLines.map(l => [l.materialId, l]))
+
+  const budgetWarnings = items
+    .map((item, i) => {
+      if (!item.materialId || !projectId) return null
+      const line      = budgetByMaterial[Number(item.materialId)]
+      if (!line || line.budgetedCost === 0) return null
+      const newAmount = (parseFloat(item.qty) || 0) * (parseFloat(item.unitPrice) || 0)
+      const projected = line.committedCost + newAmount
+      if (projected > line.budgetedCost) {
+        const mat = materials.find(m => m.id === Number(item.materialId))
+        return { index: i, name: mat?.materialName ?? 'Material', projected, budget: line.budgetedCost }
+      }
+      return null
+    })
+    .filter(Boolean) as { index: number; name: string; projected: number; budget: number }[]
+
+  const onSubmit = async (d: PoForm) => {
+    if (!d.vendorId) { setErr('Vendor is required.'); return }
+    const validItems = d.items.filter(i => i.materialId && parseFloat(i.qty) > 0)
+    if (validItems.length === 0) { setErr('At least one valid line item is required.'); return }
+    setSaving(true); setErr('')
+    try {
+      await api.post('/purchase-orders', {
+        vendorId:  Number(d.vendorId),
+        projectId: d.projectId ? Number(d.projectId) : undefined,
+        poDate:    d.poDate,
+        deliveryDate: d.deliveryDate || undefined,
+        items: validItems.map(i => ({ materialId: Number(i.materialId), qty: Number(i.qty), unitPrice: Number(i.unitPrice) })),
+      })
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? 'Save failed')
+    } finally { setSaving(false) }
+  }
 
   return (
-    <Modal open onClose={onClose} title="Add Purchase" size="md">
-      <form onSubmit={handleSubmit(d => {
-        onAdd({
-          id: `pur${Date.now()}`, ...d, notes: d.notes ?? '',
-          amount: d.quantity * d.rate,
-          posted_to_inventory: d.category === 'material',
-        })
-        onClose()
-      })} className="space-y-4 p-1">
+    <Modal open onClose={onClose} title="New Purchase Order" size="lg">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={lbl}>Vendor <span className="text-red-500">*</span></label>
+            <select {...register('vendorId')} className={inp}>
+              <option value="">Select vendor</option>
+              {vendors.map(v => <option key={v.id} value={v.id}>{v.vendorName}</option>)}
+            </select>
+          </div>
           <div>
             <label className={lbl}>Project</label>
-            <select {...register('project_id')} className={inp}>
-              <option value="">Select project</option>
-              {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            {errors.project_id && <p className="text-xs text-red-600 mt-1">{errors.project_id.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Category</label>
-            <select {...register('category')} className={inp}>
-              <option value="material">Material</option>
-              <option value="contract">Contract / Service</option>
-              <option value="other">Other Cost</option>
+            <select {...register('projectId')} className={inp}>
+              <option value="">No specific project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </select>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Item / Description</label>
-            <select {...register('item')} className={inp}>
-              <option value="">Select item</option>
-              {itemList.map(i => <option key={i}>{i}</option>)}
-            </select>
-            {errors.item && <p className="text-xs text-red-600 mt-1">{errors.item.message}</p>}
+            <label className={lbl}>PO Date</label>
+            <input type="date" {...register('poDate')} className={inp} />
           </div>
           <div>
-            <label className={lbl}>Vendor / Supplier</label>
-            <select {...register('vendor')} className={inp}>
-              <option value="">Select vendor</option>
-              {VENDORS.map(v => <option key={v}>{v}</option>)}
-            </select>
+            <label className={lbl}>Delivery Date</label>
+            <input type="date" {...register('deliveryDate')} className={inp} />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={lbl}>Quantity</label>
-            <input type="number" step="0.01" {...register('quantity')} className={inp} />
-            {errors.quantity && <p className="text-xs text-red-600 mt-1">{errors.quantity.message}</p>}
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">Line Items</label>
+            <button type="button" onClick={() => append({ materialId: '', qty: '', unitPrice: '' })}
+              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              <Plus className="w-3.5 h-3.5" /> Add Item
+            </button>
           </div>
-          <div>
-            <label className={lbl}>Unit</label>
-            <select {...register('unit')} className={inp}>
-              {UNITS[cat].map(u => <option key={u}>{u}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={lbl}>Rate (৳)</label>
-            <input type="number" {...register('rate')} className={inp} />
-            {errors.rate && <p className="text-xs text-red-600 mt-1">{errors.rate.message}</p>}
+          <div className="border border-gray-200 rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[500px] text-xs">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-2 py-2 text-left font-semibold text-gray-500 w-[45%]">Material</th>
+                  <th className="px-2 py-2 text-left font-semibold text-gray-500">Qty</th>
+                  <th className="px-2 py-2 text-left font-semibold text-gray-500">Unit Price</th>
+                  <th className="px-2 py-2 w-8" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {fields.map((field, i) => (
+                  <tr key={field.id}>
+                    <td className="px-2 py-1.5">
+                      <select {...register(`items.${i}.materialId`)} className={inp + ' text-xs py-1.5'}>
+                        <option value="">Select…</option>
+                        {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
+                      </select>
+                    </td>
+                    <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.qty`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
+                    <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.unitPrice`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
+                    <td className="px-2 py-1.5 text-center">
+                      {fields.length > 1 && (
+                        <button type="button" onClick={() => remove(i)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-50 border-t border-gray-200">
+                <tr>
+                  <td colSpan={2} className="px-2 py-2 text-xs font-semibold text-gray-600">Total</td>
+                  <td colSpan={2} className="px-2 py-2 text-xs font-bold text-gray-900">{fmt(total)}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center justify-between">
-          <span className="text-sm text-blue-700 font-medium">Total Amount</span>
-          <span className="text-lg font-bold text-blue-800">৳{(qty * rate).toLocaleString('en-BD')}</span>
-        </div>
-        {cat === 'material' && (
-          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-xs text-green-800">
-            Material purchase will automatically create a Stock-In entry in Inventory.
+
+        {budgetWarnings.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+              <AlertTriangle className="w-3.5 h-3.5" /> Budget Warning
+            </div>
+            {budgetWarnings.map(w => (
+              <p key={w.index} className="text-xs text-amber-700">
+                <span className="font-medium">{w.name}</span>: committing {fmt(w.projected)} exceeds BOQ budget of {fmt(w.budget)}. You can still proceed.
+              </p>
+            ))}
           </div>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Date</label>
-            <input type="date" {...register('date')} className={inp} />
-          </div>
-          <div>
-            <label className={lbl}>Notes</label>
-            <input {...register('notes')} className={inp} placeholder="Optional notes" />
-          </div>
-        </div>
-        <div className="flex justify-end gap-3 pt-2">
+
+        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Add Purchase</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            {saving ? 'Saving…' : 'Create PO'}
+          </button>
         </div>
       </form>
     </Modal>
   )
 }
 
-function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
-
 export function PurchasePage() {
-  const [records, setRecords]     = useState<PurchaseRecord[]>(PURCHASES)
-  const [showAdd, setShowAdd]     = useState(false)
-  const [filterProject, setFP]    = useState('')
-  const [filterCat, setFC]        = useState<string>('')
+  const qc = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState('')
+  const [showNew, setShowNew] = useState(false)
+  const [viewing, setViewing] = useState<PurchaseOrder | null>(null)
 
-  const displayed = records.filter(r =>
-    (!filterProject || r.project_id === filterProject) &&
-    (!filterCat     || r.category   === filterCat)
-  )
+  const { data: vendors = [] }   = useApiData<Vendor[]>({ url: '/vendors', queryKey: ['vendors-list'] })
+  const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
 
-  const totalMaterial = records.filter(r => r.category === 'material').reduce((s, r) => s + r.amount, 0)
-  const totalContract = records.filter(r => r.category === 'contract').reduce((s, r) => s + r.amount, 0)
-  const totalOther    = records.filter(r => r.category === 'other').reduce((s, r) => s + r.amount, 0)
-  const grand         = totalMaterial + totalContract + totalOther
+  const { data: orders = [], isLoading, error, refetch } = useApiData<PurchaseOrder[]>({
+    url: '/purchase-orders',
+    params: { search: search || undefined, status: status || undefined },
+    queryKey: ['purchase-orders', search, status],
+  })
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['purchase-orders'] })
+    qc.invalidateQueries({ queryKey: ['pos-list'] })
+    qc.invalidateQueries({ queryKey: ['material-budget-v2'] })
+    qc.invalidateQueries({ queryKey: ['material-budget-summary'] })
+  }
+
+  const approve = async (id: number) => {
+    try { await api.post(`/purchase-orders/${id}/approve`); invalidate() } catch { /* noop */ }
+  }
+
+  const totalValue = orders.reduce((s, o) => s + o.totalAmount, 0)
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Purchase Management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Record materials, contracts and other project expenditures</p>
+      <PageHeader
+        title="Purchase Orders"
+        subtitle="Create and manage purchase orders to vendors"
+        action={
+          <button onClick={() => setShowNew(true)}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New PO
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-sm text-gray-500">Total POs</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{orders.length}</p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add Purchase
-        </button>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-sm text-gray-500">Approved</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{orders.filter(o => o.status === 'Approved').length}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-sm text-gray-500">Total Value</p>
+          <p className="text-2xl font-bold text-indigo-600 mt-1">{fmt(totalValue)}</p>
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Expenditure', value: fmt(grand),         color: 'text-gray-900' },
-          { label: 'Materials',         value: fmt(totalMaterial), color: 'text-blue-600' },
-          { label: 'Contracts',         value: fmt(totalContract), color: 'text-purple-600' },
-          { label: 'Other Costs',       value: fmt(totalOther),    color: 'text-gray-600' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">{s.label}</p>
-            <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+      <SearchBar value={search} onChange={setSearch} placeholder="Search PO no or vendor…" onRefresh={refetch}>
+        <select value={status} onChange={e => setStatus(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">All Status</option>
+          {['Draft', 'Approved', 'Received', 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </SearchBar>
+
+      <DataState loading={isLoading} error={error ? 'Failed to load purchase orders.' : null} onRetry={refetch}
+        empty={orders.length === 0} emptyMessage="No purchase orders yet.">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['PO No.', 'Vendor', 'Project', 'Date', 'Items', 'Total', 'Status', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {orders.map(o => (
+                  <tr key={o.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600">
+                      <div className="flex items-center gap-1.5"><ShoppingCart className="w-3.5 h-3.5 text-gray-400" />{o.poNumber}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-900 text-sm">{o.vendorName}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{o.projectName ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{o.poDate}</td>
+                    <td className="px-4 py-3 text-gray-500 text-center">{o.items.length}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(o.totalAmount)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[o.status] ?? 'bg-gray-100 text-gray-600'}`}>{o.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setViewing(o)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
+                        {o.status === 'Draft' && (
+                          <button onClick={() => approve(o.id)} className="text-xs text-green-600 hover:text-green-700 font-medium hover:underline px-1">Approve</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
-
-      {/* Per-project breakdown */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {PROJECTS.map(proj => {
-          const recs = records.filter(r => r.project_id === proj.id)
-          const total = recs.reduce((s, r) => s + r.amount, 0)
-          if (!total) return null
-          const mat = recs.filter(r => r.category === 'material').reduce((s, r) => s + r.amount, 0)
-          const con = recs.filter(r => r.category === 'contract').reduce((s, r) => s + r.amount, 0)
-          const oth = recs.filter(r => r.category === 'other').reduce((s, r) => s + r.amount, 0)
-          return (
-            <div key={proj.id} className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-gray-900 text-sm">{proj.name}</p>
-                <span className="font-bold text-gray-900">{fmt(total)}</span>
-              </div>
-              <div className="flex gap-3 text-xs">
-                <span className="text-blue-600">Materials: {fmt(mat)}</span>
-                <span className="text-purple-600">Contracts: {fmt(con)}</span>
-                {oth > 0 && <span className="text-gray-500">Other: {fmt(oth)}</span>}
-              </div>
-              <div className="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden flex">
-                <div className="h-full bg-blue-500"   style={{ width: `${(mat/total)*100}%` }} />
-                <div className="h-full bg-purple-500" style={{ width: `${(con/total)*100}%` }} />
-                <div className="h-full bg-gray-400"   style={{ width: `${(oth/total)*100}%` }} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Table with filters */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-wrap">
-          <h3 className="font-semibold text-gray-900 flex-1">Purchase Records</h3>
-          <select value={filterProject} onChange={e => setFP(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">All Projects</option>
-            {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select value={filterCat} onChange={e => setFC(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-            <option value="">All Categories</option>
-            <option value="material">Material</option>
-            <option value="contract">Contract</option>
-            <option value="other">Other</option>
-          </select>
         </div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Date', 'Project', 'Category', 'Item', 'Qty', 'Unit', 'Rate', 'Amount', 'Vendor', 'Inventory'].map(h => (
-                <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {displayed.map(r => (
-              <tr key={r.id} className="hover:bg-gray-50">
-                <td className="px-3 py-3 text-gray-500 text-xs">{r.date}</td>
-                <td className="px-3 py-3 text-gray-700 text-xs">{PROJECTS.find(p => p.id === r.project_id)?.name.split(' — ')[0]}</td>
-                <td className="px-3 py-3">
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize ${CAT_COLORS[r.category]}`}>{r.category}</span>
-                </td>
-                <td className="px-3 py-3 font-medium text-gray-900">{r.item}</td>
-                <td className="px-3 py-3 text-gray-700">{r.quantity}</td>
-                <td className="px-3 py-3 text-gray-500">{r.unit}</td>
-                <td className="px-3 py-3 text-gray-700">{fmt(r.rate)}</td>
-                <td className="px-3 py-3 font-semibold text-gray-900">{fmt(r.amount)}</td>
-                <td className="px-3 py-3 text-gray-500 text-xs">{r.vendor}</td>
-                <td className="px-3 py-3">
-                  {r.posted_to_inventory
-                    ? <span className="text-xs text-green-600 font-semibold">✓ Stock-In</span>
-                    : <span className="text-xs text-gray-400">—</span>}
-                </td>
-              </tr>
-            ))}
-            {displayed.length === 0 && (
-              <tr><td colSpan={10} className="py-10 text-center text-gray-400">No purchase records found</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      </div>
+      </DataState>
 
-      {showAdd && <AddModal onClose={() => setShowAdd(false)} onAdd={r => setRecords(p => [r, ...p])} />}
+      {showNew && <PoModal vendors={vendors} projects={projects} materials={materials} onClose={() => setShowNew(false)} onSaved={invalidate} />}
+
+      {viewing && (
+        <Modal open onClose={() => setViewing(null)} title={`${viewing.poNumber} — ${viewing.vendorName}`} size="lg">
+          <div className="space-y-3">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[420px] text-sm border border-gray-200 rounded-lg overflow-hidden">
+                <thead className="bg-gray-50">
+                  <tr>{['Material', 'Qty', 'Unit Price', 'Amount'].map(h => (
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {viewing.items.map(it => (
+                    <tr key={it.id}>
+                      <td className="px-3 py-2 text-xs font-medium text-gray-900">{it.materialName}</td>
+                      <td className="px-3 py-2 text-xs text-gray-600">{it.qty}</td>
+                      <td className="px-3 py-2 text-xs text-gray-600">{fmt(it.unitPrice)}</td>
+                      <td className="px-3 py-2 text-xs font-semibold text-gray-900">{fmt(it.amount)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-50 font-semibold">
+                    <td colSpan={3} className="px-3 py-2 text-sm text-gray-700">Total</td>
+                    <td className="px-3 py-2 text-sm text-gray-900">{fmt(viewing.totalAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
