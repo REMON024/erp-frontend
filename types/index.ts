@@ -1,9 +1,9 @@
 // ─── Auth ───────────────────────────────────────────────────────────────────
 export type Role =
   | 'super_admin'
-  | 'company_admin'
   | 'operations'
   | 'inventory'
+  | 'engineer'
 
 export interface User {
   id: string
@@ -11,8 +11,11 @@ export interface User {
   lastName: string
   fullName: string
   email: string
-  role: Role
+  role: Role            // primary role (first of the set) — kept for legacy reads
   roleId: string
+  roles: Role[]         // full role set (multi-role union model)
+  roleIds: string[]
+  projects?: string[]   // assigned project ids (relevant when roles includes 'engineer')
   companyId?: number | null
   phoneNumber?: string | null
   isActive: boolean

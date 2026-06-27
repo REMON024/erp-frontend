@@ -6,12 +6,12 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
-import { Plus, Trash2, Edit2, Eye, CheckCircle, FileBarChart2 } from 'lucide-react'
+import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2 } from 'lucide-react'
 import api from '@/lib/api'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type BOQCategory = 'Civil' | 'Structural' | 'Architectural' | 'Electrical' | 'Plumbing' | 'HVAC' | 'Finishing' | 'Miscellaneous'
-type EstimateStatus = 'Draft' | 'Approved' | 'Revised'
+type EstimateStatus = 'Draft' | 'Approved' | 'Revised' | 'Rejected'
 
 interface Project  { id: number; projectCode: string; projectName: string }
 interface Material { id: number; materialName: string; materialCode: string; unit: string; category?: string }
@@ -33,6 +33,7 @@ const STATUS_COLORS: Record<EstimateStatus, string> = {
   Draft:    'bg-gray-100 text-gray-600',
   Approved: 'bg-green-100 text-green-700',
   Revised:  'bg-amber-100 text-amber-700',
+  Rejected: 'bg-red-100 text-red-700',
 }
 
 function fmt(n: number)  { return `৳${n.toLocaleString('en-BD')}` }
@@ -247,7 +248,7 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
 
         {materials.length === 0 && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            ⚠ No materials found in the master list. <a href="/dashboard/inventory/materials" className="underline font-medium">Add materials first</a> so you can link BOQ lines for budget tracking.
+            ⚠ No materials found in the master list. <a href="/inventory/materials" className="underline font-medium">Add materials first</a> so you can link BOQ lines for budget tracking.
           </div>
         )}
 
@@ -385,6 +386,12 @@ export function CostEstimatesPage() {
     try { await api.post(`/cost-estimates/${id}/approve`); invalidate() } catch { /* noop */ }
   }
 
+  const reject = async (id: number) => {
+    const reason = window.prompt('Reason for rejecting this estimate? (optional)')
+    if (reason === null) return // cancelled
+    try { await api.post(`/cost-estimates/${id}/reject`, { reason: reason || null }); invalidate() } catch { /* noop */ }
+  }
+
   const totalEstimated = estimates.reduce((s, e) => s + e.totalEstimated, 0)
   const totalActual    = estimates.reduce((s, e) => s + e.totalActual,    0)
   const overBudget     = estimates.filter(e => e.totalActual > e.totalEstimated && e.totalActual > 0).length
@@ -482,8 +489,12 @@ export function CostEstimatesPage() {
                           <button onClick={() => { setTarget(e); setModal('edit') }} title="Edit"
                             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
                           {e.status === 'Draft' && (
-                            <button onClick={() => approve(e.id)} title="Approve"
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
+                            <>
+                              <button onClick={() => approve(e.id)} title="Approve"
+                                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => reject(e.id)} title="Reject"
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><XCircle className="w-3.5 h-3.5" /></button>
+                            </>
                           )}
                         </div>
                       </td>

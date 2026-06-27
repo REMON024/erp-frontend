@@ -9,7 +9,8 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, FileText, XCircle } from 'lucide-react'
+import { Plus, FileText, XCircle, Printer } from 'lucide-react'
+import { printInvoice } from '@/utils/printUtils'
 import api from '@/lib/api'
 
 interface Customer { id: number; fullName: string }
@@ -238,12 +239,20 @@ export function InvoicesPage() {
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[i.status] ?? 'bg-gray-100 text-gray-600'}`}>{i.status}</span>
                     </td>
                     <td className="px-4 py-3">
-                      {(i.status === 'Draft' || i.status === 'Sent') && (
-                        <button onClick={() => cancelInvoice(i.id)} title="Cancel Invoice"
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                          <XCircle className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => printInvoice(i)}
+                          title="Print / Download PDF"
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Printer className="w-3.5 h-3.5" />
                         </button>
-                      )}
+                        {(i.status === 'Draft' || i.status === 'Sent') && (
+                          <button onClick={() => cancelInvoice(i.id)} title="Cancel Invoice"
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

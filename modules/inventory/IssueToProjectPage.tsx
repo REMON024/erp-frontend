@@ -28,6 +28,7 @@ const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 const schema = z.object({
   materialId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
+  warehouseId:     z.coerce.number().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
@@ -35,8 +36,8 @@ const schema = z.object({
 })
 type Form = z.infer<typeof schema>
 
-function IssueModal({ materials, projects, onClose, onSaved }: {
-  materials: Material[]; projects: Project[]; onClose: () => void; onSaved: () => void
+function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
+  materials: Material[]; projects: Project[]; warehouses: { id: number; name: string }[]; onClose: () => void; onSaved: () => void
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
@@ -94,6 +95,13 @@ function IssueModal({ materials, projects, onClose, onSaved }: {
           </select>
           {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
         </div>
+        <div>
+          <label className={lbl}>Warehouse <span className="text-gray-400 font-normal">(guards that warehouse's balance)</span></label>
+          <select {...register('warehouseId')} className={inp}>
+            <option value="">Unassigned (central store)</option>
+            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Quantity <span className="text-red-500">*</span></label>
@@ -142,6 +150,7 @@ export function IssueToProjectPage() {
 
   const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
   const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  const { data: warehouses = [] } = useApiData<{ id: number; name: string }[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
   const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
     url: '/stock-transactions',
     params: { type: 'Out' },
@@ -202,7 +211,7 @@ export function IssueToProjectPage() {
         </div>
       </DataState>
 
-      {showNew && <IssueModal materials={materials} projects={projects} onClose={() => setShowNew(false)} onSaved={invalidate} />}
+      {showNew && <IssueModal materials={materials} projects={projects} warehouses={warehouses} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }

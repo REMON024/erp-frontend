@@ -3,14 +3,13 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/utils/cn'
-import { useAuthStore } from '@/store/auth.store'
-import api from '@/lib/api'
+import { useAuthStore, type MenuNode } from '@/store/auth.store'
 import {
   LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
   Package, Receipt, BookOpen, PieChart, Users, Settings,
   ChevronDown, LogOut, BarChart2, Shield, Menu, ClipboardList,
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
-  DollarSign, Calendar, type LucideProps,
+  DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers, type LucideProps,
 } from 'lucide-react'
 
 // Map icon name strings (stored in DB) → Lucide components
@@ -19,17 +18,11 @@ const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   Package, Receipt, BookOpen, PieChart, Users, Settings,
   BarChart2, Shield, Menu, ClipboardList,
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
-  DollarSign, Calendar,
+  DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
 }
 // Settings stays in ICON_MAP so the DB icon string "Settings" resolves correctly
 const getIcon = (name: string | null): React.FC<LucideProps> =>
   (name && ICON_MAP[name]) ? ICON_MAP[name] : Menu
-
-interface MenuDto {
-  id: number; name: string; code: string; route: string | null
-  icon: string | null; parentId: number | null; sortOrder: number
-  isActive: boolean; children: MenuDto[]
-}
 
 interface SidebarProps {
   mobileOpen?: boolean
@@ -41,39 +34,20 @@ function isRouteActive(route: string | null, pathname: string): boolean {
   return pathname === route || pathname.startsWith(route + '/')
 }
 
-// SuperAdmin manages tenants, not the operational modules — fixed nav.
-const SUPER_ADMIN_MENUS: MenuDto[] = [
-  { id: -1, name: 'Companies', code: 'COMPANIES', route: '/admin/companies', icon: 'Building2', parentId: null, sortOrder: 1, isActive: true, children: [] },
-]
-
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
-  const { user, logout, isAuthenticated } = useAuthStore()
+  const { user, logout, menus } = useAuthStore()
 
-  const [navMenus, setNavMenus] = useState<MenuDto[]>([])
-  const [open, setOpen]         = useState<string[]>([])
+  const navMenus: MenuNode[] = menus
+  const [open, setOpen] = useState<string[]>([])
 
-  // Load user-specific menus after authentication
+  // Auto-expand parent menus that contain the current active route.
   useEffect(() => {
-    if (!isAuthenticated) return
-
-    // SuperAdmin gets a fixed tenant-management nav, not the operational menus.
-    if (user?.role === 'super_admin') {
-      setNavMenus(SUPER_ADMIN_MENUS)
-      return
-    }
-
-    api.get<MenuDto[]>('/menus/my-menus')
-      .then(res => {
-        setNavMenus(res.data)
-        // Auto-expand parent menus that contain the current active route
-        const active = res.data
-          .filter(m => m.children.some(c => isRouteActive(c.route, pathname)))
-          .map(m => m.code)
-        setOpen(active)
-      })
-      .catch(() => { /* keep nav empty, don't crash */ })
-  }, [isAuthenticated, user?.role]) // eslint-disable-line react-hooks/exhaustive-deps
+    const active = navMenus
+      .filter(m => m.children.some(c => isRouteActive(c.route, pathname)))
+      .map(m => m.code)
+    setOpen(active)
+  }, [navMenus, pathname])
 
   const toggle = (code: string) =>
     setOpen(prev => prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code])

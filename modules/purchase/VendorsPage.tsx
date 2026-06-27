@@ -9,7 +9,8 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Edit2, Phone, Mail, Building2 } from 'lucide-react'
+import { Plus, Edit2, Phone, Building2, History } from 'lucide-react'
+import { VendorHistoryModal } from './VendorHistoryModal'
 import api from '@/lib/api'
 
 interface Vendor {
@@ -136,8 +137,9 @@ export function VendorsPage() {
   const qc = useQueryClient()
   const [search, setSearch] = useState('')
   const [type,   setType]   = useState('')
-  const [modal,  setModal]  = useState<'add' | 'edit' | null>(null)
-  const [target, setTarget] = useState<Vendor | null>(null)
+  const [modal,   setModal]   = useState<'add' | 'edit' | null>(null)
+  const [target,  setTarget]  = useState<Vendor | null>(null)
+  const [history, setHistory] = useState<Vendor | null>(null)
 
   const { data: vendors = [], isLoading, error, refetch } = useApiData<Vendor[]>({
     url: '/vendors',
@@ -223,9 +225,14 @@ export function VendorsPage() {
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${v.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{v.status}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => { setTarget(v); setModal('edit') }} className="text-gray-400 hover:text-blue-600 p-1">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setHistory(v)} title="View History" className="text-gray-400 hover:text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg">
+                          <History className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => { setTarget(v); setModal('edit') }} title="Edit" className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -238,6 +245,9 @@ export function VendorsPage() {
       {modal === 'add' && <VendorModal onClose={() => setModal(null)} onSaved={invalidate} />}
       {modal === 'edit' && target && (
         <VendorModal vendor={target} onClose={() => { setModal(null); setTarget(null) }} onSaved={invalidate} />
+      )}
+      {history && (
+        <VendorHistoryModal vendorId={history.id} vendorName={history.vendorName} onClose={() => setHistory(null)} />
       )}
     </div>
   )

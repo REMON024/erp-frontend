@@ -13,6 +13,7 @@ import { Plus, PackagePlus } from 'lucide-react'
 import api from '@/lib/api'
 
 interface Material { id: number; materialName: string; unit: string; averageCost: number }
+interface Warehouse { id: number; name: string }
 interface StockTxn {
   id: number; materialName: string; unit: string; transactionType: string
   qty: number; unitCost: number; totalCost: number
@@ -27,6 +28,7 @@ const lbl = 'block text-sm font-medium text-gray-700 mb-1'
 
 const schema = z.object({
   materialId:      z.coerce.number().min(1, 'Required'),
+  warehouseId:     z.coerce.number().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   unitCost:        z.coerce.number().min(0, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
@@ -35,8 +37,8 @@ const schema = z.object({
 })
 type Form = z.infer<typeof schema>
 
-function StockInModal({ materials, onClose, onSaved }: {
-  materials: Material[]; onClose: () => void; onSaved: () => void
+function StockInModal({ materials, warehouses, onClose, onSaved }: {
+  materials: Material[]; warehouses: Warehouse[]; onClose: () => void; onSaved: () => void
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
@@ -70,6 +72,13 @@ function StockInModal({ materials, onClose, onSaved }: {
             {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
           </select>
           {errors.materialId && <p className="text-xs text-red-600 mt-1">{errors.materialId.message}</p>}
+        </div>
+        <div>
+          <label className={lbl}>Warehouse</label>
+          <select {...register('warehouseId')} className={inp}>
+            <option value="">Unassigned (central store)</option>
+            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -113,6 +122,7 @@ export function StockInPage() {
   const [showNew, setShowNew] = useState(false)
 
   const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
+  const { data: warehouses = [] } = useApiData<Warehouse[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
   const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
     url: '/stock-transactions',
     params: { type: 'In' },
@@ -169,7 +179,7 @@ export function StockInPage() {
         </div>
       </DataState>
 
-      {showNew && <StockInModal materials={materials} onClose={() => setShowNew(false)} onSaved={invalidate} />}
+      {showNew && <StockInModal materials={materials} warehouses={warehouses} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }

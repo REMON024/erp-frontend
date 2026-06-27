@@ -60,12 +60,27 @@ function BookingModal({ customers, units, onClose, onSaved }: {
 
   const [schedule, setSchedule] = useState<Installment[] | null>(null)
 
+  // Custom (hand-built) schedule — uneven instalments that must sum to the financed amount.
+  const [useCustom, setUseCustom] = useState(false)
+  const [lines, setLines] = useState<{ dueDate: string; amount: number }[]>([{ dueDate: isoToday(), amount: 0 }])
+  const watchBooking  = Number(watch('bookingAmount')) || 0
+  const watchDiscount = Number(watch('discountAmount')) || 0
+  const financed = selectedUnit ? Math.max(0, selectedUnit.totalPrice - watchDiscount - watchBooking) : 0
+  const scheduleTotal = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)
+  const scheduleMatches = Math.round(scheduleTotal * 100) === Math.round(financed * 100)
+
   const onSubmit = async (d: Form) => {
+    if (useCustom && !scheduleMatches) { setErr(`Schedule must sum to the financed amount (${fmt(financed)})`); return }
     setSaving(true); setErr('')
     try {
-      const res = await api.post('/bookings', d)
+      const payload: any = { ...d }
+      if (useCustom) {
+        payload.installmentCount = 0
+        payload.schedule = lines.map(l => ({ dueDate: l.dueDate, amount: Number(l.amount) }))
+      }
+      const res = await api.post('/bookings', payload)
       const bookingId = res.data?.id
-      if (bookingId && Number(d.installmentCount) > 0) {
+      if (bookingId && (useCustom || Number(d.installmentCount) > 0)) {
         try {
           const schedRes = await api.get(`/installments?bookingId=${bookingId}`)
           const items: Installment[] = schedRes.data?.data ?? schedRes.data ?? []
@@ -168,12 +183,47 @@ function BookingModal({ customers, units, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Installments</label>
-            <input type="number" {...register('installmentCount')} className={inp} placeholder="12" min={0} />
+            <input type="number" {...register('installmentCount')} className={inp} placeholder="12" min={0} disabled={useCustom} />
           </div>
         </div>
+
+        {/* Custom schedule builder */}
+        <div className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <input type="checkbox" checked={useCustom} onChange={e => setUseCustom(e.target.checked)} className="w-4 h-4" />
+            Custom payment schedule (uneven instalments)
+          </label>
+          {useCustom && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Financed amount to schedule: <strong className="text-gray-800">{fmt(financed)}</strong></span>
+                <span className={scheduleMatches ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                  Total: {fmt(scheduleTotal)} {scheduleMatches ? '✓' : `(must equal ${fmt(financed)})`}
+                </span>
+              </div>
+              {lines.map((l, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input type="date" value={l.dueDate}
+                    onChange={e => setLines(ls => ls.map((x, i) => i === idx ? { ...x, dueDate: e.target.value } : x))}
+                    className="border border-gray-300 rounded px-2 py-1 text-xs flex-1" />
+                  <input type="number" step="any" value={l.amount} placeholder="Amount"
+                    onChange={e => setLines(ls => ls.map((x, i) => i === idx ? { ...x, amount: Number(e.target.value) } : x))}
+                    className="border border-gray-300 rounded px-2 py-1 text-xs w-32" />
+                  <button type="button" onClick={() => setLines(ls => ls.length > 1 ? ls.filter((_, i) => i !== idx) : ls)}
+                    className="text-gray-300 hover:text-red-500"><XCircle className="w-4 h-4" /></button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setLines(ls => [...ls, { dueDate: isoToday(), amount: 0 }])}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                <Plus className="w-3.5 h-3.5" /> Add instalment
+              </button>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+          <button type="submit" disabled={saving || (useCustom && !scheduleMatches)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Confirm Booking'}
           </button>
         </div>

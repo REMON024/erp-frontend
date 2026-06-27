@@ -9,7 +9,9 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Receipt } from 'lucide-react'
+import { Plus, Receipt, Printer, BarChart2, Users } from 'lucide-react'
+import { printReceipt } from '@/utils/printUtils'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import api from '@/lib/api'
 
 interface Customer { id: number; fullName: string }
@@ -211,8 +213,10 @@ function PaymentModal({ customers, invoices, onClose, onSaved }: {
 
 export function CollectionsPage() {
   const qc = useQueryClient()
-  const [search, setSearch] = useState('')
-  const [showNew, setShowNew] = useState(false)
+  const [search, setSearch]         = useState('')
+  const [showNew, setShowNew]       = useState(false)
+  const [activeTab, setActiveTab]   = useState<'list' | 'graphs'>('list')
+  const [clientFilter, setClientFilter] = useState('')
 
   const { data: customers = [] } = useApiData<Customer[]>({ url: '/customers', queryKey: ['customers-list'] })
   const { data: invoices = [] }  = useApiData<Invoice[]>({ url: '/invoices', queryKey: ['invoices-list'] })
@@ -231,7 +235,35 @@ export function CollectionsPage() {
   }
 
   const totalCollected = payments.reduce((s, p) => s + p.amount, 0)
-  const thisMonth = payments.filter(p => p.paymentDate.startsWith(isoToday().slice(0, 7))).reduce((s, p) => s + p.amount, 0)
+  const thisMonth = payments.filter(p => p.paymentDate.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, p) => s + p.amount, 0)
+
+  // Monthly chart data — last 12 months
+  const monthlyData = (() => {
+    const map: Record<string, number> = {}
+    payments.forEach(p => {
+      const month = p.paymentDate.slice(0, 7)
+      map[month] = (map[month] || 0) + p.amount
+    })
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([month, amount]) => ({ month: month.slice(0, 7), amount }))
+  })()
+
+  // Per-client summary
+  const clientData = (() => {
+    const map: Record<string, { name: string; total: number; count: number }> = {}
+    payments.forEach(p => {
+      if (!map[p.customerId]) map[p.customerId] = { name: p.customerName, total: 0, count: 0 }
+      map[p.customerId].total += p.amount
+      map[p.customerId].count += 1
+    })
+    return Object.values(map).sort((a, b) => b.total - a.total)
+  })()
+
+  const filteredPayments = clientFilter
+    ? payments.filter(p => String(p.customerId) === clientFilter)
+    : payments
 
   return (
     <div className="space-y-6">
@@ -259,22 +291,104 @@ export function CollectionsPage() {
         ))}
       </div>
 
-      <SearchBar value={search} onChange={setSearch} placeholder="Search payment no or client…" onRefresh={refetch} />
+      {/* Tab switcher */}
+      <div className="flex gap-2 border-b border-gray-200">
+        {[{ key: 'list', label: 'Payments', icon: Receipt }, { key: 'graphs', label: 'Analytics', icon: BarChart2 }].map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key as any)}
+            className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <t.icon className="w-4 h-4" /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'graphs' && (
+        <div className="space-y-6">
+          {/* Monthly bar chart */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart2 className="w-4 h-4 text-blue-600" />
+              <h3 className="text-sm font-semibold text-gray-800">Monthly Collections</h3>
+            </div>
+            {monthlyData.length === 0
+              ? <p className="text-sm text-gray-400 text-center py-8">No payment data yet.</p>
+              : <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(v: any) => [`৳${Number(v ?? 0).toLocaleString('en-BD')}`, 'Collected']} />
+                    <Bar dataKey="amount" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>}
+          </div>
+
+          {/* Per-client breakdown */}
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+              <Users className="w-4 h-4 text-gray-500" />
+              <h3 className="text-sm font-semibold text-gray-800">Collection by Client</h3>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Client', 'Payments', 'Total Collected', 'Share', ''].map(h => (
+                    <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {clientData.map(c => {
+                  const pct = totalCollected > 0 ? (c.total / totalCollected) * 100 : 0
+                  return (
+                    <tr key={c.name} className="hover:bg-gray-50">
+                      <td className="px-4 py-2.5 font-medium text-gray-800">{c.name}</td>
+                      <td className="px-4 py-2.5 text-gray-500">{c.count}</td>
+                      <td className="px-4 py-2.5 font-semibold text-green-700">৳{c.total.toLocaleString('en-BD')}</td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-500">{pct.toFixed(1)}%</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <button onClick={() => { setClientFilter(prev => prev === String(payments.find(p => p.customerName === c.name)?.customerId) ? '' : String(payments.find(p => p.customerName === c.name)?.customerId ?? '')); setActiveTab('list') }}
+                          className="text-xs text-blue-600 hover:underline">View →</button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'list' && (
+        <>
+          {clientFilter && (
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-700">
+              Showing payments for: <strong>{clientData.find(c => String(payments.find(p => p.customerName === c.name)?.customerId) === clientFilter)?.name}</strong>
+              <button onClick={() => setClientFilter('')} className="ml-auto text-blue-500 hover:text-blue-700 font-medium">Clear ×</button>
+            </div>
+          )}
+          <SearchBar value={search} onChange={setSearch} placeholder="Search payment no or client…" onRefresh={refetch} />
 
       <DataState loading={isLoading} error={error ? 'Failed to load payments.' : null} onRetry={refetch}
-        empty={payments.length === 0} emptyMessage="No payments recorded yet.">
+        empty={filteredPayments.length === 0} emptyMessage="No payments recorded yet.">
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['Payment No.', 'Client', 'Invoice', 'Date', 'Amount', 'Method', 'Reference'].map(h => (
+                  {['Payment No.', 'Client', 'Invoice', 'Date', 'Amount', 'Method', 'Reference', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {payments.map(p => (
+                {filteredPayments.map(p => (
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600">
                       <div className="flex items-center gap-1.5"><Receipt className="w-3.5 h-3.5 text-gray-400" />{p.paymentNo}</div>
@@ -287,6 +401,14 @@ export function CollectionsPage() {
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${METHOD_COLORS[p.method] ?? 'bg-gray-100 text-gray-600'}`}>{p.method}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-400 text-xs">{p.referenceNo ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => printReceipt({ paymentNo: p.paymentNo, customerName: p.customerName, paymentDate: p.paymentDate, amount: p.amount, method: p.method, referenceNo: p.referenceNo, invoiceNo: p.invoiceNo, notes: p.notes })}
+                        title="Print Receipt"
+                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -294,6 +416,9 @@ export function CollectionsPage() {
           </div>
         </div>
       </DataState>
+
+        </>
+      )}
 
       {showNew && <PaymentModal customers={customers} invoices={invoices} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>

@@ -231,7 +231,7 @@ export function ProjectsPage() {
             <p className="text-sm font-semibold text-red-800">Budget Overrun Alert</p>
             <p className="text-xs text-red-600 mt-0.5">
               {overBudgetProjects.length} approved estimate(s) have exceeded their budget. Visit the{' '}
-              <a href="/dashboard/budget" className="underline font-medium">Budget Tracker</a> for details.
+              <a href="/budget" className="underline font-medium">Budget Tracker</a> for details.
             </p>
           </div>
         </div>
@@ -283,7 +283,7 @@ export function ProjectsPage() {
               </span>
             </div>
           </div>
-          <a href="/dashboard/material-budget"
+          <a href="/material-budget"
             className={`text-xs font-medium shrink-0 underline ${matSummary.overBudgetCount > 0 ? 'text-red-700' : 'text-amber-700'}`}>
             Review →
           </a>

@@ -38,7 +38,7 @@ interface MaterialBudgetV2Line {
 
 interface PoForm {
   vendorId: string; projectId: string; poDate: string; deliveryDate: string
-  items: { materialId: string; qty: string; unitPrice: string }[]
+  items: { materialId: string; qty: string; unitPrice: string; unmatchedReason?: string }[]
 }
 
 function PoModal({ vendors, projects, materials, onClose, onSaved }: {
@@ -47,7 +47,7 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
   const [err, setErr] = useState('')
   const [saving, setSaving] = useState(false)
   const { register, control, handleSubmit, watch } = useForm<PoForm>({
-    defaultValues: { poDate: isoToday(), deliveryDate: '', items: [{ materialId: '', qty: '', unitPrice: '' }] },
+    defaultValues: { poDate: isoToday(), deliveryDate: '', items: [{ materialId: '', qty: '', unitPrice: '', unmatchedReason: '' }] },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   const items      = watch('items')
@@ -61,6 +61,17 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
   })
 
   const budgetByMaterial = Object.fromEntries(budgetLines.map(l => [l.materialId, l]))
+
+  // Approved EPL items for the selected project → match purchase material lines (PRD-04).
+  const { data: approvedEpls = [] } = useApiData<{ items: { id: number; materialId?: number }[] }[]>({
+    url: '/cost-estimates',
+    params: { projectId: projectId || undefined, status: 'Approved' },
+    queryKey: ['approved-epls', projectId],
+    enabled: !!projectId,
+  })
+  const eplItemByMaterial: Record<number, number> = {}
+  approvedEpls.forEach(e => e.items?.forEach(it => { if (it.materialId) eplItemByMaterial[it.materialId] = it.id }))
+  const eplItemFor = (materialId: string) => (materialId ? eplItemByMaterial[Number(materialId)] : undefined)
 
   const budgetWarnings = items
     .map((item, i) => {
@@ -81,6 +92,15 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
     if (!d.vendorId) { setErr('Vendor is required.'); return }
     const validItems = d.items.filter(i => i.materialId && parseFloat(i.qty) > 0)
     if (validItems.length === 0) { setErr('At least one valid line item is required.'); return }
+    // Warn-mode (PRD-04 default): a material with no approved-EPL match needs a reason to proceed.
+    if (d.projectId) {
+      const missing = validItems.find(i => !eplItemFor(i.materialId) && !(i.unmatchedReason ?? '').trim())
+      if (missing) {
+        const mat = materials.find(m => m.id === Number(missing.materialId))
+        setErr(`"${mat?.materialName ?? 'A material'}" has no approved EPL line — enter a reason to proceed.`)
+        return
+      }
+    }
     setSaving(true); setErr('')
     try {
       await api.post('/purchase-orders', {
@@ -88,7 +108,14 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
         projectId: d.projectId ? Number(d.projectId) : undefined,
         poDate:    d.poDate,
         deliveryDate: d.deliveryDate || undefined,
-        items: validItems.map(i => ({ materialId: Number(i.materialId), qty: Number(i.qty), unitPrice: Number(i.unitPrice) })),
+        items: validItems.map(i => {
+          const eplId = d.projectId ? eplItemFor(i.materialId) : undefined
+          return {
+            materialId: Number(i.materialId), qty: Number(i.qty), unitPrice: Number(i.unitPrice),
+            costEstimateItemId: eplId ?? null,
+            unmatchedReason: (!eplId && d.projectId) ? ((i.unmatchedReason ?? '').trim() || null) : null,
+          }
+        }),
       })
       onSaved(); onClose()
     } catch (e: any) {
@@ -130,7 +157,7 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700">Line Items</label>
-            <button type="button" onClick={() => append({ materialId: '', qty: '', unitPrice: '' })}
+            <button type="button" onClick={() => append({ materialId: '', qty: '', unitPrice: '', unmatchedReason: '' })}
               className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
               <Plus className="w-3.5 h-3.5" /> Add Item
             </button>
@@ -153,6 +180,12 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
                         <option value="">Select…</option>
                         {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
                       </select>
+                      {projectId && items[i]?.materialId && (
+                        eplItemFor(items[i].materialId)
+                          ? <p className="text-[10px] text-green-600 mt-0.5">✓ EPL-linked</p>
+                          : <input {...register(`items.${i}.unmatchedReason`)} placeholder="No EPL match — reason to proceed"
+                              className="mt-1 w-full border border-amber-300 bg-amber-50 rounded px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-amber-400" />
+                      )}
                     </td>
                     <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.qty`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
                     <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.unitPrice`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
