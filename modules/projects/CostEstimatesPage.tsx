@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
-import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2 } from 'lucide-react'
+import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2, Upload } from 'lucide-react'
 import api from '@/lib/api'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -392,6 +392,25 @@ export function CostEstimatesPage() {
     try { await api.post(`/cost-estimates/${id}/reject`, { reason: reason || null }); invalidate() } catch { /* noop */ }
   }
 
+  // CSV columns: category, description, unit, quantity, unitRate (header row optional).
+  const importCsv = async (id: number, file: File) => {
+    const text = await file.text()
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    if (lines.length === 0) return
+    if (/category/i.test(lines[0]) && /description/i.test(lines[0])) lines.shift()
+    const rows = lines.map(l => {
+      const [category, description, unit, quantity, unitRate] = l.split(',').map(c => c.trim())
+      return { category, description, unit, quantity: Number(quantity), unitRate: Number(unitRate) }
+    })
+    try {
+      await api.post(`/cost-estimates/${id}/import`, rows)
+      invalidate()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { errors?: string[] } } })?.response?.data?.errors?.join('\n')
+      window.alert(msg || 'Import failed.')
+    }
+  }
+
   const totalEstimated = estimates.reduce((s, e) => s + e.totalEstimated, 0)
   const totalActual    = estimates.reduce((s, e) => s + e.totalActual,    0)
   const overBudget     = estimates.filter(e => e.totalActual > e.totalEstimated && e.totalActual > 0).length
@@ -490,6 +509,12 @@ export function CostEstimatesPage() {
                             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
                           {e.status === 'Draft' && (
                             <>
+                              <label title="Import BOQ from CSV"
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg cursor-pointer">
+                                <Upload className="w-3.5 h-3.5" />
+                                <input type="file" accept=".csv,text/csv" className="hidden"
+                                  onChange={ev => { const f = ev.target.files?.[0]; if (f) importCsv(e.id, f); ev.target.value = '' }} />
+                              </label>
                               <button onClick={() => approve(e.id)} title="Approve"
                                 className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
                               <button onClick={() => reject(e.id)} title="Reject"

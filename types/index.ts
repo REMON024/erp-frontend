@@ -16,7 +16,6 @@ export interface User {
   roles: Role[]         // full role set (multi-role union model)
   roleIds: string[]
   projects?: string[]   // assigned project ids (relevant when roles includes 'engineer')
-  companyId?: number | null
   phoneNumber?: string | null
   isActive: boolean
   createdAt: string

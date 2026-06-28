@@ -32,8 +32,7 @@ export function LoginForm() {
       const data = res.data
       const user = data.user ?? data
       setAuth(user, data.accessToken ?? data.token)
-      // SuperAdmin manages tenants, not day-to-day operations.
-      router.push(user.role === 'super_admin' ? '/admin/companies' : '/dashboard')
+      router.push('/dashboard')
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string; title?: string; errors?: string[] } } }
       const msg = e.response?.data?.errors?.[0] ?? e.response?.data?.message ?? e.response?.data?.title ?? 'Invalid email or password.'

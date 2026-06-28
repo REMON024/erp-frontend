@@ -199,10 +199,67 @@ export function MaterialMasterPage() {
         </div>
       </DataState>
 
+      <SubstitutionsPanel materials={materials} />
+
       {modal === 'add' && <MaterialModal onClose={() => setModal(null)} onSaved={invalidate} />}
       {modal === 'edit' && target && (
         <MaterialModal material={target} onClose={() => { setModal(null); setTarget(null) }} onSaved={invalidate} />
       )}
+    </div>
+  )
+}
+
+interface Substitution {
+  id: number
+  originalMaterialId: number; originalMaterialName: string
+  substituteMaterialId: number; substituteMaterialName: string
+}
+
+// Material-substitution mapping (PRD-02 FR-EST-14): equivalents that count toward the
+// original's BOQ actuals so they are not flagged as variance.
+function SubstitutionsPanel({ materials }: { materials: Material[] }) {
+  const qc = useQueryClient()
+  const { data: subs = [] } = useApiData<Substitution[]>({ url: '/material-substitutions', queryKey: ['material-substitutions'] })
+  const [original, setOriginal] = useState('')
+  const [substitute, setSubstitute] = useState('')
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['material-substitutions'] })
+
+  const add = async () => {
+    if (!original || !substitute || original === substitute) return
+    try {
+      await api.post('/material-substitutions', { originalMaterialId: Number(original), substituteMaterialId: Number(substitute) })
+      setOriginal(''); setSubstitute(''); invalidate()
+    } catch (err: unknown) {
+      window.alert((err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Could not add substitution.')
+    }
+  }
+  const remove = async (id: number) => { try { await api.delete(`/material-substitutions/${id}`); invalidate() } catch { /* noop */ } }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h3 className="font-semibold text-gray-900 text-sm">Material Substitutions</h3>
+      <p className="text-xs text-gray-500 mt-1">Approved equivalents are excluded from EPL variance.</p>
+      <div className="flex flex-wrap items-center gap-2 mt-3">
+        <select value={original} onChange={e => setOriginal(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          <option value="">Original material…</option>
+          {materials.map(m => <option key={m.id} value={m.id}>{m.materialName}</option>)}
+        </select>
+        <span className="text-gray-400 text-sm">→ may be replaced by →</span>
+        <select value={substitute} onChange={e => setSubstitute(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          <option value="">Substitute material…</option>
+          {materials.map(m => <option key={m.id} value={m.id}>{m.materialName}</option>)}
+        </select>
+        <button onClick={add} className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add</button>
+      </div>
+      <div className="mt-4 divide-y divide-gray-100">
+        {subs.length === 0 && <p className="text-xs text-gray-400">No substitutions defined.</p>}
+        {subs.map(s => (
+          <div key={s.id} className="flex items-center justify-between py-2 text-sm">
+            <span>{s.originalMaterialName} <span className="text-gray-400">→</span> {s.substituteMaterialName}</span>
+            <button onClick={() => remove(s.id)} className="text-gray-400 hover:text-red-600 text-xs">Remove</button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

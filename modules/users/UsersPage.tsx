@@ -4,7 +4,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Edit2, Shield, Eye, EyeOff, Search, ToggleLeft, ToggleRight, UserCheck, RefreshCw, AlertCircle } from 'lucide-react'
+import { Plus, Edit2, Shield, Eye, EyeOff, Search, ToggleLeft, ToggleRight, UserCheck, RefreshCw, AlertCircle, KeyRound } from 'lucide-react'
 import api from '@/lib/api'
 import { effectiveAccess } from '@/utils/permissions'
 import { Role } from '@/types'
@@ -289,6 +289,17 @@ export function UsersPage() {
     } catch { /* ignore */ }
   }
 
+  const resetPassword = async (u: UserDto) => {
+    const newPassword = window.prompt(`Set a new password for ${u.fullName} (min 6 chars):`)
+    if (!newPassword) return
+    try {
+      await api.put(`/users/${u.id}/reset-password`, { newPassword })
+      window.alert('Password has been reset.')
+    } catch (e: unknown) {
+      window.alert((e as { response?: { data?: { errors?: string[] } } })?.response?.data?.errors?.[0] ?? 'Failed to reset password.')
+    }
+  }
+
   const rolesOf = (u: UserDto) => (u.roles?.length ? u.roles : (u.role ? [u.role] : []))
   const filtered = roleFilter === 'all' ? users : users.filter(u => rolesOf(u).includes(roleFilter))
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
@@ -416,6 +427,10 @@ export function UsersPage() {
                         <button onClick={() => { setTarget(u); setModal('role') }} title="Assign role"
                           className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
                           <UserCheck className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => resetPassword(u)} title="Reset password"
+                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                          <KeyRound className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>

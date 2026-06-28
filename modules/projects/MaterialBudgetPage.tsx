@@ -21,6 +21,7 @@ interface MaterialBudgetV2Line {
   actualCost:    number
   variance:      number
   budgetUtilPct: number
+  status:        string   // 'within' | 'approaching' | 'exceeded' (PRD-02 FR-EST-09)
 }
 
 function fmt(n: number) {
@@ -31,16 +32,18 @@ function fmtQ(n: number) {
 }
 
 function StatusBadge({ line }: { line: MaterialBudgetV2Line }) {
-  if (line.budgetedCost === 0) {
+  if (line.budgetedCost === 0 && line.actualCost === 0) {
     return <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Unbudgeted</span>
   }
-  if (line.actualCost > line.budgetedCost) {
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">Over Budget</span>
+  // Driven by the backend threshold engine (within / approaching / exceeded — FR-EST-09).
+  switch (line.status) {
+    case 'exceeded':
+      return <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">Exceeded</span>
+    case 'approaching':
+      return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Approaching (80%)</span>
+    default:
+      return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Within</span>
   }
-  if (line.committedCost > line.budgetedCost * 0.8) {
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">At Risk</span>
-  }
-  return <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">On Track</span>
 }
 
 function UtilBar({ pct, overBudget }: { pct: number; overBudget: boolean }) {

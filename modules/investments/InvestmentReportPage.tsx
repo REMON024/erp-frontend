@@ -22,6 +22,12 @@ interface InvestmentSummaryDto {
   grandTotal: number
 }
 
+interface InvestorRoiRow {
+  investorId: number; investorName: string
+  invested: number; distributed: number; roiPct: number
+}
+interface InvestorRoiDto { rows: InvestorRoiRow[]; totalInvested: number; totalDistributed: number }
+
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 
 const ROLE_COLOR: Record<string, string> = {
@@ -53,6 +59,8 @@ export function InvestmentReportPage() {
     queryKey: ['investment-summary', projectId, investorId, dateFrom, dateTo],
   })
 
+  const { data: roi } = useApiData<InvestorRoiDto>({ url: '/profit-distribution/roi', queryKey: ['investor-roi'] })
+
   const maxProjectAmount  = Math.max(...(data?.byProject.map(r => r.totalInvested)  ?? [1]), 1)
   const maxInvestorAmount = Math.max(...(data?.byInvestor.map(r => r.totalInvested) ?? [1]), 1)
 
@@ -62,6 +70,36 @@ export function InvestmentReportPage() {
         title="Investment Report"
         subtitle="Capital contributions by project and by investor with share percentages"
       />
+
+      {/* Investor ROI across projects (PRD-08 FR-PRD-08) */}
+      {roi && roi.rows.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-green-600" />
+            <h3 className="font-semibold text-gray-800 text-sm">Investor ROI</h3>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-500">
+              <tr>
+                <th className="text-left px-4 py-2 font-medium">Investor</th>
+                <th className="text-right px-4 py-2 font-medium">Invested</th>
+                <th className="text-right px-4 py-2 font-medium">Distributed</th>
+                <th className="text-right px-4 py-2 font-medium">ROI %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {roi.rows.map(r => (
+                <tr key={r.investorId} className="border-t border-gray-100">
+                  <td className="px-4 py-2 text-gray-900">{r.investorName}</td>
+                  <td className="px-4 py-2 text-right">{fmt(r.invested)}</td>
+                  <td className="px-4 py-2 text-right">{fmt(r.distributed)}</td>
+                  <td className={`px-4 py-2 text-right font-semibold ${r.roiPct >= 0 ? 'text-green-600' : 'text-red-600'}`}>{r.roiPct}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-end bg-white rounded-xl border border-gray-200 p-4">
