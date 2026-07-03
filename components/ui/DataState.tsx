@@ -14,14 +14,14 @@ export function DataState({ loading, error, empty, emptyMessage = 'No data found
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+      <div className="flex items-center gap-3 px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm">
         <AlertCircle className="w-4 h-4 shrink-0" />
         <span className="flex-1">{error}</span>
         {onRetry && (
@@ -35,7 +35,7 @@ export function DataState({ loading, error, empty, emptyMessage = 'No data found
 
   if (empty) {
     return (
-      <div className="py-16 text-center text-sm text-gray-400">{emptyMessage}</div>
+      <div className="py-16 text-center text-sm text-content-muted">{emptyMessage}</div>
     )
   }
 

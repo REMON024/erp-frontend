@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,17 +28,17 @@ const PREVIEW_MODULES = [
 
 const ROLE_COLORS: Record<string, { label: string; color: string; bg: string }> = {
   super_admin:   { label: 'Super Admin',   color: 'text-purple-700', bg: 'bg-purple-100' },
-  operations:    { label: 'Operations',    color: 'text-blue-700',   bg: 'bg-blue-100'   },
+  operations:    { label: 'Operations',    color: 'text-primary',   bg: 'bg-primary/10'   },
   inventory:     { label: 'Inventory',     color: 'text-orange-700', bg: 'bg-orange-100' },
   engineer:      { label: 'Engineer',      color: 'text-teal-700',   bg: 'bg-teal-100'   },
 }
 const roleMeta = (name: string) => ROLE_COLORS[name] ?? {
   label: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-  color: 'text-gray-700', bg: 'bg-gray-100',
+  color: 'text-content', bg: 'bg-surface-muted',
 }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const addSchema = z.object({
   firstName:   z.string().min(1, 'Required'),
@@ -112,10 +113,10 @@ function UserModal({ user, roles, onClose, onSaved }: {
         </div>
         {!isEdit && (
           <div>
-            <label className={lbl}>Initial Role <span className="text-gray-400 font-normal">(add more via Assign Roles)</span></label>
-            <select {...register('role')} className={inp}>
+            <label className={lbl}>Initial Role <span className="text-content-muted font-normal">(add more via Assign Roles)</span></label>
+            <Select {...register('role')}>
               {roles.map(r => <option key={r.id} value={r.name}>{roleMeta(r.name).label}</option>)}
-            </select>
+            </Select>
           </div>
         )}
         <div>
@@ -124,15 +125,15 @@ function UserModal({ user, roles, onClose, onSaved }: {
             <input type={showPass ? 'text' : 'password'} {...register('password')} className={inp}
               placeholder={isEdit ? 'Leave blank to keep current' : 'Min 8 chars, 1 uppercase, 1 digit'} />
             <button type="button" onClick={() => setShowPass(v => !v)}
-              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+              className="absolute right-3 top-2.5 text-content-muted hover:text-content-muted">
               {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
           {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>}
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add User'}
           </button>
         </div>
@@ -190,33 +191,33 @@ function AssignRoleModal({ user, roles, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title="Assign Roles" size="md">
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">Role set for <strong>{user.fullName}</strong> — effective access is the union of all selected roles.</p>
+        <p className="text-sm text-content-muted">Role set for <strong>{user.fullName}</strong> — effective access is the union of all selected roles.</p>
         {err && <p className="text-xs text-red-600">{err}</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {roles.map(r => {
             const on = selected.includes(r.name)
             return (
-              <label key={r.id} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${on ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <label key={r.id} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${on ? 'border-primary bg-primary/10' : 'border-border-default hover:border-border-default'}`}>
                 <input type="checkbox" checked={on} onChange={() => toggle(r.name)} className="w-4 h-4" />
-                <Shield className={`w-4 h-4 ${on ? 'text-blue-600' : 'text-gray-400'}`} />
-                <span className={`text-sm font-medium ${on ? 'text-blue-700' : 'text-gray-700'}`}>{roleMeta(r.name).label}</span>
+                <Shield className={`w-4 h-4 ${on ? 'text-primary' : 'text-content-muted'}`} />
+                <span className={`text-sm font-medium ${on ? 'text-primary' : 'text-content'}`}>{roleMeta(r.name).label}</span>
               </label>
             )
           })}
         </div>
 
         {/* Effective-access preview (union) */}
-        <div className="rounded-lg border border-gray-200 p-3">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Effective module access (preview)</p>
+        <div className="rounded-lg border border-border-default p-3">
+          <p className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-2">Effective module access (preview)</p>
           {selected.length === 0 ? (
-            <p className="text-xs text-gray-400">No roles selected — user has no access.</p>
+            <p className="text-xs text-content-muted">No roles selected — user has no access.</p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {PREVIEW_MODULES.map(m => {
                 const granted = effectiveAccess(previewRoles, m) === 'FULL'
                 return (
-                  <span key={m} className={`text-xs px-2 py-0.5 rounded-full ${granted ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400 line-through'}`}>
+                  <span key={m} className={`text-xs px-2 py-0.5 rounded-full ${granted ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted line-through'}`}>
                     {m}
                   </span>
                 )
@@ -230,9 +231,9 @@ function AssignRoleModal({ user, roles, onClose, onSaved }: {
           <div className="rounded-lg border border-teal-200 bg-teal-50 p-3">
             <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-2">Assigned projects (Engineer scope)</p>
             <div className="max-h-40 overflow-y-auto space-y-1">
-              {projects.length === 0 && <p className="text-xs text-gray-400">No projects available.</p>}
+              {projects.length === 0 && <p className="text-xs text-content-muted">No projects available.</p>}
               {projects.map(p => (
-                <label key={p.id} className="flex items-center gap-2 text-sm text-gray-700">
+                <label key={p.id} className="flex items-center gap-2 text-sm text-content">
                   <input type="checkbox" checked={assignedProjects.includes(p.id)} onChange={() => toggleProject(p.id)} className="w-4 h-4" />
                   {p.name}
                 </label>
@@ -241,9 +242,9 @@ function AssignRoleModal({ user, roles, onClose, onSaved }: {
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Save Roles'}
           </button>
         </div>
@@ -308,76 +309,76 @@ export function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage system users and access control</p>
+          <h1 className="text-2xl font-bold text-content">User Management</h1>
+          <p className="text-sm text-content-muted mt-0.5">Manage system users and access control</p>
         </div>
         <button onClick={() => setModal('add')}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+          className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
           <Plus className="w-4 h-4" /> Add User
         </button>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Total Users</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{totalCount}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted uppercase tracking-wide">Total Users</p>
+          <p className="text-3xl font-bold text-content mt-1">{totalCount}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Active</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted uppercase tracking-wide">Active</p>
           <p className="text-3xl font-bold text-green-600 mt-1">{users.filter(u => u.isActive).length}</p>
         </div>
         {roles.slice(0, 2).map(r => (
-          <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{roleMeta(r.name).label}</p>
+          <div key={r.id} className="bg-surface rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted uppercase tracking-wide">{roleMeta(r.name).label}</p>
             <p className={`text-3xl font-bold mt-1 ${roleMeta(r.name).color}`}>{r.userCount}</p>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-3">
+      <div className="bg-surface rounded-xl border border-border-default p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             placeholder="Search name or email…"
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+            className="w-full pl-9 pr-4 py-2 border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none" />
         </div>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+          className="min-w-[150px]">
           <option value="all">All Roles</option>
           {roles.map(r => <option key={r.id} value={r.name}>{roleMeta(r.name).label}</option>)}
-        </select>
-        <button onClick={loadUsers} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+        </Select>
+        <button onClick={loadUsers} className="flex items-center gap-1.5 px-3 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted text-content-muted">
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
         {error && (
           <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
             <AlertCircle className="w-4 h-4 shrink-0" />{error}
           </div>
         )}
-        <div className="px-4 py-3 border-b border-gray-100">
-          <p className="text-sm font-medium text-gray-700">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</p>
+        <div className="px-4 py-3 border-b border-border-default">
+          <p className="text-sm font-medium text-content">{filtered.length} user{filtered.length !== 1 ? 's' : ''}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[750px] text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 {['User', 'Email', 'Phone', 'Role', 'Last Login', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border-default">
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse" /></td>
+                      <td key={j} className="px-4 py-3"><div className="h-4 bg-surface-muted rounded animate-pulse" /></td>
                     ))}
                   </tr>
                 ))
@@ -385,35 +386,35 @@ export function UsersPage() {
                 const userRoles = rolesOf(u)
                 const initials = `${u.firstName[0]}${u.lastName[0]}`
                 return (
-                  <tr key={u.id} className={`hover:bg-gray-50 ${!u.isActive ? 'opacity-60' : ''}`}>
+                  <tr key={u.id} className={`hover:bg-surface-muted ${!u.isActive ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
                           {initials}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{u.fullName}</p>
-                          <p className="text-xs text-gray-400">Since {u.createdAt.slice(0, 10)}</p>
+                          <p className="font-medium text-content">{u.fullName}</p>
+                          <p className="text-xs text-content-muted">Since {u.createdAt.slice(0, 10)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{u.email}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{u.phoneNumber ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{u.email}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{u.phoneNumber ?? '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {userRoles.length === 0 && <span className="text-xs text-gray-400">—</span>}
+                        {userRoles.length === 0 && <span className="text-xs text-content-muted">—</span>}
                         {userRoles.map(rn => {
                           const rm = roleMeta(rn)
                           return <span key={rn} className={`text-xs px-2.5 py-1 rounded-full font-semibold ${rm.bg} ${rm.color}`}>{rm.label}</span>
                         })}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                    <td className="px-4 py-3 text-content-muted text-xs whitespace-nowrap">
                       {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleStatus(u)}
-                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${u.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${u.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-surface-muted text-content-muted hover:bg-surface-muted'}`}>
                         {u.isActive ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
                         {u.isActive ? 'Active' : 'Inactive'}
                       </button>
@@ -421,15 +422,15 @@ export function UsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => { setTarget(u); setModal('edit') }} title="Edit"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => { setTarget(u); setModal('role') }} title="Assign role"
-                          className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
                           <UserCheck className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => resetPassword(u)} title="Reset password"
-                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
                           <KeyRound className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -438,7 +439,7 @@ export function UsersPage() {
                 )
               })}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">No users found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-12 text-center text-content-muted text-sm">No users found</td></tr>
               )}
             </tbody>
           </table>
@@ -446,13 +447,13 @@ export function UsersPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-500">Page {page} of {totalPages}</span>
+          <div className="px-4 py-3 border-t border-border-default flex items-center justify-between">
+            <span className="text-xs text-content-muted">Page {page} of {totalPages}</span>
             <div className="flex gap-1">
               <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-                className="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 disabled:opacity-40">Previous</button>
+                className="px-3 py-1.5 text-xs border rounded-lg hover:bg-surface-muted disabled:opacity-40">Previous</button>
               <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 disabled:opacity-40">Next</button>
+                className="px-3 py-1.5 text-xs border rounded-lg hover:bg-surface-muted disabled:opacity-40">Next</button>
             </div>
           </div>
         )}

@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -29,22 +31,22 @@ interface WorkOrderBill {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  Draft:     'bg-gray-100 text-gray-600',
+  Draft:     'bg-surface-muted text-content-muted',
   Active:    'bg-green-100 text-green-700',
-  Completed: 'bg-blue-100 text-blue-700',
+  Completed: 'bg-primary/10 text-primary',
   Cancelled: 'bg-red-100 text-red-600',
 }
 const BILL_STATUS_COLORS: Record<string, string> = {
   Pending:  'bg-amber-100 text-amber-700',
   Approved: 'bg-green-100 text-green-700',
-  Paid:     'bg-blue-100 text-blue-700',
+  Paid:     'bg-primary/10 text-primary',
 }
 function fmt(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
 function fmtFull(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 // ── Work order form ────────────────────────────────────────────────────────────
 const schema = z.object({
@@ -93,18 +95,18 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Project <span className="text-red-500">*</span></label>
-            <select {...register('projectId')} className={inp}>
+            <Select {...register('projectId')}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-            </select>
+            </Select>
             {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
           </div>
           <div>
             <label className={lbl}>Contractor <span className="text-red-500">*</span></label>
-            <select {...register('vendorId')} className={inp}>
+            <Select {...register('vendorId')}>
               <option value="">Select contractor</option>
               {contractors.map(v => <option key={v.id} value={v.id}>{v.vendorName}</option>)}
-            </select>
+            </Select>
             {errors.vendorId && <p className="text-xs text-red-600 mt-1">{errors.vendorId.message}</p>}
           </div>
         </div>
@@ -116,11 +118,11 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Start Date</label>
-            <input type="date" {...register('startDate')} className={inp} />
+            <DateField {...register('startDate')} />
           </div>
           <div>
             <label className={lbl}>End Date</label>
-            <input type="date" {...register('endDate')} className={inp} />
+            <DateField {...register('endDate')} />
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -138,9 +140,9 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
             <input type="number" step="any" {...register('retentionPercent')} className={inp} placeholder="5" min={0} max={100} />
           </div>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Work Order'}
           </button>
         </div>
@@ -198,31 +200,31 @@ function VoucherFromBillModal({ bill, wo, mode, accounts, onClose, onSaved }: {
     <Modal open onClose={onClose} title={title} size="md">
       <div className="space-y-4">
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
-        <div className="bg-blue-50 rounded-lg px-4 py-2 text-xs text-blue-700">
+        <div className="bg-primary/10 rounded-lg px-4 py-2 text-xs text-primary">
           Amount: <strong>{fmtFull(amount)}</strong> · Bill: <strong>{bill.billNo}</strong> · Project: <strong>{wo.projectName}</strong>
         </div>
         <div>
           <label className={lbl}>{debitLabel} <span className="text-red-500">*</span></label>
-          <select value={debitAccountId} onChange={e => setDebitAccountId(e.target.value)} className={inp}>
+          <Select value={debitAccountId} onChange={e => setDebitAccountId(e.target.value)}>
             <option value="">Select account</option>
             {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
-          </select>
+          </Select>
         </div>
         <div>
           <label className={lbl}>{creditLabel} <span className="text-red-500">*</span></label>
-          <select value={creditAccountId} onChange={e => setCreditAccountId(e.target.value)} className={inp}>
+          <Select value={creditAccountId} onChange={e => setCreditAccountId(e.target.value)}>
             <option value="">Select account</option>
             {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
-          </select>
+          </Select>
         </div>
         <div>
           <label className={lbl}>Narration</label>
           <input value={narration} onChange={e => setNarration(e.target.value)} className={inp} />
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
           <button onClick={onSubmit} disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Posting…' : 'Post Voucher'}
           </button>
         </div>
@@ -285,7 +287,7 @@ function BillsModal({ wo, onClose, onChanged }: {
     )}
     <Modal open onClose={onClose} title={`Bills — ${wo.workOrderNo}`} size="lg">
       <div className="space-y-4">
-        <div className="bg-gray-50 rounded-lg px-4 py-2 text-xs text-gray-600 flex flex-wrap gap-4">
+        <div className="bg-surface-muted rounded-lg px-4 py-2 text-xs text-content-muted flex flex-wrap gap-4">
           <span>Contractor: <strong>{wo.vendorName}</strong></span>
           <span>Contract: <strong>{fmtFull(wo.contractAmount)}</strong></span>
           <span>Retention: <strong>{wo.retentionPercent}%</strong></span>
@@ -293,11 +295,11 @@ function BillsModal({ wo, onClose, onChanged }: {
 
         {!adding ? (
           <button onClick={() => setAdding(true)}
-            className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-1.5">
+            className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-1.5">
             <Plus className="w-3.5 h-3.5" /> Add Progress Bill
           </button>
         ) : (
-          <div className="border border-gray-200 rounded-lg p-3 space-y-3">
+          <div className="border border-border-default rounded-lg p-3 space-y-3">
             {err && <p className="text-xs text-red-600">{err}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -310,37 +312,37 @@ function BillsModal({ wo, onClose, onChanged }: {
               </div>
             </div>
             {amount && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-content-muted">
                 Retention ({wo.retentionPercent}%): <strong>{fmtFull(retention)}</strong> · Net payable: <strong className="text-green-700">{fmtFull(netPayable)}</strong>
               </p>
             )}
             <div className="flex justify-end gap-2">
-              <button onClick={() => { setAdding(false); setErr('') }} className="px-3 py-1.5 text-xs border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button onClick={addBill} className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save Bill</button>
+              <button onClick={() => { setAdding(false); setErr('') }} className="px-3 py-1.5 text-xs border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+              <button onClick={addBill} className="px-3 py-1.5 text-xs bg-primary text-white rounded-lg hover:bg-primary/90 font-medium">Save Bill</button>
             </div>
           </div>
         )}
 
         <DataState loading={isLoading} empty={bills.length === 0} emptyMessage="No bills yet for this work order.">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm border border-gray-200 rounded-lg overflow-hidden">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="w-full min-w-[520px] text-sm border border-border-default rounded-lg overflow-hidden">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Bill No.', 'Date', 'Amount', 'Retention', 'Net Payable', 'Status', ''].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {bills.map(b => (
                   <tr key={b.id}>
-                    <td className="px-3 py-2 font-mono text-xs font-semibold text-blue-600">{b.billNo}</td>
-                    <td className="px-3 py-2 text-gray-500 text-xs">{b.billDate}</td>
-                    <td className="px-3 py-2 font-medium text-gray-900 text-xs">{fmtFull(b.billAmount)}</td>
+                    <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{b.billNo}</td>
+                    <td className="px-3 py-2 text-content-muted text-xs">{b.billDate}</td>
+                    <td className="px-3 py-2 font-medium text-content text-xs">{fmtFull(b.billAmount)}</td>
                     <td className="px-3 py-2 text-red-600 text-xs">{fmtFull(b.retentionAmount)}</td>
                     <td className="px-3 py-2 font-semibold text-green-700 text-xs">{fmtFull(b.netPayable)}</td>
                     <td className="px-3 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${BILL_STATUS_COLORS[b.status] ?? 'bg-gray-100 text-gray-600'}`}>{b.status}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${BILL_STATUS_COLORS[b.status] ?? 'bg-surface-muted text-content-muted'}`}>{b.status}</span>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1">
@@ -351,11 +353,11 @@ function BillsModal({ wo, onClose, onChanged }: {
                         {b.status === 'Approved' && (
                           <>
                             <button onClick={() => setVoucherBill({ bill: b, mode: 'expense' })} title="Create Expense Voucher"
-                              className="p-1 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                              className="p-1 text-content-muted hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
                               <BookOpen className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => setVoucherBill({ bill: b, mode: 'payment' })} title="Create Payment Voucher"
-                              className="p-1 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors">
+                              className="p-1 text-content-muted hover:text-green-600 hover:bg-green-50 rounded transition-colors">
                               <CreditCard className="w-3.5 h-3.5" />
                             </button>
                           </>
@@ -407,7 +409,7 @@ export function WorkOrdersPage() {
         subtitle="Manage contractor work orders and progress bills"
         action={
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Work Order
           </button>
         }
@@ -415,71 +417,71 @@ export function WorkOrdersPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Orders', value: orders.length,                                  color: 'text-gray-900' },
+          { label: 'Total Orders', value: orders.length,                                  color: 'text-content' },
           { label: 'Active',       value: active,                                          color: 'text-green-600' },
-          { label: 'Completed',    value: orders.filter(o => o.status === 'Completed').length, color: 'text-blue-600' },
+          { label: 'Completed',    value: orders.filter(o => o.status === 'Completed').length, color: 'text-primary' },
           { label: 'Contract Value', value: fmt(totalContract),                            color: 'text-purple-600' },
         ].map(k => (
-          <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">{k.label}</p>
+          <div key={k.label} className="bg-surface rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted uppercase tracking-wide font-medium">{k.label}</p>
             <p className={`text-2xl font-bold mt-1 ${k.color}`}>{k.value}</p>
           </div>
         ))}
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search work orders…" onRefresh={refetch}>
-        <select value={project} onChange={e => setProject(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={project} onChange={e => setProject(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Projects</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode}</option>)}
-        </select>
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </Select>
+        <Select value={status} onChange={e => setStatus(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Status</option>
           {['Draft', 'Active', 'Completed', 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load work orders.' : null} onRetry={refetch}
         empty={orders.length === 0} emptyMessage="No work orders yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Work Order', 'Project', 'Contractor', 'Contract', 'Advance', 'Retention', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {orders.map(o => (
-                  <tr key={o.id} className="hover:bg-gray-50">
+                  <tr key={o.id} className="hover:bg-surface-muted">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4 text-gray-400 shrink-0" />
+                        <ClipboardList className="w-4 h-4 text-content-muted shrink-0" />
                         <div>
-                          <p className="font-semibold text-gray-900 text-xs">{o.workOrderNo}</p>
-                          <p className="text-gray-400 text-xs truncate max-w-[140px]">{o.scope}</p>
+                          <p className="font-semibold text-content text-xs">{o.workOrderNo}</p>
+                          <p className="text-content-muted text-xs truncate max-w-[140px]">{o.scope}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs bg-blue-50 text-blue-700 font-medium px-2 py-0.5 rounded-full">{o.projectName.split(' ')[0]}</span>
+                      <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">{o.projectName.split(' ')[0]}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-700 text-xs font-medium">{o.vendorName}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(o.contractAmount)}</td>
-                    <td className="px-4 py-3 text-gray-600">{fmt(o.advanceAmount)}</td>
-                    <td className="px-4 py-3 text-gray-600">{o.retentionPercent}%</td>
+                    <td className="px-4 py-3 text-content text-xs font-medium">{o.vendorName}</td>
+                    <td className="px-4 py-3 font-semibold text-content">{fmt(o.contractAmount)}</td>
+                    <td className="px-4 py-3 text-content-muted">{fmt(o.advanceAmount)}</td>
+                    <td className="px-4 py-3 text-content-muted">{o.retentionPercent}%</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[o.status] ?? 'bg-gray-100 text-gray-600'}`}>{o.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[o.status] ?? 'bg-surface-muted text-content-muted'}`}>{o.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => setBillsFor(o)} title="Progress Bills"
-                          className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Receipt className="w-3.5 h-3.5" /></button>
+                          className="p-1.5 text-content-muted hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Receipt className="w-3.5 h-3.5" /></button>
                         <button onClick={() => { setTarget(o); setModal('edit') }} title="Edit"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
+                          className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
                         {o.status === 'Draft' && (
                           <button onClick={() => approve(o.id)} className="text-xs text-green-600 hover:text-green-700 font-medium hover:underline px-1">Approve</button>
                         )}

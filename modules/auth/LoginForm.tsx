@@ -42,14 +42,14 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="bg-surface rounded-2xl shadow-xl p-8">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Building2 className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Construction ERP</h1>
-          <p className="text-slate-500 text-sm mt-1">Sign in to your workspace</p>
+          <h1 className="text-2xl font-bold text-content">Construction ERP</h1>
+          <p className="text-content-muted text-sm mt-1">Sign in to your workspace</p>
         </div>
 
         {/* Error */}
@@ -62,15 +62,15 @@ export function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
+            <label className="block text-sm font-medium text-content mb-1.5">Email address</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
               <input
                 {...register('email')}
                 type="email"
                 autoComplete="email"
                 placeholder="you@company.com"
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.email ? 'border-red-400' : 'border-slate-300'}`}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent ${errors.email ? 'border-red-400' : 'border-border-default'}`}
               />
             </div>
             {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
@@ -78,20 +78,20 @@ export function LoginForm() {
 
           <div>
             <div className="flex justify-between mb-1.5">
-              <label className="text-sm font-medium text-slate-700">Password</label>
-              <Link href="/forgot-password" className="text-xs text-blue-600 hover:underline">Forgot password?</Link>
+              <label className="text-sm font-medium text-content">Password</label>
+              <Link href="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
             </div>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
               <input
                 {...register('password')}
                 type={showPass ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.password ? 'border-red-400' : 'border-slate-300'}`}
+                className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent ${errors.password ? 'border-red-400' : 'border-border-default'}`}
               />
               <button type="button" onClick={() => setShowPass(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-content-muted hover:text-content-muted">
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
@@ -101,7 +101,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             {isSubmitting ? (
               <span className="flex items-center justify-center gap-2">

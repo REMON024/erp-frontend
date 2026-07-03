@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -19,7 +20,7 @@ interface Account {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  Asset:     'bg-blue-100 text-blue-700',
+  Asset:     'bg-primary/10 text-primary',
   Liability: 'bg-orange-100 text-orange-700',
   Equity:    'bg-purple-100 text-purple-700',
   Revenue:   'bg-green-100 text-green-700',
@@ -28,8 +29,8 @@ const TYPE_COLORS: Record<string, string> = {
 const TYPES = ['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   accountName:     z.string().min(1, 'Required'),
@@ -76,9 +77,9 @@ function AccountModal({ account, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Type <span className="text-red-500">*</span></label>
-            <select {...register('accountType')} className={inp}>
+            <Select {...register('accountType')}>
               {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -97,11 +98,11 @@ function AccountModal({ account, onClose, onSaved }: {
         </div>
         <div className="flex items-center gap-2">
           <input type="checkbox" id="isPosting" {...register('isPosting')} className="rounded" />
-          <label htmlFor="isPosting" className="text-sm text-gray-700">Allow posting transactions to this account</label>
+          <label htmlFor="isPosting" className="text-sm text-content">Allow posting transactions to this account</label>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Account'}
           </button>
         </div>
@@ -137,7 +138,7 @@ export function ChartOfAccountsPage() {
         subtitle="Manage the general ledger account structure"
         action={
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add Account
           </button>
         }
@@ -145,51 +146,51 @@ export function ChartOfAccountsPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {TYPES.map(t => (
-          <div key={t} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{t}</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">{byType(t)}</p>
+          <div key={t} className="bg-surface rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted uppercase tracking-wide">{t}</p>
+            <p className="text-2xl font-bold text-content mt-1">{byType(t)}</p>
           </div>
         ))}
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search account name or code…" onRefresh={refetch}>
-        <select value={type} onChange={e => setType(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={type} onChange={e => setType(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Types</option>
           {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load accounts.' : null} onRetry={refetch}
         empty={accounts.length === 0} emptyMessage="No accounts yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Code', 'Account Name', 'Type', 'Category', 'Opening Balance', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {accounts.map(a => (
-                  <tr key={a.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700 font-semibold">{a.accountCode}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                  <tr key={a.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-mono text-xs text-content font-semibold">{a.accountCode}</td>
+                    <td className="px-4 py-3 font-medium text-content">
                       <div className="flex items-center gap-2">
                         {a.accountName}
-                        {a.isSystem && <Lock className="w-3 h-3 text-gray-300" />}
+                        {a.isSystem && <Lock className="w-3 h-3 text-content-muted/50" />}
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${TYPE_COLORS[a.accountType] ?? 'bg-gray-100 text-gray-600'}`}>{a.accountType}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${TYPE_COLORS[a.accountType] ?? 'bg-surface-muted text-content-muted'}`}>{a.accountType}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{a.accountCategory ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-700">{a.openingBalance ? fmt(a.openingBalance) : '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{a.accountCategory ?? '—'}</td>
+                    <td className="px-4 py-3 text-content">{a.openingBalance ? fmt(a.openingBalance) : '—'}</td>
                     <td className="px-4 py-3">
                       {!a.isSystem && (
-                        <button onClick={() => { setTarget(a); setModal('edit') }} className="text-gray-400 hover:text-blue-600 p-1">
+                        <button onClick={() => { setTarget(a); setModal('edit') }} className="text-content-muted hover:text-primary p-1">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                       )}

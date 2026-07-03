@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -20,8 +21,8 @@ interface Material {
 
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   materialName: z.string().min(1, 'Required'),
@@ -89,15 +90,15 @@ function MaterialModal({ material, onClose, onSaved }: {
         {isEdit && (
           <div>
             <label className={lbl}>Status</label>
-            <select {...register('status')} className={inp}>
+            <Select {...register('status')}>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
-            </select>
+            </Select>
           </div>
         )}
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Material'}
           </button>
         </div>
@@ -131,23 +132,23 @@ export function MaterialMasterPage() {
         subtitle="Manage construction material catalogue"
         action={
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add Material
           </button>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Total Materials</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{materials.length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Total Materials</p>
+          <p className="text-2xl font-bold text-primary mt-1">{materials.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Low Stock Alerts</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Low Stock Alerts</p>
           <p className="text-2xl font-bold text-red-600 mt-1">{lowStock}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Stock Value</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Stock Value</p>
           <p className="text-2xl font-bold text-indigo-600 mt-1">
             {fmt(materials.reduce((s, m) => s + m.currentStock * m.averageCost, 0))}
           </p>
@@ -158,36 +159,36 @@ export function MaterialMasterPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load materials.' : null} onRetry={refetch}
         empty={materials.length === 0} emptyMessage="No materials yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Material', 'Code', 'Category', 'Unit', 'Stock', 'Reorder', 'Avg Cost', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {materials.map(m => (
-                  <tr key={m.id} className={`hover:bg-gray-50 ${m.isLowStock ? 'bg-red-50/40' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{m.materialName}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{m.materialCode}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{m.category ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{m.unit}</td>
-                    <td className={`px-4 py-3 font-bold ${m.isLowStock ? 'text-red-600' : 'text-gray-900'}`}>
+                  <tr key={m.id} className={`hover:bg-surface-muted ${m.isLowStock ? 'bg-red-50/40' : ''}`}>
+                    <td className="px-4 py-3 font-medium text-content">{m.materialName}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{m.materialCode}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{m.category ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{m.unit}</td>
+                    <td className={`px-4 py-3 font-bold ${m.isLowStock ? 'text-red-600' : 'text-content'}`}>
                       <div className="flex items-center gap-1">
                         {m.isLowStock && <AlertTriangle className="w-3.5 h-3.5" />}
                         {m.currentStock.toLocaleString()}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">{m.minimumStock.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-700 text-xs">{fmt(m.averageCost)}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{m.minimumStock.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-content text-xs">{fmt(m.averageCost)}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${m.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{m.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${m.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted'}`}>{m.status}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => { setTarget(m); setModal('edit') }} className="text-gray-400 hover:text-blue-600 p-1">
+                      <button onClick={() => { setTarget(m); setModal('edit') }} className="text-content-muted hover:text-primary p-1">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
@@ -236,27 +237,27 @@ function SubstitutionsPanel({ materials }: { materials: Material[] }) {
   const remove = async (id: number) => { try { await api.delete(`/material-substitutions/${id}`); invalidate() } catch { /* noop */ } }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="font-semibold text-gray-900 text-sm">Material Substitutions</h3>
-      <p className="text-xs text-gray-500 mt-1">Approved equivalents are excluded from EPL variance.</p>
+    <div className="bg-surface rounded-xl border border-border-default p-5">
+      <h3 className="font-semibold text-content text-sm">Material Substitutions</h3>
+      <p className="text-xs text-content-muted mt-1">Approved equivalents are excluded from EPL variance.</p>
       <div className="flex flex-wrap items-center gap-2 mt-3">
-        <select value={original} onChange={e => setOriginal(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        <Select value={original} onChange={e => setOriginal(e.target.value)} className="min-w-[150px]">
           <option value="">Original material…</option>
           {materials.map(m => <option key={m.id} value={m.id}>{m.materialName}</option>)}
-        </select>
-        <span className="text-gray-400 text-sm">→ may be replaced by →</span>
-        <select value={substitute} onChange={e => setSubstitute(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </Select>
+        <span className="text-content-muted text-sm">→ may be replaced by →</span>
+        <Select value={substitute} onChange={e => setSubstitute(e.target.value)} className="min-w-[150px]">
           <option value="">Substitute material…</option>
           {materials.map(m => <option key={m.id} value={m.id}>{m.materialName}</option>)}
-        </select>
-        <button onClick={add} className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add</button>
+        </Select>
+        <button onClick={add} className="px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90">Add</button>
       </div>
-      <div className="mt-4 divide-y divide-gray-100">
-        {subs.length === 0 && <p className="text-xs text-gray-400">No substitutions defined.</p>}
+      <div className="mt-4 divide-y divide-border-default">
+        {subs.length === 0 && <p className="text-xs text-content-muted">No substitutions defined.</p>}
         {subs.map(s => (
           <div key={s.id} className="flex items-center justify-between py-2 text-sm">
-            <span>{s.originalMaterialName} <span className="text-gray-400">→</span> {s.substituteMaterialName}</span>
-            <button onClick={() => remove(s.id)} className="text-gray-400 hover:text-red-600 text-xs">Remove</button>
+            <span>{s.originalMaterialName} <span className="text-content-muted">→</span> {s.substituteMaterialName}</span>
+            <button onClick={() => remove(s.id)} className="text-content-muted hover:text-red-600 text-xs">Remove</button>
           </div>
         ))}
       </div>

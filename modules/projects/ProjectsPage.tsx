@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -21,17 +23,17 @@ interface Project {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  Planning:  'bg-gray-100 text-gray-600',
+  Planning:  'bg-surface-muted text-content-muted',
   Active:    'bg-green-100 text-green-700',
   OnHold:    'bg-amber-100 text-amber-700',
-  Completed: 'bg-blue-100 text-blue-700',
+  Completed: 'bg-primary/10 text-primary',
 }
 const STATUSES = ['Planning', 'Active', 'OnHold', 'Completed']
 
 function fmt(n?: number) { return n ? `৳${(n / 100000).toFixed(1)}L` : '—' }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   projectCode:      z.string().min(1, 'Required'),
@@ -92,9 +94,9 @@ function ProjectModal({ project, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Status <span className="text-red-500">*</span></label>
-            <select {...register('status')} className={inp}>
+            <Select {...register('status')}>
               {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
         <div>
@@ -114,16 +116,16 @@ function ProjectModal({ project, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Start Date</label>
-            <input type="date" {...register('startDate')} className={inp} />
+            <DateField {...register('startDate')} />
           </div>
           <div>
             <label className={lbl}>Est. Completion</label>
-            <input type="date" {...register('endDate')} className={inp} />
+            <DateField {...register('endDate')} />
           </div>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Project'}
           </button>
         </div>
@@ -134,35 +136,35 @@ function ProjectModal({ project, onClose, onSaved }: {
 
 function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: () => void; onSetup: () => void }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+    <div className="bg-surface rounded-xl border border-border-default p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2 mb-4">
         <div className="min-w-0">
-          <p className="text-xs text-gray-400 font-mono">{project.projectCode}</p>
-          <h3 className="font-semibold text-gray-900 truncate">{project.projectName}</h3>
+          <p className="text-xs text-content-muted font-mono">{project.projectCode}</p>
+          <h3 className="font-semibold text-content truncate">{project.projectName}</h3>
           {project.address && (
-            <p className="flex items-center gap-1 text-xs text-gray-500 mt-0.5"><MapPin className="w-3 h-3" />{project.address}</p>
+            <p className="flex items-center gap-1 text-xs text-content-muted mt-0.5"><MapPin className="w-3 h-3" />{project.address}</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[project.status] ?? 'bg-gray-100 text-gray-600'}`}>
+          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[project.status] ?? 'bg-surface-muted text-content-muted'}`}>
             {project.status}
           </span>
-          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit project">
+          <button onClick={onEdit} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Edit project">
             <Edit2 className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onSetup} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Setup checklist">
+          <button onClick={onSetup} className="p-1.5 text-content-muted hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Setup checklist">
             <ClipboardList className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-gray-100">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+      <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border-default">
+        <div className="flex items-center gap-2 text-xs text-content-muted">
           <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
-          <span>Cost: <span className="font-medium text-gray-700">{fmt(project.estimatedCost)}</span></span>
+          <span>Cost: <span className="font-medium text-content">{fmt(project.estimatedCost)}</span></span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-content-muted">
           <Building2 className="w-3.5 h-3.5 text-green-400" />
-          <span>Revenue: <span className="font-medium text-gray-700">{fmt(project.estimatedRevenue)}</span></span>
+          <span>Revenue: <span className="font-medium text-content">{fmt(project.estimatedRevenue)}</span></span>
         </div>
       </div>
       <button
@@ -218,7 +220,7 @@ export function ProjectsPage() {
         subtitle="Track all residential development projects"
         action={
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Project
           </button>
         }
@@ -238,21 +240,21 @@ export function ProjectsPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Total Projects</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{projects.length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Total Projects</p>
+          <p className="text-2xl font-bold text-primary mt-1">{projects.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Active</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Active</p>
           <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Completed</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{completedCount}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Completed</p>
+          <p className="text-2xl font-bold text-primary mt-1">{completedCount}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Planning</p>
-          <p className="text-2xl font-bold text-gray-600 mt-1">{projects.filter(p => p.status === 'Planning').length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Planning</p>
+          <p className="text-2xl font-bold text-content-muted mt-1">{projects.filter(p => p.status === 'Planning').length}</p>
         </div>
       </div>
 
@@ -278,7 +280,7 @@ export function ProjectsPage() {
                   <strong>{matSummary.atRiskCount}</strong> at risk (&gt;80% committed)
                 </span>
               )}
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-content-muted">
                 across {matSummary.projectsAffected} project{matSummary.projectsAffected !== 1 ? 's' : ''}
               </span>
             </div>
@@ -291,11 +293,11 @@ export function ProjectsPage() {
       )}
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search projects…" onRefresh={refetch}>
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={status} onChange={e => setStatus(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Status</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load projects.' : null} onRetry={refetch}

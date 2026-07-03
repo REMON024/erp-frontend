@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -23,15 +24,15 @@ export interface Unit {
 
 const STATUS_COLORS: Record<string, string> = {
   Available: 'bg-emerald-100 text-emerald-700',
-  Booked:    'bg-blue-100 text-blue-700',
-  Sold:      'bg-gray-100 text-gray-500',
+  Booked:    'bg-primary/10 text-primary',
+  Sold:      'bg-surface-muted text-content-muted',
   Cancelled: 'bg-red-100 text-red-600',
 }
 const STATUSES = ['Available', 'Booked', 'Sold', 'Cancelled']
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   projectId:       z.coerce.number().min(1, 'Required'),
@@ -87,18 +88,18 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Project <span className="text-red-500">*</span></label>
-            <select {...register('projectId')} className={inp}>
+            <Select {...register('projectId')}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-            </select>
+            </Select>
             {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
           </div>
           <div>
             <label className={lbl}>Block <span className="text-red-500">*</span></label>
-            <select {...register('blockId')} className={inp}>
+            <Select {...register('blockId')}>
               <option value="">Select block</option>
               {eligibleBlocks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+            </Select>
             {errors.blockId && <p className="text-xs text-red-600 mt-1">{errors.blockId.message}</p>}
           </div>
         </div>
@@ -124,16 +125,16 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Facing</label>
-            <select {...register('facing')} className={inp}>
+            <Select {...register('facing')}>
               <option value="">—</option>
               {['North', 'South', 'East', 'West', 'North-East', 'South-West'].map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
+            </Select>
           </div>
           <div>
             <label className={lbl}>Status</label>
-            <select {...register('status')} className={inp}>
+            <Select {...register('status')}>
               {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -148,14 +149,14 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
           </div>
         </div>
         {totalPrice > 0 && (
-          <div className="bg-gray-50 rounded-lg px-4 py-2 flex justify-between items-center text-sm">
-            <span className="text-gray-500">Total Price</span>
-            <span className="font-bold text-gray-900">৳{totalPrice.toLocaleString('en-BD')}</span>
+          <div className="bg-surface-muted rounded-lg px-4 py-2 flex justify-between items-center text-sm">
+            <span className="text-content-muted">Total Price</span>
+            <span className="font-bold text-content">৳{totalPrice.toLocaleString('en-BD')}</span>
           </div>
         )}
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Unit'}
           </button>
         </div>
@@ -198,7 +199,7 @@ export function UnitsPage() {
         subtitle="Define and manage sellable units across all projects"
         action={
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add Unit
           </button>
         }
@@ -206,62 +207,62 @@ export function UnitsPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
-          { label: 'Total Units',     value: units.length,        color: 'text-gray-900',    bg: 'bg-white' },
+          { label: 'Total Units',     value: units.length,        color: 'text-content',    bg: 'bg-surface' },
           { label: 'Available',       value: available,           color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Booked',          value: booked,              color: 'text-blue-600',    bg: 'bg-blue-50' },
-          { label: 'Sold',            value: sold,                color: 'text-gray-500',    bg: 'bg-gray-50' },
+          { label: 'Booked',          value: booked,              color: 'text-primary',    bg: 'bg-primary/10' },
+          { label: 'Sold',            value: sold,                color: 'text-content-muted',    bg: 'bg-surface-muted' },
           { label: 'Available Value', value: fmt(availableValue), color: 'text-indigo-600',  bg: 'bg-indigo-50' },
         ].map(s => (
-          <div key={s.label} className={`rounded-xl border border-gray-200 p-4 ${s.bg}`}>
-            <p className="text-xs text-gray-500 uppercase tracking-wide leading-tight">{s.label}</p>
+          <div key={s.label} className={`rounded-xl border border-border-default p-4 ${s.bg}`}>
+            <p className="text-xs text-content-muted uppercase tracking-wide leading-tight">{s.label}</p>
             <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search unit no…" onRefresh={refetch}>
-        <select value={projectId} onChange={e => setProject(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={projectId} onChange={e => setProject(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Projects</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-        </select>
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </Select>
+        <Select value={status} onChange={e => setStatus(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Status</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load units.' : null} onRetry={refetch}
         empty={units.length === 0} emptyMessage="No units found.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Unit No.', 'Block', 'Type', 'Floor', 'Area (sqft)', 'Total Price', 'Facing', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {units.map(u => (
-                  <tr key={u.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-semibold text-gray-900">{u.unitNo}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">
-                      <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-gray-400" />{u.blockName}</div>
+                  <tr key={u.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-semibold text-content">{u.unitNo}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">
+                      <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-content-muted" />{u.blockName}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{u.unitType ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-center">{u.floorNo ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-700 font-medium">{u.sizeSqFt?.toLocaleString() ?? '—'}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(u.totalPrice)}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{u.facing ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{u.unitType ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-center">{u.floorNo ?? '—'}</td>
+                    <td className="px-4 py-3 text-content font-medium">{u.sizeSqFt?.toLocaleString() ?? '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-content">{fmt(u.totalPrice)}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{u.facing ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[u.status] ?? 'bg-gray-100 text-gray-600'}`}>{u.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[u.status] ?? 'bg-surface-muted text-content-muted'}`}>{u.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => { setTarget(u); setModal('edit') }}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                     </td>

@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -20,14 +21,14 @@ interface Vendor {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-  Supplier:   'bg-blue-100 text-blue-700',
+  Supplier:   'bg-primary/10 text-primary',
   Contractor: 'bg-orange-100 text-orange-700',
   Both:       'bg-purple-100 text-purple-700',
 }
 const TYPES = ['Supplier', 'Contractor', 'Both']
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   vendorName:    z.string().min(1, 'Required'),
@@ -77,9 +78,9 @@ function VendorModal({ vendor, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Type <span className="text-red-500">*</span></label>
-            <select {...register('vendorType')} className={inp}>
+            <Select {...register('vendorType')}>
               {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -116,15 +117,15 @@ function VendorModal({ vendor, onClose, onSaved }: {
         {isEdit && (
           <div>
             <label className={lbl}>Status</label>
-            <select {...register('status')} className={inp}>
+            <Select {...register('status')}>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
-            </select>
+            </Select>
           </div>
         )}
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Vendor'}
           </button>
         </div>
@@ -162,74 +163,74 @@ export function VendorsPage() {
         subtitle="Manage suppliers and contractors"
         action={
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add Vendor
           </button>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Total Vendors</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{vendors.length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Total Vendors</p>
+          <p className="text-2xl font-bold text-content mt-1">{vendors.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Suppliers</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{suppliers}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Suppliers</p>
+          <p className="text-2xl font-bold text-primary mt-1">{suppliers}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Contractors</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Contractors</p>
           <p className="text-2xl font-bold text-orange-600 mt-1">{contractors}</p>
         </div>
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search vendor name or code…" onRefresh={refetch}>
-        <select value={type} onChange={e => setType(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={type} onChange={e => setType(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Types</option>
           {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load vendors.' : null} onRetry={refetch}
         empty={vendors.length === 0} emptyMessage="No vendors yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Vendor', 'Code', 'Type', 'Contact', 'BIN', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {vendors.map(v => (
-                  <tr key={v.id} className="hover:bg-gray-50">
+                  <tr key={v.id} className="hover:bg-surface-muted">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="font-medium text-gray-900">{v.vendorName}</span>
+                        <Building2 className="w-4 h-4 text-content-muted shrink-0" />
+                        <span className="font-medium text-content">{v.vendorName}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{v.vendorCode}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{v.vendorCode}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${TYPE_COLORS[v.vendorType] ?? 'bg-gray-100 text-gray-600'}`}>{v.vendorType}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${TYPE_COLORS[v.vendorType] ?? 'bg-surface-muted text-content-muted'}`}>{v.vendorType}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">
+                    <td className="px-4 py-3 text-content-muted text-xs">
                       {v.contactPerson && <p>{v.contactPerson}</p>}
                       {v.mobile && <p className="flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3" />{v.mobile}</p>}
                     </td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{v.binNumber ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{v.binNumber ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${v.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{v.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${v.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted'}`}>{v.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setHistory(v)} title="View History" className="text-gray-400 hover:text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg">
+                        <button onClick={() => setHistory(v)} title="View History" className="text-content-muted hover:text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg">
                           <History className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => { setTarget(v); setModal('edit') }} title="Edit" className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg">
+                        <button onClick={() => { setTarget(v); setModal('edit') }} title="Edit" className="text-content-muted hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                       </div>

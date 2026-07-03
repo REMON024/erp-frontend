@@ -290,3 +290,156 @@ Company-wide configuration toggles, e.g.:
 - **Status badges** with consistent colours, and an **Approve** action where a record
   has a Draft → Approved/Active lifecycle.
 - Data is fetched via a shared `useApiData` hook against the backend REST API.
+
+---
+
+## How the modules connect
+
+The modules are not independent — data flows from project setup through to the
+ledger. The diagram below shows the main dependencies (arrows = "feeds into").
+
+```
+                          ┌──────────────┐
+                          │   PROJECTS   │  (the spine — everything tags to a project)
+                          └──────┬───────┘
+        ┌────────────────────────┼─────────────────────────┐
+        ▼                        ▼                          ▼
+ ┌─────────────┐         ┌──────────────┐           ┌──────────────┐
+ │  ESTIMATES  │         │  INVESTMENT  │           │    SALES     │
+ │  (BOQ)      │         │   entries    │           │              │
+ └──────┬──────┘         └──────┬───────┘           │ Units→Booking│
+        │ budget baseline       │                   │  →Schedule   │
+        ▼                       │                   │  →Invoice    │
+ ┌─────────────────┐            │                   │  →Collection │
+ │ BUDGET TRACKER  │            │                   └──────┬───────┘
+ │ MATERIAL BUDGET │◄───┐       │                          │
+ └─────────────────┘    │       │                          │
+        ▲ checked by    │       │                          │
+        │               │       │                          │
+ ┌──────┴──────┐  ┌──────┴────┐ │                          │
+ │  PURCHASE   │  │ INVENTORY │ │                          │
+ │ PO → GRN    │─►│ stock in/ │ │                          │
+ └─────────────┘  │ issue/    │ │                          │
+ ┌─────────────┐  │ transfer  │ │                          │
+ │ CONSTRUCTION│  └───────────┘ │                          │
+ │ Work Orders │                │                          │
+ │ → Bills     │                │                          │
+ └──────┬──────┘                │                          │
+        │ expense/payment       │ profit shares            │ receipts/revenue
+        ▼ vouchers              ▼ vouchers                 ▼ vouchers
+ ┌───────────────────────────────────────────────────────────────────┐
+ │                          ACCOUNTING                                 │
+ │   Vouchers → Ledger → Trial Balance → Profit & Loss                 │
+ │   (P&L net profit feeds back into → PROFIT DISTRIBUTION)            │
+ └───────────────────────────────────────────────────────────────────┘
+```
+
+### Rendered diagram (Mermaid)
+
+```mermaid
+flowchart TD
+    P[PROJECTS<br/>the spine]
+
+    P --> EST[ESTIMATES / BOQ]
+    P --> INV[INVESTMENT entries]
+    P --> SALES
+
+    EST -->|budget baseline| BUD[BUDGET TRACKER<br/>MATERIAL BUDGET]
+
+    subgraph Procurement
+        PUR[PURCHASE<br/>PO to GRN] --> STK[INVENTORY<br/>stock in / issue / transfer]
+    end
+    P --> PUR
+    PUR -.->|checked against| BUD
+    STK -.->|issues = actual cost| BUD
+
+    P --> WO[CONSTRUCTION<br/>Work Orders to Bills]
+
+    subgraph SalesFlow [SALES]
+        U[Units] --> B[Bookings] --> SCH[Payment Schedule] --> I[Invoices] --> C[Collections]
+    end
+    SALES --> SalesFlow
+
+    STK -->|consumption voucher| ACC
+    WO -->|expense / payment vouchers| ACC
+    INV -->|investment vouchers| ACC
+    C -->|receipt / revenue vouchers| ACC
+
+    subgraph ACC [ACCOUNTING]
+        V[Vouchers] --> L[Ledger] --> TB[Trial Balance] --> PL[Profit & Loss]
+    end
+
+    PL -->|net profit| PD[PROFIT DISTRIBUTION]
+    INV --> PD
+```
+
+**The key idea:** almost every operational action (a collection, a material issue,
+a work-order bill, an investment) ends up as a **voucher** in Accounting. The
+ledger, trial balance and P&L are just different views of those vouchers. The
+**Trial Balance reconciliation banner** exists to confirm the source modules and
+the ledger still agree.
+
+---
+
+## End-to-end walkthroughs
+
+These show how the pages chain together for the main business processes.
+
+### A. Standing up a new project
+1. **Projects → New Project** — create the project (code, name, estimated cost/revenue).
+2. Open its **Setup Checklist** to see the remaining stages.
+3. **Blocks** — add the building blocks; **Units** — add the sellable flats.
+4. **Estimates** — build the BOQ (budget) and **Approve** it. This becomes the
+   baseline for Budget Tracker, Material Budget and Cost Variance.
+
+### B. Procure-to-stock (buying materials)
+1. **Materials** — make sure each material exists in the catalogue.
+2. **Purchase → New PO** — order materials from a vendor for the project. Lines are
+   checked against the **Material Budget**; unmatched items need a reason (or are
+   blocked, per System Settings).
+3. **Approve** the PO.
+4. **GRN** — receive goods against the approved PO (received qty + unit cost). This
+   raises stock and updates average cost.
+5. Verify in **Stock Levels**.
+
+### C. Issue material to site (consumption)
+1. **Inventory → Issue to Project** — issue material out to the project.
+2. This becomes the project's **actual** material cost, visible in **Material Budget**
+   and **Cost Variance**, and consumes stock (low-stock alerts trigger if needed).
+3. Optionally use **Stock Transfer** to move material between warehouses first.
+
+### D. Subcontractor work (Work Orders)
+1. **Construction → New Work Order** — contract a contractor (from Vendors, type
+   Contractor/Both) with contract amount, advance, retention %. **Approve** → Active.
+2. As work progresses, open the order's **Bills** and **Add Progress Bill**; the
+   system holds back retention and computes net payable. **Approve** the bill.
+3. From the approved bill, create an **Expense Voucher** (records the cost) and a
+   **Payment Voucher** (records paying the contractor) — both land in Accounting.
+4. Track overall status in **Reports → Work Order Progress**.
+
+### E. Sell a unit and collect money
+1. **Clients** — add the buyer.
+2. **Bookings → New Booking** — book an Available unit; set booking amount, discount,
+   and the installment plan (even or custom). The unit becomes Booked.
+3. **Payment Schedule** — when an installment is due, **generate an invoice** for it.
+4. **Invoices** — review/print the invoice.
+5. **Collections** — record the customer's payment against the invoice (Cash/Bank/
+   Cheque/Online); print a receipt. Revenue posts to Accounting per the
+   **Revenue Recognition Basis** in System Settings.
+6. Monitor **Reports → AR Aging** and **Collection Pipeline** for what's outstanding.
+
+### F. Investment and profit distribution
+1. **Investors** — add the investors.
+2. **Investment → Entries** — record each investor's money into a project.
+3. **Investment → Report** — see totals by project/investor and ROI.
+4. When a project is profitable, **Profit Distribution** — pick the project, choose
+   profit & share basis, **preview** each investor's share, adjust/round if needed,
+   then declare. Payout lines/vouchers are generated. (Super-admin gated.)
+
+### G. Month/period close (Accounting)
+1. Day-to-day, most vouchers are created automatically by modules B–F above; use
+   **Vouchers** for manual journal entries.
+2. **Account Ledger** — drill into any account's transactions.
+3. **Trial Balance** — confirm debits = credits and the **reconciliation** checks pass.
+4. **Profit & Loss** — review revenue vs expense and net profit.
+5. **Fiscal Years** — close the period to lock its vouchers.

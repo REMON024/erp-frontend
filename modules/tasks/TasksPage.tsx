@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,21 +11,21 @@ import api from '@/lib/api'
 import type { Task, TaskStatus, TaskPriority } from '@/types'
 
 const COLUMNS: { id: TaskStatus; label: string; color: string; icon: React.ReactNode }[] = [
-  { id: 'pending',     label: 'Pending',     color: 'bg-gray-100 border-gray-300',   icon: <Circle className="w-4 h-4 text-gray-400" /> },
-  { id: 'in_progress', label: 'In Progress', color: 'bg-blue-50 border-blue-200',    icon: <Clock className="w-4 h-4 text-blue-500" /> },
+  { id: 'pending',     label: 'Pending',     color: 'bg-surface-muted border-border-default',   icon: <Circle className="w-4 h-4 text-content-muted" /> },
+  { id: 'in_progress', label: 'In Progress', color: 'bg-primary/10 border-blue-200',    icon: <Clock className="w-4 h-4 text-primary" /> },
   { id: 'review',      label: 'Review',      color: 'bg-amber-50 border-amber-200',  icon: <Eye className="w-4 h-4 text-amber-500" /> },
   { id: 'done',        label: 'Done',        color: 'bg-green-50 border-green-200',  icon: <CheckCircle2 className="w-4 h-4 text-green-500" /> },
 ]
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  low:      'bg-gray-100 text-gray-600',
-  medium:   'bg-blue-100 text-blue-700',
+  low:      'bg-surface-muted text-content-muted',
+  medium:   'bg-primary/10 text-primary',
   high:     'bg-orange-100 text-orange-700',
   critical: 'bg-red-100 text-red-700',
 }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   title:       z.string().min(1, 'Required'),
@@ -82,26 +84,26 @@ function TaskModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Priority</label>
-            <select {...register('priority')} className={inp}>
+            <Select {...register('priority')}>
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="critical">Critical</option>
-            </select>
+            </Select>
           </div>
           <div>
             <label className={lbl}>Start Date</label>
-            <input type="date" {...register('start_date')} className={inp} />
+            <DateField {...register('start_date')} />
           </div>
           <div>
             <label className={lbl}>Due Date</label>
-            <input type="date" {...register('due_date')} className={inp} />
+            <DateField {...register('due_date')} />
             {errors.due_date && <p className="text-xs text-red-600 mt-1">{errors.due_date.message}</p>}
           </div>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Creating…' : 'Create Task'}
           </button>
         </div>
@@ -116,26 +118,26 @@ function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: s
     pending: 'in_progress', in_progress: 'review', review: 'done', done: null,
   }
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm space-y-2">
-      <p className="text-sm font-medium text-gray-900 leading-tight">{task.title}</p>
-      {task.description && <p className="text-xs text-gray-500 line-clamp-2">{task.description}</p>}
+    <div className="bg-surface rounded-lg border border-border-default p-3 shadow-sm space-y-2">
+      <p className="text-sm font-medium text-content leading-tight">{task.title}</p>
+      {task.description && <p className="text-xs text-content-muted line-clamp-2">{task.description}</p>}
       <div className="flex items-center justify-between">
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${PRIORITY_COLORS[task.priority]}`}>
           {task.priority}
         </span>
-        <span className={`text-xs ${overdue ? 'text-red-600 font-medium' : 'text-gray-400'}`}>
+        <span className={`text-xs ${overdue ? 'text-red-600 font-medium' : 'text-content-muted'}`}>
           {overdue ? 'Overdue ' : ''}{task.due_date}
         </span>
       </div>
       {task.progress > 0 && (
-        <div className="h-1 bg-gray-100 rounded-full">
-          <div className="h-1 bg-blue-500 rounded-full" style={{ width: `${task.progress}%` }} />
+        <div className="h-1 bg-surface-muted rounded-full">
+          <div className="h-1 bg-primary rounded-full" style={{ width: `${task.progress}%` }} />
         </div>
       )}
       {next[task.status] && (
         <button
           onClick={() => onStatusChange(task.id, next[task.status]!)}
-          className="text-xs text-blue-600 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           Move to {next[task.status]!.replace('_', ' ')} →
         </button>
@@ -179,20 +181,20 @@ export function TasksPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Task Management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Track tasks across all projects</p>
+          <h1 className="text-2xl font-bold text-content">Task Management</h1>
+          <p className="text-sm text-content-muted mt-0.5">Track tasks across all projects</p>
         </div>
         <div className="flex items-center gap-3">
           <input
             value={project} onChange={e => setProject(e.target.value)}
             placeholder="Filter by project ID"
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-44"
+            className="border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none w-44"
           />
-          <button onClick={load} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">
+          <button onClick={load} className="p-2 border border-border-default rounded-lg hover:bg-surface-muted text-content-muted">
             <RefreshCw className="w-4 h-4" />
           </button>
           <button onClick={() => setShowAdd(true)}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Task
           </button>
         </div>
@@ -201,11 +203,11 @@ export function TasksPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {COLUMNS.map(col => (
-          <div key={col.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+          <div key={col.id} className="bg-surface rounded-xl border border-border-default p-4 flex items-center gap-3">
             {col.icon}
             <div>
-              <p className="text-xs text-gray-500">{col.label}</p>
-              <p className="text-2xl font-bold text-gray-900">{counts[col.id] ?? 0}</p>
+              <p className="text-xs text-content-muted">{col.label}</p>
+              <p className="text-2xl font-bold text-content">{counts[col.id] ?? 0}</p>
             </div>
           </div>
         ))}
@@ -223,14 +225,14 @@ export function TasksPage() {
           <div key={col.id} className={`rounded-xl border-2 ${col.color} p-3 space-y-3 min-h-[300px]`}>
             <div className="flex items-center gap-2">
               {col.icon}
-              <span className="text-sm font-semibold text-gray-700">{col.label}</span>
-              <span className="ml-auto text-xs bg-white border border-gray-200 rounded-full px-2 py-0.5 font-medium">
+              <span className="text-sm font-semibold text-content">{col.label}</span>
+              <span className="ml-auto text-xs bg-surface border border-border-default rounded-full px-2 py-0.5 font-medium">
                 {counts[col.id] ?? 0}
               </span>
             </div>
             {loading
               ? Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="h-20 bg-white rounded-lg border border-gray-200 animate-pulse" />
+                  <div key={i} className="h-20 bg-surface rounded-lg border border-border-default animate-pulse" />
                 ))
               : tasks.filter(t => t.status === col.id).map(t => (
                   <TaskCard key={t.id} task={t} onStatusChange={moveTask} />

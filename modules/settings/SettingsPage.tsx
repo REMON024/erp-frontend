@@ -25,8 +25,8 @@ const passwordSchema = z.object({
 type ProfileForm  = z.infer<typeof profileSchema>
 type PasswordForm = z.infer<typeof passwordSchema>
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 export function SettingsPage() {
   const { user, setAuth, token } = useAuthStore()
@@ -84,32 +84,32 @@ export function SettingsPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manage your account and preferences</p>
+        <h1 className="text-2xl font-bold text-content">Settings</h1>
+        <p className="text-sm text-content-muted mt-0.5">Manage your account and preferences</p>
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-border-default">
         {([
           { key: 'profile',       label: 'Profile Details' },
           { key: 'password',      label: 'Change Password' },
           { key: 'notifications', label: 'Notifications' },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === t.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${activeTab === t.key ? 'border-primary text-primary' : 'border-transparent text-content-muted hover:text-content'}`}>
             {t.label}
           </button>
         ))}
       </div>
 
       {activeTab === 'profile' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
-            <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold select-none">
+        <div className="bg-surface rounded-xl border border-border-default p-6">
+          <div className="flex items-center gap-4 mb-6 pb-6 border-b border-border-default">
+            <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-2xl font-bold select-none">
               {initials}
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-lg">{user?.fullName}</p>
-              <p className="text-sm text-gray-500">{user?.role?.replace(/_/g, ' ')} · {user?.email}</p>
+              <p className="font-semibold text-content text-lg">{user?.fullName}</p>
+              <p className="text-sm text-content-muted">{user?.role?.replace(/_/g, ' ')} · {user?.email}</p>
             </div>
           </div>
 
@@ -125,7 +125,7 @@ export function SettingsPage() {
               <div>
                 <label className={lbl}>First Name <span className="text-red-500">*</span></label>
                 <div className="relative">
-                  <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <User className="absolute left-3 top-2.5 w-4 h-4 text-content-muted" />
                   <input {...profileForm.register('firstName')} className={inp + ' pl-9'} />
                 </div>
                 {profileForm.formState.errors.firstName && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.firstName.message}</p>}
@@ -139,24 +139,24 @@ export function SettingsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={lbl}>Email Address</label>
-                <input value={user?.email ?? ''} disabled className={inp + ' bg-gray-50 text-gray-400 cursor-not-allowed'} />
-                <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+                <input value={user?.email ?? ''} disabled className={inp + ' bg-surface-muted text-content-muted cursor-not-allowed'} />
+                <p className="text-xs text-content-muted mt-1">Email cannot be changed</p>
               </div>
               <div>
                 <label className={lbl}>Phone Number</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                  <Phone className="absolute left-3 top-2.5 w-4 h-4 text-content-muted" />
                   <input {...profileForm.register('phone')} className={inp + ' pl-9'} placeholder="+880-…" />
                 </div>
               </div>
             </div>
             <div>
               <label className={lbl}>Role</label>
-              <input value={user?.role?.replace(/_/g, ' ') ?? ''} disabled className={inp + ' bg-gray-50 text-gray-400 cursor-not-allowed'} />
+              <input value={user?.role?.replace(/_/g, ' ') ?? ''} disabled className={inp + ' bg-surface-muted text-content-muted cursor-not-allowed'} />
             </div>
             <div className="flex justify-end pt-2">
               <button type="submit" disabled={profileForm.formState.isSubmitting}
-                className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+                className="px-6 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
                 {profileForm.formState.isSubmitting ? 'Saving…' : 'Save Changes'}
               </button>
             </div>
@@ -165,11 +165,11 @@ export function SettingsPage() {
       )}
 
       {activeTab === 'password' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+        <div className="bg-surface rounded-xl border border-border-default p-6">
+          <h3 className="font-semibold text-content mb-2 flex items-center gap-2">
             <Lock className="w-4 h-4" /> Change Password
           </h3>
-          <p className="text-sm text-gray-500 mb-6">Ensure your account uses a strong and secure password</p>
+          <p className="text-sm text-content-muted mb-6">Ensure your account uses a strong and secure password</p>
 
           {pwMsg && (
             <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${pwMsg.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
@@ -198,7 +198,7 @@ export function SettingsPage() {
             </div>
             <div className="flex justify-end pt-2">
               <button type="submit" disabled={passwordForm.formState.isSubmitting}
-                className="px-6 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+                className="px-6 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
                 {passwordForm.formState.isSubmitting ? 'Changing…' : 'Change Password'}
               </button>
             </div>
@@ -207,9 +207,9 @@ export function SettingsPage() {
       )}
 
       {activeTab === 'notifications' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-2">Notification Preferences</h3>
-          <p className="text-sm text-gray-500 mb-6">Choose what notifications you receive</p>
+        <div className="bg-surface rounded-xl border border-border-default p-6">
+          <h3 className="font-semibold text-content mb-2">Notification Preferences</h3>
+          <p className="text-sm text-content-muted mb-6">Choose what notifications you receive</p>
           <div className="space-y-4">
             {[
               { label: 'Budget Overrun Alerts',       desc: 'Notify when project costs exceed budget thresholds',    defaultOn: true },
@@ -219,14 +219,14 @@ export function SettingsPage() {
               { label: 'Vendor Invoice Due Dates',    desc: 'Reminders for upcoming vendor invoice due dates',       defaultOn: true },
               { label: 'Certification Expiry',        desc: 'Alerts when vendor certifications are about to expire', defaultOn: true },
             ].map(n => (
-              <div key={n.label} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+              <div key={n.label} className="flex items-center justify-between py-3 border-b border-border-default last:border-0">
                 <div>
-                  <p className="text-sm font-medium text-gray-900">{n.label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{n.desc}</p>
+                  <p className="text-sm font-medium text-content">{n.label}</p>
+                  <p className="text-xs text-content-muted mt-0.5">{n.desc}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" defaultChecked={n.defaultOn} />
-                  <div className="w-10 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                  <div className="w-10 h-5 bg-surface-muted peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-surface after:rounded-full after:h-4 after:w-4 after:transition-all" />
                 </label>
               </div>
             ))}

@@ -37,8 +37,8 @@ export function TrialBalancePage() {
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {r.checks.map((c) => (
-              <div key={c.label} className="flex items-center justify-between rounded-lg bg-white border border-gray-100 px-3 py-2 text-sm">
-                <span className="text-gray-700">{c.label}</span>
+              <div key={c.label} className="flex items-center justify-between rounded-lg bg-surface border border-border-default px-3 py-2 text-sm">
+                <span className="text-content">{c.label}</span>
                 <span className={c.isBalanced ? 'text-green-600 font-medium' : 'text-red-600 font-semibold'}>
                   {c.isBalanced ? 'OK' : `Δ ${fmt(c.difference)}`}
                 </span>
@@ -49,9 +49,9 @@ export function TrialBalancePage() {
       )}
 
       <DataState loading={tb.isLoading} error={tb.error ? 'Failed to load trial balance.' : null} onRetry={tb.refetch}>
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-600">
+            <thead className="bg-surface-muted text-content-muted">
               <tr>
                 <th className="text-left px-4 py-2 font-medium">Code</th>
                 <th className="text-left px-4 py-2 font-medium">Account</th>
@@ -62,10 +62,10 @@ export function TrialBalancePage() {
             </thead>
             <tbody>
               {data.rows.map((row) => (
-                <tr key={row.accountCode} className="border-t border-gray-100">
-                  <td className="px-4 py-2 text-gray-500">{row.accountCode}</td>
-                  <td className="px-4 py-2 text-gray-900">{row.accountName}</td>
-                  <td className="px-4 py-2 text-gray-500">{row.accountType}</td>
+                <tr key={row.accountCode} className="border-t border-border-default">
+                  <td className="px-4 py-2 text-content-muted">{row.accountCode}</td>
+                  <td className="px-4 py-2 text-content">{row.accountName}</td>
+                  <td className="px-4 py-2 text-content-muted">{row.accountType}</td>
                   <td className="px-4 py-2 text-right">{fmt(row.debit)}</td>
                   <td className="px-4 py-2 text-right">{fmt(row.credit)}</td>
                 </tr>

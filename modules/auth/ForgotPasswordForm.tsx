@@ -23,35 +23,35 @@ export function ForgotPasswordForm() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="bg-surface rounded-2xl shadow-xl p-8">
         {sent ? (
           <div className="text-center">
             <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-slate-900">Check your email</h2>
-            <p className="text-slate-500 text-sm mt-2">We sent a password reset link to your email address.</p>
-            <Link href="/login" className="inline-block mt-6 text-sm text-blue-600 hover:underline">
+            <h2 className="text-xl font-bold text-content">Check your email</h2>
+            <p className="text-content-muted text-sm mt-2">We sent a password reset link to your email address.</p>
+            <Link href="/login" className="inline-block mt-6 text-sm text-primary hover:underline">
               Back to login
             </Link>
           </div>
         ) : (
           <>
             <div className="mb-6">
-              <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
+              <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-content-muted hover:text-content">
                 <ArrowLeft className="w-4 h-4" /> Back to login
               </Link>
-              <h1 className="text-2xl font-bold text-slate-900 mt-4">Forgot password?</h1>
-              <p className="text-slate-500 text-sm mt-1">Enter your email and we'll send a reset link.</p>
+              <h1 className="text-2xl font-bold text-content mt-4">Forgot password?</h1>
+              <p className="text-content-muted text-sm mt-1">Enter your email and we'll send a reset link.</p>
             </div>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <label className="block text-sm font-medium text-content mb-1.5">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
                   <input
                     {...register('email')}
                     type="email"
                     placeholder="you@company.com"
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-10 pr-4 py-2.5 border border-border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
                 {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
@@ -59,7 +59,7 @@ export function ForgotPasswordForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
               >
                 {isSubmitting ? 'Sending...' : 'Send reset link'}
               </button>

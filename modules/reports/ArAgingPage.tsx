@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
@@ -43,20 +44,20 @@ export function ArAgingPage() {
 
       <div className="flex items-end gap-3 flex-wrap">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">As of Date</label>
-          <input type="date" value={asOfDate} onChange={e => setAsOfDate(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          <label className="block text-sm font-medium text-content mb-1">As of Date</label>
+          <DateField value={asOfDate} onChange={e => setAsOfDate(e.target.value)}
+            className="min-w-[150px]" />
         </div>
         <button onClick={() => { setSubmitted(true); refetch() }}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+          className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium">
           Run Report
         </button>
       </div>
 
       {!submitted && (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
-          <Clock className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <p className="text-sm text-gray-500">Click "Run Report" to generate the AR aging analysis</p>
+        <div className="rounded-xl border border-dashed border-border-default bg-surface-muted p-12 text-center">
+          <Clock className="w-10 h-10 text-content-muted/50 mx-auto mb-3" />
+          <p className="text-sm text-content-muted">Click "Run Report" to generate the AR aging analysis</p>
         </div>
       )}
 
@@ -67,34 +68,34 @@ export function ArAgingPage() {
             {/* Bucket summary */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {Object.entries(BUCKET_COLOR).map(([bucket, cls]) => (
-                <div key={bucket} className={`rounded-xl border border-gray-200 p-4 ${cls.replace('text-', 'bg-').replace('700', '50').replace('800', '50').replace('bg-', 'bg-')}`}>
+                <div key={bucket} className={`rounded-xl border border-border-default p-4 ${cls.replace('text-', 'bg-').replace('700', '50').replace('800', '50').replace('bg-', 'bg-')}`}>
                   <p className="text-xs font-semibold uppercase">{bucket}</p>
                   <p className="text-lg font-bold mt-1">{fmt(bucketTotals[bucket] ?? 0)}</p>
                 </div>
               ))}
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-800">Invoice Detail</h3>
+            <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+              <div className="px-4 py-3 border-b border-border-default flex items-center justify-between">
+                <h3 className="font-semibold text-content">Invoice Detail</h3>
                 <span className="text-sm font-bold text-red-700">Total Outstanding: {fmt(data?.totalOutstanding ?? 0)}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[780px] text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-surface-muted border-b border-border-default">
                     <tr>
                       {['Invoice No', 'Customer', 'Invoice Date', 'Due Date', 'Total', 'Paid', 'Outstanding', 'Days Overdue', 'Bucket'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                        <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-border-default">
                     {data?.rows.map(r => (
-                      <tr key={r.invoiceId} className={r.daysOverdue > 90 ? 'bg-red-50/40' : r.daysOverdue > 60 ? 'bg-orange-50/40' : 'hover:bg-gray-50'}>
-                        <td className="px-3 py-2 font-medium text-blue-700">{r.invoiceNo}</td>
-                        <td className="px-3 py-2 text-gray-800">{r.customerName}</td>
-                        <td className="px-3 py-2 text-gray-500">{r.invoiceDate}</td>
-                        <td className="px-3 py-2 text-gray-500">{r.dueDate || '—'}</td>
+                      <tr key={r.invoiceId} className={r.daysOverdue > 90 ? 'bg-red-50/40' : r.daysOverdue > 60 ? 'bg-orange-50/40' : 'hover:bg-surface-muted'}>
+                        <td className="px-3 py-2 font-medium text-primary">{r.invoiceNo}</td>
+                        <td className="px-3 py-2 text-content">{r.customerName}</td>
+                        <td className="px-3 py-2 text-content-muted">{r.invoiceDate}</td>
+                        <td className="px-3 py-2 text-content-muted">{r.dueDate || '—'}</td>
                         <td className="px-3 py-2 text-right">{fmt(r.totalAmount)}</td>
                         <td className="px-3 py-2 text-right text-green-700">{fmt(r.paidAmount)}</td>
                         <td className="px-3 py-2 text-right font-semibold text-red-700">{fmt(r.outstanding)}</td>
@@ -107,14 +108,14 @@ export function ArAgingPage() {
                           {r.daysOverdue === 0 && <span className="text-green-600">Current</span>}
                         </td>
                         <td className="px-3 py-2">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BUCKET_COLOR[r.agingBucket] ?? 'bg-gray-100 text-gray-600'}`}>{r.agingBucket}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BUCKET_COLOR[r.agingBucket] ?? 'bg-surface-muted text-content-muted'}`}>{r.agingBucket}</span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
-                  <tfoot className="border-t border-gray-200 bg-gray-50 font-bold">
+                  <tfoot className="border-t border-border-default bg-surface-muted font-bold">
                     <tr>
-                      <td colSpan={6} className="px-3 py-2 text-xs uppercase text-gray-700">Total Outstanding</td>
+                      <td colSpan={6} className="px-3 py-2 text-xs uppercase text-content">Total Outstanding</td>
                       <td className="px-3 py-2 text-right text-red-700">{fmt(data?.totalOutstanding ?? 0)}</td>
                       <td colSpan={2} />
                     </tr>

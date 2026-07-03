@@ -54,9 +54,9 @@ export function SystemSettingsPage() {
       <DataState loading={isLoading} error={error ? 'Failed to load settings.' : null} onRetry={refetch}>
         <div className="space-y-4 max-w-2xl">
           {Object.entries(OPTIONS).map(([key, cfg]) => (
-            <div key={key} className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 text-sm">{cfg.label}</h3>
-              <p className="text-xs text-gray-500 mt-1">{cfg.help}</p>
+            <div key={key} className="bg-surface rounded-xl border border-border-default p-5">
+              <h3 className="font-semibold text-content text-sm">{cfg.label}</h3>
+              <p className="text-xs text-content-muted mt-1">{cfg.help}</p>
               <div className="mt-3 flex gap-2">
                 {cfg.choices.map((c) => {
                   const active = values[key] === c.value
@@ -67,8 +67,8 @@ export function SystemSettingsPage() {
                       disabled={saving === key}
                       className={`px-4 py-2 rounded-lg text-sm border transition ${
                         active
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-surface text-content border-border-default hover:border-blue-400'
                       } ${saving === key ? 'opacity-60' : ''}`}
                     >
                       {c.label}

@@ -60,24 +60,24 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
       )}
 
       <aside className={cn(
-        'flex flex-col h-full w-64 sm:w-52 bg-[#0f172a] text-white shrink-0 z-50',
+        'flex flex-col h-full w-64 sm:w-52 bg-surface text-content border-r border-border-default shrink-0 z-50',
         'fixed inset-y-0 left-0 sm:static',
         mobileOpen ? 'flex' : 'hidden sm:flex',
       )}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-800">
-          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-sm shrink-0 select-none">
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-border-default">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary text-white flex items-center justify-center font-bold text-sm shrink-0 select-none shadow-sm shadow-primary/30">
             1C
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold leading-tight truncate">Construction ERP</p>
-            <p className="text-xs text-slate-400 truncate">
+            <p className="text-xs text-content-muted truncate">
               {user?.role ? user.role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Dashboard'}
             </p>
           </div>
         </div>
 
-        <p className="px-4 pt-4 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
+        <p className="px-4 pt-4 pb-1 text-[10px] font-semibold text-content-muted uppercase tracking-widest">
           Main Menu
         </p>
 
@@ -97,7 +97,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 <Link key={item.id} href={item.route ?? '#'} onClick={onMobileClose}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                    parentActive ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                    parentActive ? 'bg-primary/10 text-primary font-medium' : 'text-content-muted hover:text-content hover:bg-surface-muted',
                   )}>
                   <Icon className="w-4 h-4 shrink-0" />
                   <span>{item.name}</span>
@@ -110,7 +110,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                 <button onClick={() => toggle(item.code)}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors w-full text-left',
-                    parentActive ? 'text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                    parentActive ? 'text-content font-medium' : 'text-content-muted hover:text-content hover:bg-surface-muted',
                   )}>
                   <Icon className="w-4 h-4 shrink-0" />
                   <span className="flex-1">{item.name}</span>
@@ -125,7 +125,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                         <Link key={child.id} href={child.route ?? '#'} onClick={onMobileClose}
                           className={cn(
                             'flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-colors',
-                            active ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+                            active ? 'bg-primary/10 text-primary font-medium' : 'text-content-muted hover:text-content hover:bg-surface-muted',
                           )}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0 opacity-60" />
                           <span className="text-[13px]">{child.name}</span>
@@ -141,15 +141,15 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         </nav>
 
         {/* User info + logout */}
-        <div className="p-2 border-t border-slate-800 space-y-1">
+        <div className="p-2 border-t border-border-default space-y-1">
           {user && (
             <div className="px-3 py-2">
-              <p className="text-xs font-medium text-slate-300 truncate">{user.fullName ?? `${user.firstName} ${user.lastName}`}</p>
-              <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
+              <p className="text-xs font-medium text-content truncate">{user.fullName ?? `${user.firstName} ${user.lastName}`}</p>
+              <p className="text-[11px] text-content-muted truncate">{user.email}</p>
             </div>
           )}
           <button onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-content-muted hover:text-danger hover:bg-surface-muted transition-colors">
             <LogOut className="w-4 h-4 shrink-0" />
             <span>Logout</span>
           </button>

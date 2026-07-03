@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -22,8 +24,8 @@ interface StockTxn {
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   materialId:      z.coerce.number().min(1, 'Required'),
@@ -76,31 +78,31 @@ function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div>
           <label className={lbl}>Material <span className="text-red-500">*</span></label>
-          <select {...register('materialId')} className={inp}>
+          <Select {...register('materialId')}>
             <option value="">Select material</option>
             {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} — {m.currentStock.toLocaleString()} {m.unit} available</option>)}
-          </select>
+          </Select>
           {errors.materialId && <p className="text-xs text-red-600 mt-1">{errors.materialId.message}</p>}
         </div>
         {selectedMat && (
-          <div className="bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-600">
+          <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
             Available: <strong>{selectedMat.currentStock.toLocaleString()} {selectedMat.unit}</strong>
           </div>
         )}
         <div>
           <label className={lbl}>Project <span className="text-red-500">*</span></label>
-          <select {...register('projectId')} className={inp}>
+          <Select {...register('projectId')}>
             <option value="">Select project</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-          </select>
+          </Select>
           {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
         </div>
         <div>
-          <label className={lbl}>Warehouse <span className="text-gray-400 font-normal">(guards that warehouse's balance)</span></label>
-          <select {...register('warehouseId')} className={inp}>
+          <label className={lbl}>Warehouse <span className="text-content-muted font-normal">(guards that warehouse's balance)</span></label>
+          <Select {...register('warehouseId')}>
             <option value="">Unassigned (central store)</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+          </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -108,7 +110,7 @@ function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
             <input type="number" step="any" {...register('qty')} className={inp} placeholder="0" />
             {errors.qty && <p className="text-xs text-red-600 mt-1">{errors.qty.message}</p>}
             {remaining !== null && !wouldExceed && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-content-muted mt-1">
                 BOQ remaining: <span className="font-medium text-green-700">{remaining.toLocaleString()} {budgetLine?.unit}</span>
               </p>
             )}
@@ -126,16 +128,16 @@ function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Date <span className="text-red-500">*</span></label>
-            <input type="date" {...register('transactionDate')} className={inp} />
+            <DateField {...register('transactionDate')} />
           </div>
         </div>
         <div>
           <label className={lbl}>Reference / Notes</label>
           <input {...register('referenceNo')} className={inp} placeholder="ISS-..." />
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Issue Material'}
           </button>
         </div>
@@ -174,7 +176,7 @@ export function IssueToProjectPage() {
         subtitle="Issue materials from store to project sites"
         action={
           <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Issue Material
           </button>
         }
@@ -182,27 +184,27 @@ export function IssueToProjectPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load issue history.' : null} onRetry={refetch}
         empty={txns.length === 0} emptyMessage="No material issues yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Material', 'Project', 'Date', 'Qty', 'Value', 'Reference'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {txns.map(t => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                  <tr key={t.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-medium text-content">
                       <div className="flex items-center gap-2"><PackageCheck className="w-4 h-4 text-orange-500" />{t.materialName}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{t.projectName ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{t.transactionDate}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{t.projectName ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{t.transactionDate}</td>
                     <td className="px-4 py-3 text-orange-600 font-semibold">−{t.qty.toLocaleString()} {t.unit}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(t.totalCost)}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{t.referenceNo ?? '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-content">{fmt(t.totalCost)}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{t.referenceNo ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

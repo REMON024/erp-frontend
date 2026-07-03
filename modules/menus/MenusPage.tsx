@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,8 +18,8 @@ function flattenTree(items: MenuItem[]): MenuItem[] {
   return items.flatMap(m => [{ ...m, children: [] }, ...flattenTree(m.children)])
 }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   name:      z.string().min(1, 'Required').max(100),
@@ -75,7 +76,7 @@ function MenuModal({ menu, roots, onClose, onSaved }: {
             {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Code <span className="text-gray-400 font-normal">(unique)</span></label>
+            <label className={lbl}>Code <span className="text-content-muted font-normal">(unique)</span></label>
             <input {...register('code')} className={inp} placeholder="e.g. PROJECTS" disabled={isEdit} />
             {errors.code && <p className="text-xs text-red-600 mt-1">{errors.code.message}</p>}
           </div>
@@ -88,25 +89,25 @@ function MenuModal({ menu, roots, onClose, onSaved }: {
           <div>
             <label className={lbl}>Icon Name</label>
             <input {...register('icon')} className={inp} placeholder="e.g. FolderKanban" />
-            <p className="text-xs text-gray-400 mt-1">Lucide icon name</p>
+            <p className="text-xs text-content-muted mt-1">Lucide icon name</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Parent Menu <span className="text-gray-400 font-normal">(optional)</span></label>
-            <select {...register('parentId')} className={inp}>
+            <label className={lbl}>Parent Menu <span className="text-content-muted font-normal">(optional)</span></label>
+            <Select {...register('parentId')}>
               <option value="">— None (top level) —</option>
               {eligibleParents.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+            </Select>
           </div>
           <div>
             <label className={lbl}>Sort Order</label>
             <input type="number" {...register('sortOrder')} className={inp} min={1} />
           </div>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Menu'}
           </button>
         </div>
@@ -123,31 +124,31 @@ function MenuRow({ menu, children, depth, onEdit, onDelete, onToggle }: {
   const hasChildren = children.length > 0
   return (
     <>
-      <tr className={`hover:bg-gray-50 ${!menu.isActive ? 'opacity-50' : ''}`}>
+      <tr className={`hover:bg-surface-muted ${!menu.isActive ? 'opacity-50' : ''}`}>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2" style={{ paddingLeft: depth * 20 }}>
-            <GripVertical className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+            <GripVertical className="w-3.5 h-3.5 text-content-muted/50 shrink-0" />
             {hasChildren ? (
-              <button onClick={() => setOpen(v => !v)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => setOpen(v => !v)} className="text-content-muted hover:text-content-muted">
                 {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
               </button>
             ) : (
               <span className="w-3.5 h-3.5 shrink-0 flex items-center justify-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+                <span className="w-1.5 h-1.5 rounded-full bg-surface-muted" />
               </span>
             )}
-            <span className="font-medium text-gray-800 text-sm">{menu.name}</span>
+            <span className="font-medium text-content text-sm">{menu.name}</span>
           </div>
         </td>
         <td className="px-4 py-3">
-          <code className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">{menu.code}</code>
+          <code className="text-xs bg-surface-muted text-content-muted px-2 py-0.5 rounded font-mono">{menu.code}</code>
         </td>
-        <td className="px-4 py-3 text-xs text-gray-500 font-mono">{menu.route ?? '—'}</td>
-        <td className="px-4 py-3 text-xs text-gray-500">{menu.icon ?? '—'}</td>
-        <td className="px-4 py-3 text-center text-xs font-medium text-gray-500">{menu.sortOrder}</td>
+        <td className="px-4 py-3 text-xs text-content-muted font-mono">{menu.route ?? '—'}</td>
+        <td className="px-4 py-3 text-xs text-content-muted">{menu.icon ?? '—'}</td>
+        <td className="px-4 py-3 text-center text-xs font-medium text-content-muted">{menu.sortOrder}</td>
         <td className="px-4 py-3">
           <button onClick={() => onToggle(menu)}
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-colors ${menu.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-colors ${menu.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-surface-muted text-content-muted hover:bg-surface-muted'}`}>
             {menu.isActive ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
             {menu.isActive ? 'Active' : 'Inactive'}
           </button>
@@ -155,11 +156,11 @@ function MenuRow({ menu, children, depth, onEdit, onDelete, onToggle }: {
         <td className="px-4 py-3">
           <div className="flex gap-1">
             <button onClick={() => onEdit(menu)}
-              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+              className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
               <Edit2 className="w-3.5 h-3.5" />
             </button>
             <button onClick={() => onDelete(menu.id)} disabled={hasChildren}
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+              className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -229,15 +230,15 @@ export function MenusPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Configure navigation menus and their hierarchy</p>
+          <h1 className="text-2xl font-bold text-content">Menu Management</h1>
+          <p className="text-sm text-content-muted mt-0.5">Configure navigation menus and their hierarchy</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-gray-200 transition-colors">
+          <button onClick={load} className="p-2 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg border border-border-default transition-colors">
             <RefreshCw className="w-4 h-4" />
           </button>
           <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Add Menu
           </button>
         </div>
@@ -245,20 +246,20 @@ export function MenusPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Total Menus</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{flat.length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted uppercase tracking-wide">Total Menus</p>
+          <p className="text-3xl font-bold text-content mt-1">{flat.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Root Menus</p>
-          <p className="text-3xl font-bold text-blue-600 mt-1">{roots.length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted uppercase tracking-wide">Root Menus</p>
+          <p className="text-3xl font-bold text-primary mt-1">{roots.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Sub-Menus</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted uppercase tracking-wide">Sub-Menus</p>
           <p className="text-3xl font-bold text-indigo-600 mt-1">{flat.filter(m => m.parentId !== null).length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Active</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted uppercase tracking-wide">Active</p>
           <p className="text-3xl font-bold text-green-600 mt-1">{flat.filter(m => m.isActive).length}</p>
         </div>
       </div>
@@ -270,22 +271,22 @@ export function MenusPage() {
       )}
 
       {/* Tree table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 {['Name', 'Code', 'Route', 'Icon', 'Order', 'Status', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border-default">
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i}>
                     {Array.from({ length: 7 }).map((_, j) => (
-                      <td key={j} className="px-4 py-3"><div className="h-4 bg-gray-200 rounded animate-pulse" /></td>
+                      <td key={j} className="px-4 py-3"><div className="h-4 bg-surface-muted rounded animate-pulse" /></td>
                     ))}
                   </tr>
                 ))
@@ -297,7 +298,7 @@ export function MenusPage() {
                   onToggle={toggleStatus} />
               ))}
               {!loading && roots.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">No menus found</td></tr>
+                <tr><td colSpan={7} className="px-4 py-12 text-center text-content-muted">No menus found</td></tr>
               )}
             </tbody>
           </table>
@@ -314,9 +315,9 @@ export function MenusPage() {
       {delId !== null && (
         <Modal open onClose={() => setDelId(null)} title="Delete Menu Item" size="sm">
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">Delete this menu item? Associated role permissions will also be removed.</p>
+            <p className="text-sm text-content-muted">Delete this menu item? Associated role permissions will also be removed.</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDelId(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button onClick={() => setDelId(null)} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
               <button onClick={deleteMenu} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Delete</button>
             </div>
           </div>

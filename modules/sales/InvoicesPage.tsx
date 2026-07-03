@@ -1,15 +1,18 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
+import { Select } from '@/components/ui/Select'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, FileText, XCircle, Printer } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, FileText, XCircle, Printer, Wallet } from 'lucide-react'
 import { printInvoice } from '@/utils/printUtils'
 import api from '@/lib/api'
 
@@ -24,17 +27,17 @@ interface Invoice {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  Draft:     'bg-gray-100 text-gray-600',
-  Sent:      'bg-blue-100 text-blue-700',
+  Draft:     'bg-surface-muted text-content-muted',
+  Sent:      'bg-primary/10 text-primary',
   Paid:      'bg-green-100 text-green-700',
   Overdue:   'bg-red-100 text-red-700',
-  Cancelled: 'bg-gray-100 text-gray-400',
+  Cancelled: 'bg-surface-muted text-content-muted',
 }
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   customerId:     z.coerce.number().min(1, 'Required'),
@@ -82,18 +85,18 @@ function InvoiceModal({ customers, projects, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Client <span className="text-red-500">*</span></label>
-            <select {...register('customerId')} className={inp}>
+            <Select {...register('customerId')} invalid={!!errors.customerId}>
               <option value="">Select client</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
-            </select>
+            </Select>
             {errors.customerId && <p className="text-xs text-red-600 mt-1">{errors.customerId.message}</p>}
           </div>
           <div>
             <label className={lbl}>Project <span className="text-red-500">*</span></label>
-            <select {...register('projectId')} className={inp}>
+            <Select {...register('projectId')} invalid={!!errors.projectId}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-            </select>
+            </Select>
             {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
           </div>
         </div>
@@ -106,11 +109,11 @@ function InvoiceModal({ customers, projects, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Invoice Date <span className="text-red-500">*</span></label>
-            <input type="date" {...register('invoiceDate')} className={inp} />
+            <DateField {...register('invoiceDate')} />
           </div>
           <div>
             <label className={lbl}>Due Date</label>
-            <input type="date" {...register('dueDate')} className={inp} />
+            <DateField {...register('dueDate')} />
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -132,13 +135,13 @@ function InvoiceModal({ customers, projects, onClose, onSaved }: {
             <input type="number" {...register('taxAmount')} className={inp} placeholder="0" />
           </div>
         </div>
-        <div className="bg-gray-50 rounded-lg px-4 py-2 flex justify-between items-center">
-          <span className="text-sm text-gray-600">Total Amount</span>
-          <span className="text-lg font-bold text-gray-900">{fmt(total)}</span>
+        <div className="bg-surface-muted rounded-lg px-4 py-2 flex justify-between items-center">
+          <span className="text-sm text-content-muted">Total Amount</span>
+          <span className="text-lg font-bold text-content">{fmt(total)}</span>
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Create Invoice'}
           </button>
         </div>
@@ -183,7 +186,7 @@ export function InvoicesPage() {
         subtitle="Generate and track customer invoices"
         action={
           <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Invoice
           </button>
         }
@@ -191,64 +194,71 @@ export function InvoicesPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Invoices',  value: invoices.length,      color: 'text-gray-900' },
+          { label: 'Total Invoices',  value: invoices.length,      color: 'text-content' },
           { label: 'Total Billed',    value: fmt(totalBilled),     color: 'text-indigo-600' },
           { label: 'Collected',       value: fmt(totalCollected),  color: 'text-green-600' },
           { label: 'Outstanding',     value: fmt(outstanding),     color: 'text-red-600' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{s.label}</p>
+          <div key={s.label} className="bg-surface rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted uppercase tracking-wide">{s.label}</p>
             <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search invoice no or client…" onRefresh={refetch}>
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={status} onChange={e => setStatus(e.target.value)} className="min-w-[150px]">
           <option value="">All Status</option>
           {['Draft', 'Sent', 'Paid', 'Overdue', 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load invoices.' : null} onRetry={refetch}
         empty={invoices.length === 0} emptyMessage="No invoices yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Invoice No.', 'Client', 'Type', 'Date', 'Total', 'Paid', 'Due', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {invoices.map(i => (
-                  <tr key={i.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600">
-                      <div className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-gray-400" />{i.invoiceNo}</div>
+                  <tr key={i.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">
+                      <div className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-content-muted" />{i.invoiceNo}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-900 text-sm">{i.customerName}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{i.invoiceType}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{i.invoiceDate}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(i.totalAmount)}</td>
+                    <td className="px-4 py-3 text-content text-sm">{i.customerName}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{i.invoiceType}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{i.invoiceDate}</td>
+                    <td className="px-4 py-3 font-semibold text-content">{fmt(i.totalAmount)}</td>
                     <td className="px-4 py-3 text-green-700 text-xs">{fmt(i.paidAmount)}</td>
                     <td className="px-4 py-3 text-red-600 text-xs">{fmt(i.dueAmount)}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[i.status] ?? 'bg-gray-100 text-gray-600'}`}>{i.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[i.status] ?? 'bg-surface-muted text-content-muted'}`}>{i.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {i.dueAmount > 0 && i.status !== 'Cancelled' && (
+                          <Link
+                            href={`/sales/collections?invoice=${i.id}&customer=${i.customerId}`}
+                            title="Collect payment"
+                            className="p-1.5 text-content-muted hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                            <Wallet className="w-3.5 h-3.5" />
+                          </Link>
+                        )}
                         <button
                           onClick={() => printInvoice(i)}
                           title="Print / Download PDF"
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                           <Printer className="w-3.5 h-3.5" />
                         </button>
                         {(i.status === 'Draft' || i.status === 'Sent') && (
                           <button onClick={() => cancelInvoice(i.id)} title="Cancel Invoice"
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                             <XCircle className="w-3.5 h-3.5" />
                           </button>
                         )}

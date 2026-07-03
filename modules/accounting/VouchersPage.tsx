@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -23,14 +25,14 @@ interface Voucher {
 
 const TYPE_COLORS: Record<string, string> = {
   JV: 'bg-purple-100 text-purple-700', PV: 'bg-red-100 text-red-700',
-  RV: 'bg-green-100 text-green-700', CV: 'bg-blue-100 text-blue-700', BV: 'bg-orange-100 text-orange-700',
+  RV: 'bg-green-100 text-green-700', CV: 'bg-primary/10 text-primary', BV: 'bg-orange-100 text-orange-700',
 }
 const TYPE_LABELS: Record<string, string> = { JV: 'Journal', PV: 'Payment', RV: 'Receipt', CV: 'Contra', BV: 'Bank' }
 const fmt = (n: number) => n === 0 ? '—' : `৳${n.toLocaleString('en-BD')}`
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 // ── View modal ─────────────────────────────────────────────────────────────────
 function ViewModal({ voucher, onClose }: { voucher: Voucher; onClose: () => void }) {
@@ -38,38 +40,38 @@ function ViewModal({ voucher, onClose }: { voucher: Voucher; onClose: () => void
     <Modal open onClose={onClose} title={`${voucher.voucherNo} — ${TYPE_LABELS[voucher.voucherType] ?? voucher.voucherType} Voucher`} size="lg">
       <div className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <div><span className="text-gray-400 text-xs">Date</span><p className="font-medium">{voucher.voucherDate}</p></div>
-          <div><span className="text-gray-400 text-xs">Reference</span><p className="font-medium">{voucher.referenceNo || '—'}</p></div>
-          <div><span className="text-gray-400 text-xs">Status</span>
+          <div><span className="text-content-muted text-xs">Date</span><p className="font-medium">{voucher.voucherDate}</p></div>
+          <div><span className="text-content-muted text-xs">Reference</span><p className="font-medium">{voucher.referenceNo || '—'}</p></div>
+          <div><span className="text-content-muted text-xs">Status</span>
             <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-semibold mt-0.5 ${voucher.isPosted ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
               {voucher.isPosted ? 'Posted' : 'Draft'}
             </span>
           </div>
         </div>
-        {voucher.narration && <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">{voucher.narration}</p>}
+        {voucher.narration && <p className="text-sm text-content-muted bg-surface-muted rounded-lg px-3 py-2">{voucher.narration}</p>}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-sm border border-gray-200 rounded-lg overflow-hidden">
-            <thead className="bg-gray-50">
+          <table className="w-full min-w-[480px] text-sm border border-border-default rounded-lg overflow-hidden">
+            <thead className="bg-surface-muted">
               <tr>{['Account', 'Description', 'Debit', 'Credit'].map(h => (
-                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
               ))}</tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border-default">
               {voucher.lines.map(l => (
                 <tr key={l.id}>
                   <td className="px-3 py-2">
-                    <p className="font-medium text-gray-900 text-xs">{l.accountName}</p>
-                    <p className="text-gray-400 text-xs">{l.accountCode}</p>
+                    <p className="font-medium text-content text-xs">{l.accountName}</p>
+                    <p className="text-content-muted text-xs">{l.accountCode}</p>
                   </td>
-                  <td className="px-3 py-2 text-gray-500 text-xs">{l.description ?? '—'}</td>
-                  <td className="px-3 py-2 text-right font-medium text-gray-900">{fmt(l.debitAmount)}</td>
-                  <td className="px-3 py-2 text-right font-medium text-gray-900">{fmt(l.creditAmount)}</td>
+                  <td className="px-3 py-2 text-content-muted text-xs">{l.description ?? '—'}</td>
+                  <td className="px-3 py-2 text-right font-medium text-content">{fmt(l.debitAmount)}</td>
+                  <td className="px-3 py-2 text-right font-medium text-content">{fmt(l.creditAmount)}</td>
                 </tr>
               ))}
-              <tr className="bg-gray-50 font-semibold">
-                <td colSpan={2} className="px-3 py-2 text-gray-700 text-sm">Total</td>
-                <td className="px-3 py-2 text-right text-gray-900">{fmt(voucher.totalDebit)}</td>
-                <td className="px-3 py-2 text-right text-gray-900">{fmt(voucher.totalCredit)}</td>
+              <tr className="bg-surface-muted font-semibold">
+                <td colSpan={2} className="px-3 py-2 text-content text-sm">Total</td>
+                <td className="px-3 py-2 text-right text-content">{fmt(voucher.totalDebit)}</td>
+                <td className="px-3 py-2 text-right text-content">{fmt(voucher.totalCredit)}</td>
               </tr>
             </tbody>
           </table>
@@ -140,17 +142,17 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Type <span className="text-red-500">*</span></label>
-            <select {...register('voucherType')} className={inp}>
+            <Select {...register('voucherType')}>
               <option value="JV">Journal (JV)</option>
               <option value="PV">Payment (PV)</option>
               <option value="RV">Receipt (RV)</option>
               <option value="CV">Contra (CV)</option>
               <option value="BV">Bank (BV)</option>
-            </select>
+            </Select>
           </div>
           <div>
             <label className={lbl}>Date <span className="text-red-500">*</span></label>
-            <input type="date" {...register('voucherDate')} className={inp} />
+            <DateField {...register('voucherDate')} />
           </div>
           <div>
             <label className={lbl}>Reference No</label>
@@ -164,51 +166,51 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">Transaction Lines</label>
+            <label className="text-sm font-medium text-content">Transaction Lines</label>
             <button type="button" onClick={() => append({ accountId: '', projectId: '', debit: '', credit: '', description: '' })}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add Line</button>
+              className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add Line</button>
           </div>
-          <div className="border border-gray-200 rounded-lg overflow-x-auto">
+          <div className="border border-border-default rounded-lg overflow-x-auto">
             <table className="w-full min-w-[700px] text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500 w-[28%]">Account</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500 w-[18%]">Project</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500">Description</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500 w-[14%]">Debit</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500 w-[14%]">Credit</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[28%]">Account</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[18%]">Project</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[14%]">Debit</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[14%]">Credit</th>
                   <th className="px-2 py-2 w-8" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {fields.map((field, i) => (
                   <tr key={field.id}>
                     <td className="px-2 py-1.5">
-                      <select {...register(`lines.${i}.accountId`)} className={inp + ' text-xs py-1.5'}>
+                      <Select {...register(`lines.${i}.accountId`)} className="text-xs py-1.5">
                         <option value="">Select…</option>
                         {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
-                      </select>
+                      </Select>
                     </td>
                     <td className="px-2 py-1.5">
-                      <select {...register(`lines.${i}.projectId`)} className={inp + ' text-xs py-1.5'}>
+                      <Select {...register(`lines.${i}.projectId`)} className="text-xs py-1.5">
                         <option value="">— None —</option>
                         {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode}</option>)}
-                      </select>
+                      </Select>
                     </td>
                     <td className="px-2 py-1.5"><input {...register(`lines.${i}.description`)} className={inp + ' text-xs py-1.5'} placeholder="Note…" /></td>
                     <td className="px-2 py-1.5"><input type="number" step="any" {...register(`lines.${i}.debit`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
                     <td className="px-2 py-1.5"><input type="number" step="any" {...register(`lines.${i}.credit`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
                     <td className="px-2 py-1.5 text-center">
-                      {fields.length > 2 && <button type="button" onClick={() => remove(i)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}
+                      {fields.length > 2 && <button type="button" onClick={() => remove(i)} className="text-content-muted/50 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50 border-t border-gray-200">
+              <tfoot className="bg-surface-muted border-t border-border-default">
                 <tr>
-                  <td colSpan={3} className="px-2 py-2 text-xs font-semibold text-gray-600">Total</td>
-                  <td className="px-2 py-2 text-xs font-bold text-gray-900">{fmt(totalDebit)}</td>
-                  <td className="px-2 py-2 text-xs font-bold text-gray-900">{fmt(totalCredit)}</td>
+                  <td colSpan={3} className="px-2 py-2 text-xs font-semibold text-content-muted">Total</td>
+                  <td className="px-2 py-2 text-xs font-bold text-content">{fmt(totalDebit)}</td>
+                  <td className="px-2 py-2 text-xs font-bold text-content">{fmt(totalCredit)}</td>
                   <td />
                 </tr>
               </tfoot>
@@ -221,9 +223,9 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Save as Draft'}
           </button>
         </div>
@@ -263,7 +265,7 @@ export function VouchersPage() {
         subtitle="Create and post journal, payment, receipt and contra vouchers"
         action={
           <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> New Voucher
           </button>
         }
@@ -271,27 +273,27 @@ export function VouchersPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Vouchers', value: vouchers.length, color: 'text-gray-900' },
+          { label: 'Total Vouchers', value: vouchers.length, color: 'text-content' },
           { label: 'Posted',         value: posted,          color: 'text-green-600' },
           { label: 'Drafts',         value: draft,           color: 'text-amber-600' },
-          { label: 'Account Heads',  value: accounts.length, color: 'text-blue-600' },
+          { label: 'Account Heads',  value: accounts.length, color: 'text-primary' },
         ].map(k => (
-          <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">{k.label}</p>
+          <div key={k.label} className="bg-surface rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted uppercase tracking-wide font-medium">{k.label}</p>
             <p className={`text-3xl font-bold mt-1 ${k.color}`}>{k.value}</p>
           </div>
         ))}
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search voucher no or narration…" onRefresh={refetch}>
-        <select value={typeFilter} onChange={e => setType(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={typeFilter} onChange={e => setType(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Types</option>
           {Object.keys(TYPE_LABELS).map(t => <option key={t} value={t}>{TYPE_LABELS[t]} ({t})</option>)}
-        </select>
+        </Select>
         {(['', 'posted', 'draft'] as const).map(s => (
           <button key={s || 'all'} onClick={() => setStatus(s)}
-            className={`px-3 py-2 text-xs rounded-lg border font-medium capitalize ${statusFilter === s ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:border-blue-400'}`}>
+            className={`px-3 py-2 text-xs rounded-lg border font-medium capitalize ${statusFilter === s ? 'bg-primary text-white border-primary' : 'border-border-default text-content-muted hover:border-blue-400'}`}>
             {s || 'All'}
           </button>
         ))}
@@ -299,30 +301,30 @@ export function VouchersPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load vouchers.' : null} onRetry={refetch}
         empty={vouchers.length === 0} emptyMessage="No vouchers yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Voucher No', 'Type', 'Date', 'Narration', 'Amount', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {vouchers.map(v => (
-                  <tr key={v.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-700 font-semibold">{v.voucherNo}</td>
-                    <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded font-bold ${TYPE_COLORS[v.voucherType] ?? 'bg-gray-100'}`}>{v.voucherType}</span></td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{v.voucherDate}</td>
-                    <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{v.narration ?? '—'}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900 text-right">{fmt(v.totalDebit)}</td>
+                  <tr key={v.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-mono text-xs text-content font-semibold">{v.voucherNo}</td>
+                    <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded font-bold ${TYPE_COLORS[v.voucherType] ?? 'bg-surface-muted'}`}>{v.voucherType}</span></td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{v.voucherDate}</td>
+                    <td className="px-4 py-3 text-content-muted max-w-xs truncate">{v.narration ?? '—'}</td>
+                    <td className="px-4 py-3 font-medium text-content text-right">{fmt(v.totalDebit)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${v.isPosted ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{v.isPosted ? 'Posted' : 'Draft'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <button onClick={() => setViewing(v)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setViewing(v)} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
                         {!v.isPosted && <button onClick={() => post(v.id)} className="text-xs text-green-600 hover:text-green-700 font-medium hover:underline">Post</button>}
                       </div>
                     </td>

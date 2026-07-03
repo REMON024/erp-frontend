@@ -6,7 +6,7 @@ import { useApiData } from '@/hooks/useApiData'
 const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading: () => (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {[0, 1].map(i => (
-      <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 h-[320px] animate-pulse" />
+      <div key={i} className="bg-surface rounded-xl border border-border-default p-5 h-[320px] animate-pulse" />
     ))}
   </div>
 )})
@@ -26,13 +26,13 @@ function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor, loading }: 
   icon: React.ElementType; iconBg: string; iconColor: string; loading?: boolean
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
+    <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
       <div>
-        <p className="text-sm text-gray-500 font-medium">{label}</p>
+        <p className="text-sm text-content-muted font-medium">{label}</p>
         {loading
-          ? <div className="h-7 w-24 bg-gray-100 rounded animate-pulse mt-1" />
-          : <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>}
-        <p className="text-xs text-gray-400 mt-1">{sub}</p>
+          ? <div className="h-7 w-24 bg-surface-muted rounded animate-pulse mt-1" />
+          : <p className="text-2xl font-bold text-content mt-1">{value}</p>}
+        <p className="text-xs text-content-muted mt-1">{sub}</p>
       </div>
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
         <Icon className={`w-5 h-5 ${iconColor}`} />
@@ -91,7 +91,7 @@ export function DashboardPage() {
     .slice(0, 6)
 
   const ACTIVITY_COLORS: Record<string, string> = {
-    investment: 'bg-blue-100 text-blue-600',
+    investment: 'bg-primary/10 text-primary',
     sales:      'bg-green-100 text-green-600',
   }
 
@@ -99,14 +99,14 @@ export function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Welcome back! Here's your construction business overview.</p>
+          <h1 className="text-2xl font-bold text-content">Dashboard</h1>
+          <p className="text-sm text-content-muted mt-0.5">Welcome back! Here's your construction business overview.</p>
         </div>
-        {loading && <RefreshCw className="w-4 h-4 text-gray-400 animate-spin" />}
+        {loading && <RefreshCw className="w-4 h-4 text-content-muted animate-spin" />}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KpiCard label="Active Projects"     value={String(activeProjects)}    sub={`${projects.length} total`}        icon={FolderKanban} iconBg="bg-blue-50"   iconColor="text-blue-600"   loading={loadP} />
+        <KpiCard label="Active Projects"     value={String(activeProjects)}    sub={`${projects.length} total`}        icon={FolderKanban} iconBg="bg-primary/10"   iconColor="text-primary"   loading={loadP} />
         <KpiCard label="Total Revenue Billed"value={fmt(totalRevenue)}          sub="From all invoices"                 icon={Receipt}      iconBg="bg-green-50"  iconColor="text-green-600"  loading={loadI} />
         <KpiCard label="Collected"           value={fmt(totalCollected)}        sub={`${totalRevenue > 0 ? Math.round(totalCollected / totalRevenue * 100) : 0}% collection rate`} icon={TrendingUp} iconBg="bg-teal-50" iconColor="text-teal-600" loading={loadI} />
         <KpiCard label="Budget Utilization"
@@ -125,32 +125,32 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Project financial summary */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Project Overview</h3>
+        <div className="bg-surface rounded-xl border border-border-default">
+          <div className="px-5 py-4 border-b border-border-default">
+            <h3 className="font-semibold text-content">Project Overview</h3>
           </div>
           {loadP ? (
-            <div className="divide-y divide-gray-100">
-              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-gray-50" />)}
+            <div className="divide-y divide-border-default">
+              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-surface-muted" />)}
             </div>
           ) : projects.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-gray-400 text-center">No projects yet.</p>
+            <p className="px-5 py-8 text-sm text-content-muted text-center">No projects yet.</p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border-default">
               {projects.slice(0, 6).map(p => (
                 <div key={p.id} className="px-5 py-3">
                   <div className="flex items-center justify-between mb-0.5">
-                    <p className="font-medium text-gray-900 text-sm">{p.projectName}</p>
+                    <p className="font-medium text-content text-sm">{p.projectName}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                       p.status === 'Active' ? 'bg-green-100 text-green-700' :
-                      p.status === 'Completed' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-600'
+                      p.status === 'Completed' ? 'bg-primary/10 text-primary' :
+                      'bg-surface-muted text-content-muted'
                     }`}>{p.status}</span>
                   </div>
-                  <div className="flex gap-4 text-xs text-gray-500">
-                    <span className="font-mono text-gray-400">{p.projectCode}</span>
-                    {p.estimatedCost   && <span>Est. Cost: <strong className="text-gray-700">{fmt(p.estimatedCost)}</strong></span>}
-                    {p.estimatedRevenue && <span>Est. Revenue: <strong className="text-gray-700">{fmt(p.estimatedRevenue)}</strong></span>}
+                  <div className="flex gap-4 text-xs text-content-muted">
+                    <span className="font-mono text-content-muted">{p.projectCode}</span>
+                    {p.estimatedCost   && <span>Est. Cost: <strong className="text-content">{fmt(p.estimatedCost)}</strong></span>}
+                    {p.estimatedRevenue && <span>Est. Revenue: <strong className="text-content">{fmt(p.estimatedRevenue)}</strong></span>}
                   </div>
                 </div>
               ))}
@@ -159,28 +159,28 @@ export function DashboardPage() {
         </div>
 
         {/* Recent activity */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Recent Activity</h3>
+        <div className="bg-surface rounded-xl border border-border-default">
+          <div className="px-5 py-4 border-b border-border-default">
+            <h3 className="font-semibold text-content">Recent Activity</h3>
           </div>
           {(loadPy || loadB) ? (
-            <div className="divide-y divide-gray-100">
-              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-gray-50" />)}
+            <div className="divide-y divide-border-default">
+              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-surface-muted" />)}
             </div>
           ) : activity.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-gray-400 text-center">No recent activity.</p>
+            <p className="px-5 py-8 text-sm text-content-muted text-center">No recent activity.</p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-border-default">
               {activity.map(a => (
                 <div key={a.key} className="px-5 py-3 flex items-start gap-3">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${ACTIVITY_COLORS[a.type] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${ACTIVITY_COLORS[a.type] ?? 'bg-surface-muted text-content-muted'}`}>
                     {a.type === 'sales' ? '৳' : '★'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{a.action}</p>
-                    <p className="text-xs text-gray-500 truncate">{a.detail}</p>
+                    <p className="text-sm font-medium text-content">{a.action}</p>
+                    <p className="text-xs text-content-muted truncate">{a.detail}</p>
                   </div>
-                  <p className="text-xs text-gray-400 shrink-0">{a.date}</p>
+                  <p className="text-xs text-content-muted shrink-0">{a.date}</p>
                 </div>
               ))}
             </div>

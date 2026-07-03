@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -23,8 +25,8 @@ interface StockTxn {
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   materialId:      z.coerce.number().min(1, 'Required'),
@@ -63,22 +65,22 @@ function StockInModal({ materials, warehouses, onClose, onSaved }: {
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div>
           <label className={lbl}>Material <span className="text-red-500">*</span></label>
-          <select {...register('materialId')} className={inp}
+          <Select {...register('materialId')}
             onChange={e => {
               const m = materials.find(x => x.id === Number(e.target.value))
               if (m) setValue('unitCost', m.averageCost)
             }}>
             <option value="">Select material</option>
             {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
-          </select>
+          </Select>
           {errors.materialId && <p className="text-xs text-red-600 mt-1">{errors.materialId.message}</p>}
         </div>
         <div>
           <label className={lbl}>Warehouse</label>
-          <select {...register('warehouseId')} className={inp}>
+          <Select {...register('warehouseId')}>
             <option value="">Unassigned (central store)</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
+          </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -95,7 +97,7 @@ function StockInModal({ materials, warehouses, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Date <span className="text-red-500">*</span></label>
-            <input type="date" {...register('transactionDate')} className={inp} />
+            <DateField {...register('transactionDate')} />
           </div>
           <div>
             <label className={lbl}>Reference / GRN No.</label>
@@ -106,9 +108,9 @@ function StockInModal({ materials, warehouses, onClose, onSaved }: {
           <label className={lbl}>Notes</label>
           <input {...register('notes')} className={inp} placeholder="Optional…" />
         </div>
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Record Stock In'}
           </button>
         </div>
@@ -142,7 +144,7 @@ export function StockInPage() {
         subtitle="Record goods received into the central store"
         action={
           <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> Stock In
           </button>
         }
@@ -150,27 +152,27 @@ export function StockInPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load stock-in history.' : null} onRetry={refetch}
         empty={txns.length === 0} emptyMessage="No stock-in transactions yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Material', 'Date', 'Qty', 'Unit Cost', 'Total', 'Reference'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {txns.map(t => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">
+                  <tr key={t.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-medium text-content">
                       <div className="flex items-center gap-2"><PackagePlus className="w-4 h-4 text-green-500" />{t.materialName}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{t.transactionDate}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{t.transactionDate}</td>
                     <td className="px-4 py-3 text-green-700 font-semibold">+{t.qty.toLocaleString()} {t.unit}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{fmt(t.unitCost)}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(t.totalCost)}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{t.referenceNo ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{fmt(t.unitCost)}</td>
+                    <td className="px-4 py-3 font-semibold text-content">{fmt(t.totalCost)}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{t.referenceNo ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>

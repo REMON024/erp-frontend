@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
@@ -36,25 +38,25 @@ export function MaterialConsumptionPage() {
 
       <div className="flex items-end gap-3 flex-wrap">
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Project</label>
-          <select value={projectId} onChange={e => setProjectId(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <label className="block text-xs font-medium text-content mb-1">Project</label>
+          <Select value={projectId} onChange={e => setProjectId(e.target.value)}
+            className="min-w-[150px]">
             <option value="">All Projects</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode}</option>)}
-          </select>
+          </Select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          <label className="block text-xs font-medium text-content mb-1">From</label>
+          <DateField value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            className="min-w-[150px]" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+          <label className="block text-xs font-medium text-content mb-1">To</label>
+          <DateField value={dateTo} onChange={e => setDateTo(e.target.value)}
+            className="min-w-[150px]" />
         </div>
         <button onClick={() => refetch()}
-          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium self-end">
+          className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium self-end">
           Refresh
         </button>
       </div>
@@ -63,48 +65,48 @@ export function MaterialConsumptionPage() {
         empty={!isLoading && (data?.rows.length ?? 0) === 0} emptyMessage="No material transactions found for the selected filters.">
         <>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-gray-200 bg-blue-50 p-4">
-              <p className="text-xs text-blue-600 uppercase font-semibold">Total Issued Value</p>
+            <div className="rounded-xl border border-border-default bg-primary/10 p-4">
+              <p className="text-xs text-primary uppercase font-semibold">Total Issued Value</p>
               <p className="text-2xl font-bold text-blue-900 mt-1">{fmt(data?.totalIssuedValue ?? 0)}</p>
             </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-xs text-gray-500 uppercase font-semibold">Materials Used</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{data?.rows.length ?? 0}</p>
+            <div className="rounded-xl border border-border-default bg-surface p-4">
+              <p className="text-xs text-content-muted uppercase font-semibold">Materials Used</p>
+              <p className="text-2xl font-bold text-content mt-1">{data?.rows.length ?? 0}</p>
             </div>
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-xs text-gray-500 uppercase font-semibold">Categories</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{categories.length}</p>
+            <div className="rounded-xl border border-border-default bg-surface p-4">
+              <p className="text-xs text-content-muted uppercase font-semibold">Categories</p>
+              <p className="text-2xl font-bold text-content mt-1">{categories.length}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[780px] text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-surface-muted border-b border-border-default">
                   <tr>
                     {['Code', 'Material', 'Category', 'Unit', 'Received', 'Issued', 'Balance', 'Avg Cost', 'Issued Value'].map(h => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-border-default">
                   {data?.rows.map(r => (
-                    <tr key={r.materialId} className={r.balanceQty < 0 ? 'bg-red-50/40' : 'hover:bg-gray-50'}>
-                      <td className="px-3 py-2 text-xs text-gray-400">{r.materialCode}</td>
-                      <td className="px-3 py-2 font-medium text-gray-800">{r.materialName}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500">{r.category}</td>
-                      <td className="px-3 py-2 text-gray-500">{r.unit}</td>
+                    <tr key={r.materialId} className={r.balanceQty < 0 ? 'bg-red-50/40' : 'hover:bg-surface-muted'}>
+                      <td className="px-3 py-2 text-xs text-content-muted">{r.materialCode}</td>
+                      <td className="px-3 py-2 font-medium text-content">{r.materialName}</td>
+                      <td className="px-3 py-2 text-xs text-content-muted">{r.category}</td>
+                      <td className="px-3 py-2 text-content-muted">{r.unit}</td>
                       <td className="px-3 py-2 text-right text-green-700">{fmtQ(r.receivedQty)}</td>
-                      <td className="px-3 py-2 text-right text-blue-700">{fmtQ(r.issuedQty)}</td>
-                      <td className={`px-3 py-2 text-right font-semibold ${r.balanceQty < 0 ? 'text-red-700' : 'text-gray-800'}`}>{fmtQ(r.balanceQty)}</td>
-                      <td className="px-3 py-2 text-right text-gray-500">{fmt(r.avgCost)}</td>
-                      <td className="px-3 py-2 text-right font-semibold text-blue-700">{fmt(r.issuedValue)}</td>
+                      <td className="px-3 py-2 text-right text-primary">{fmtQ(r.issuedQty)}</td>
+                      <td className={`px-3 py-2 text-right font-semibold ${r.balanceQty < 0 ? 'text-red-700' : 'text-content'}`}>{fmtQ(r.balanceQty)}</td>
+                      <td className="px-3 py-2 text-right text-content-muted">{fmt(r.avgCost)}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-primary">{fmt(r.issuedValue)}</td>
                     </tr>
                   ))}
                 </tbody>
-                <tfoot className="border-t border-gray-200 bg-gray-50 font-bold">
+                <tfoot className="border-t border-border-default bg-surface-muted font-bold">
                   <tr>
-                    <td colSpan={8} className="px-3 py-2 text-xs uppercase text-gray-700">Total Issued Value</td>
+                    <td colSpan={8} className="px-3 py-2 text-xs uppercase text-content">Total Issued Value</td>
                     <td className="px-3 py-2 text-right text-blue-800">{fmt(data?.totalIssuedValue ?? 0)}</td>
                   </tr>
                 </tfoot>

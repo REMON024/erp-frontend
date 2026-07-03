@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -21,16 +23,16 @@ interface PurchaseOrder {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  Draft:     'bg-gray-100 text-gray-600',
+  Draft:     'bg-surface-muted text-content-muted',
   Approved:  'bg-green-100 text-green-700',
-  Received:  'bg-blue-100 text-blue-700',
+  Received:  'bg-primary/10 text-primary',
   Cancelled: 'bg-red-100 text-red-600',
 }
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
-const lbl = 'block text-sm font-medium text-gray-700 mb-1'
+const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl = 'block text-sm font-medium text-content mb-1'
 
 interface MaterialBudgetV2Line {
   materialId: number; budgetedCost: number; committedCost: number; actualCost: number
@@ -130,56 +132,56 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Vendor <span className="text-red-500">*</span></label>
-            <select {...register('vendorId')} className={inp}>
+            <Select {...register('vendorId')}>
               <option value="">Select vendor</option>
               {vendors.map(v => <option key={v.id} value={v.id}>{v.vendorName}</option>)}
-            </select>
+            </Select>
           </div>
           <div>
             <label className={lbl}>Project</label>
-            <select {...register('projectId')} className={inp}>
+            <Select {...register('projectId')}>
               <option value="">No specific project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-            </select>
+            </Select>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>PO Date</label>
-            <input type="date" {...register('poDate')} className={inp} />
+            <DateField {...register('poDate')} />
           </div>
           <div>
             <label className={lbl}>Delivery Date</label>
-            <input type="date" {...register('deliveryDate')} className={inp} />
+            <DateField {...register('deliveryDate')} />
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700">Line Items</label>
+            <label className="text-sm font-medium text-content">Line Items</label>
             <button type="button" onClick={() => append({ materialId: '', qty: '', unitPrice: '', unmatchedReason: '' })}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+              className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1">
               <Plus className="w-3.5 h-3.5" /> Add Item
             </button>
           </div>
-          <div className="border border-gray-200 rounded-lg overflow-x-auto">
+          <div className="border border-border-default rounded-lg overflow-x-auto">
             <table className="w-full min-w-[500px] text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500 w-[45%]">Material</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500">Qty</th>
-                  <th className="px-2 py-2 text-left font-semibold text-gray-500">Unit Price</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[45%]">Material</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted">Qty</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted">Unit Price</th>
                   <th className="px-2 py-2 w-8" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {fields.map((field, i) => (
                   <tr key={field.id}>
                     <td className="px-2 py-1.5">
-                      <select {...register(`items.${i}.materialId`)} className={inp + ' text-xs py-1.5'}>
+                      <Select {...register(`items.${i}.materialId`)} className="text-xs py-1.5">
                         <option value="">Select…</option>
                         {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
-                      </select>
+                      </Select>
                       {projectId && items[i]?.materialId && (
                         eplItemFor(items[i].materialId)
                           ? <p className="text-[10px] text-green-600 mt-0.5">✓ EPL-linked</p>
@@ -191,16 +193,16 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
                     <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.unitPrice`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
                     <td className="px-2 py-1.5 text-center">
                       {fields.length > 1 && (
-                        <button type="button" onClick={() => remove(i)} className="text-gray-300 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <button type="button" onClick={() => remove(i)} className="text-content-muted/50 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-gray-50 border-t border-gray-200">
+              <tfoot className="bg-surface-muted border-t border-border-default">
                 <tr>
-                  <td colSpan={2} className="px-2 py-2 text-xs font-semibold text-gray-600">Total</td>
-                  <td colSpan={2} className="px-2 py-2 text-xs font-bold text-gray-900">{fmt(total)}</td>
+                  <td colSpan={2} className="px-2 py-2 text-xs font-semibold text-content-muted">Total</td>
+                  <td colSpan={2} className="px-2 py-2 text-xs font-bold text-content">{fmt(total)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -220,9 +222,9 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
+        <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
+          <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
             {saving ? 'Saving…' : 'Create PO'}
           </button>
         </div>
@@ -268,64 +270,64 @@ export function PurchasePage() {
         subtitle="Create and manage purchase orders to vendors"
         action={
           <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
             <Plus className="w-4 h-4" /> New PO
           </button>
         }
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Total POs</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{orders.length}</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Total POs</p>
+          <p className="text-2xl font-bold text-content mt-1">{orders.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Approved</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Approved</p>
           <p className="text-2xl font-bold text-green-600 mt-1">{orders.filter(o => o.status === 'Approved').length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-sm text-gray-500">Total Value</p>
+        <div className="bg-surface rounded-xl border border-border-default p-4">
+          <p className="text-sm text-content-muted">Total Value</p>
           <p className="text-2xl font-bold text-indigo-600 mt-1">{fmt(totalValue)}</p>
         </div>
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search PO no or vendor…" onRefresh={refetch}>
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <Select value={status} onChange={e => setStatus(e.target.value)}
+          className="min-w-[150px]">
           <option value="">All Status</option>
           {['Draft', 'Approved', 'Received', 'Cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
+        </Select>
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load purchase orders.' : null} onRetry={refetch}
         empty={orders.length === 0} emptyMessage="No purchase orders yet.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['PO No.', 'Vendor', 'Project', 'Date', 'Items', 'Total', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {orders.map(o => (
-                  <tr key={o.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600">
-                      <div className="flex items-center gap-1.5"><ShoppingCart className="w-3.5 h-3.5 text-gray-400" />{o.poNumber}</div>
+                  <tr key={o.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">
+                      <div className="flex items-center gap-1.5"><ShoppingCart className="w-3.5 h-3.5 text-content-muted" />{o.poNumber}</div>
                     </td>
-                    <td className="px-4 py-3 text-gray-900 text-sm">{o.vendorName}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{o.projectName ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{o.poDate}</td>
-                    <td className="px-4 py-3 text-gray-500 text-center">{o.items.length}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900">{fmt(o.totalAmount)}</td>
+                    <td className="px-4 py-3 text-content text-sm">{o.vendorName}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{o.projectName ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{o.poDate}</td>
+                    <td className="px-4 py-3 text-content-muted text-center">{o.items.length}</td>
+                    <td className="px-4 py-3 font-semibold text-content">{fmt(o.totalAmount)}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[o.status] ?? 'bg-gray-100 text-gray-600'}`}>{o.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[o.status] ?? 'bg-surface-muted text-content-muted'}`}>{o.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setViewing(o)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setViewing(o)} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
                         {o.status === 'Draft' && (
                           <button onClick={() => approve(o.id)} className="text-xs text-green-600 hover:text-green-700 font-medium hover:underline px-1">Approve</button>
                         )}
@@ -345,24 +347,24 @@ export function PurchasePage() {
         <Modal open onClose={() => setViewing(null)} title={`${viewing.poNumber} — ${viewing.vendorName}`} size="lg">
           <div className="space-y-3">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[420px] text-sm border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50">
+              <table className="w-full min-w-[420px] text-sm border border-border-default rounded-lg overflow-hidden">
+                <thead className="bg-surface-muted">
                   <tr>{['Material', 'Qty', 'Unit Price', 'Amount'].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-gray-500">{h}</th>
+                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
                   ))}</tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-border-default">
                   {viewing.items.map(it => (
                     <tr key={it.id}>
-                      <td className="px-3 py-2 text-xs font-medium text-gray-900">{it.materialName}</td>
-                      <td className="px-3 py-2 text-xs text-gray-600">{it.qty}</td>
-                      <td className="px-3 py-2 text-xs text-gray-600">{fmt(it.unitPrice)}</td>
-                      <td className="px-3 py-2 text-xs font-semibold text-gray-900">{fmt(it.amount)}</td>
+                      <td className="px-3 py-2 text-xs font-medium text-content">{it.materialName}</td>
+                      <td className="px-3 py-2 text-xs text-content-muted">{it.qty}</td>
+                      <td className="px-3 py-2 text-xs text-content-muted">{fmt(it.unitPrice)}</td>
+                      <td className="px-3 py-2 text-xs font-semibold text-content">{fmt(it.amount)}</td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-50 font-semibold">
-                    <td colSpan={3} className="px-3 py-2 text-sm text-gray-700">Total</td>
-                    <td className="px-3 py-2 text-sm text-gray-900">{fmt(viewing.totalAmount)}</td>
+                  <tr className="bg-surface-muted font-semibold">
+                    <td colSpan={3} className="px-3 py-2 text-sm text-content">Total</td>
+                    <td className="px-3 py-2 text-sm text-content">{fmt(viewing.totalAmount)}</td>
                   </tr>
                 </tbody>
               </table>

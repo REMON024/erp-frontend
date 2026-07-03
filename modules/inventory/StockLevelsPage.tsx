@@ -33,16 +33,16 @@ export function StockLevelsPage() {
       <PageHeader title="Stock Levels" subtitle="Real-time material stock in the central store" />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Total Materials</p><p className="text-2xl font-bold text-blue-600 mt-1">{materials.length}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><Package className="w-5 h-5 text-blue-600" /></div>
+        <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
+          <div><p className="text-sm text-content-muted">Total Materials</p><p className="text-2xl font-bold text-primary mt-1">{materials.length}</p></div>
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Package className="w-5 h-5 text-primary" /></div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Low Stock Alerts</p><p className="text-2xl font-bold text-red-600 mt-1">{lowStock}</p><p className="text-xs text-gray-400 mt-1">Below reorder level</p></div>
+        <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
+          <div><p className="text-sm text-content-muted">Low Stock Alerts</p><p className="text-2xl font-bold text-red-600 mt-1">{lowStock}</p><p className="text-xs text-content-muted mt-1">Below reorder level</p></div>
           <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
-          <div><p className="text-sm text-gray-500">Stock Value</p><p className="text-2xl font-bold text-indigo-600 mt-1">{fmt(stockValue)}</p></div>
+        <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
+          <div><p className="text-sm text-content-muted">Stock Value</p><p className="text-2xl font-bold text-indigo-600 mt-1">{fmt(stockValue)}</p></div>
           <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center"><Package className="w-5 h-5 text-indigo-600" /></div>
         </div>
       </div>
@@ -51,31 +51,31 @@ export function StockLevelsPage() {
         {(['all', 'low'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-2 text-xs rounded-lg border font-medium capitalize ${
-              filter === f ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600 hover:border-blue-400'
+              filter === f ? 'bg-primary text-white border-primary' : 'border-border-default text-content-muted hover:border-blue-400'
             }`}>{f === 'all' ? 'All' : 'Low Stock'}</button>
         ))}
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load stock.' : null} onRetry={refetch}
         empty={displayed.length === 0} emptyMessage="No materials found.">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {['Material', 'Code', 'Unit', 'Current Stock', 'Reorder Level', 'Status'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-border-default">
                 {displayed.map(m => (
-                  <tr key={m.id} className={`hover:bg-gray-50 ${m.isLowStock ? 'bg-red-50/40' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{m.materialName}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs font-mono">{m.materialCode}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{m.unit}</td>
-                    <td className={`px-4 py-3 font-bold ${m.isLowStock ? 'text-red-600' : 'text-gray-900'}`}>{m.currentStock.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-gray-400 text-xs">{m.minimumStock.toLocaleString()}</td>
+                  <tr key={m.id} className={`hover:bg-surface-muted ${m.isLowStock ? 'bg-red-50/40' : ''}`}>
+                    <td className="px-4 py-3 font-medium text-content">{m.materialName}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{m.materialCode}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{m.unit}</td>
+                    <td className={`px-4 py-3 font-bold ${m.isLowStock ? 'text-red-600' : 'text-content'}`}>{m.currentStock.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{m.minimumStock.toLocaleString()}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${m.isLowStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                         {m.isLowStock ? 'Low' : 'OK'}
