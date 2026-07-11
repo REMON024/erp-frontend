@@ -29,6 +29,55 @@ export interface AuthTokens {
   user: User
 }
 
+// ─── Auth Request / Response shapes (contract) ───────────────────────────────
+export interface LoginRequest {
+  email: string
+  password: string
+}
+
+export interface LoginResponse {
+  user: User
+  /** Compat: field name may be `accessToken` or `token` depending on server version. */
+  accessToken: string
+  refreshToken?: string
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string
+  refreshToken: string
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+/** POST /auth/forgot-password */
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+/**
+ * POST /auth/reset-password
+ * Used after the user clicks the emailed link that contains a one-time token.
+ */
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+}
+
+/** Standard API error envelope returned by the backend for all 4xx/5xx responses. */
+export interface ApiErrorEnvelope {
+  title?: string
+  message?: string
+  errors?: string[]
+  status?: number
+}
+
 // ─── Project ─────────────────────────────────────────────────────────────────
 export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled'
 
