@@ -99,7 +99,7 @@ All endpoints below are relative to `/auth`.
 |---|---|
 | **Method** | `POST` |
 | **Path** | `/auth/change-password` |
-| **Auth required** | Yes (`Authorization: ****** |
+| **Auth required** | Yes (access token required in Authorization header) |
 
 **Request body**
 

@@ -37,7 +37,7 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   user: User
-  /** ****** — field name may be `accessToken` or `token` depending on server version. */
+  /** Compat: field name may be `accessToken` or `token` depending on server version. */
   accessToken: string
   refreshToken?: string
 }
