@@ -14,13 +14,17 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Auth endpoints that should never trigger a redirect on 401
+const AUTH_PUBLIC_PATHS = ['/auth/login', '/auth/forgot-password', '/auth/reset-password']
+
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     const url: string = error.config?.url ?? ''
+    const isPublicAuthPath = AUTH_PUBLIC_PATHS.some((p) => url.includes(p))
     if (
       error.response?.status === 401 &&
-      !url.includes('/auth/login') &&
+      !isPublicAuthPath &&
       typeof window !== 'undefined'
     ) {
       localStorage.removeItem('erp_token')
