@@ -1,14 +1,86 @@
 @import "tailwindcss";
 
+/* Dark mode driven by a `.dark` class on <html> (see theme.store + layout script) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- Design tokens (Ynex palette). Values are space-separated RGB triplets ---- */
 :root {
-  --font-geist-sans: '';
+  --primary: 132 90 223;
+  --primary-fg: 255 255 255;
+  --secondary: 35 183 229;
+  --success: 38 191 148;
+  --warning: 245 184 73;
+  --danger: 230 83 60;
+  --info: 73 182 245;
+
+  --bg: 240 241 247;
+  --surface: 255 255 255;
+  --surface-muted: 247 248 249;
+  --content: 51 51 53;
+  --content-muted: 140 144 151;
+  --border: 235 238 243;
+}
+
+.dark {
+  --primary: 145 106 231;
+  --primary-fg: 255 255 255;
+  --secondary: 35 183 229;
+  --success: 38 191 148;
+  --warning: 245 184 73;
+  --danger: 230 83 60;
+  --info: 73 182 245;
+
+  --bg: 26 28 30;
+  --surface: 37 39 41;
+  --surface-muted: 43 46 49;
+  --content: 236 238 243;
+  --content-muted: 148 158 183;
+  --border: 49 51 53;
+}
+
+/* ---- Expose tokens as Tailwind color utilities (bg-surface, text-content, …) ---- */
+@theme inline {
+  --color-primary: rgb(var(--primary));
+  --color-primary-fg: rgb(var(--primary-fg));
+  --color-secondary: rgb(var(--secondary));
+  --color-success: rgb(var(--success));
+  --color-warning: rgb(var(--warning));
+  --color-danger: rgb(var(--danger));
+  --color-info: rgb(var(--info));
+
+  --color-bg: rgb(var(--bg));
+  --color-surface: rgb(var(--surface));
+  --color-surface-muted: rgb(var(--surface-muted));
+  --color-content: rgb(var(--content));
+  --color-content-muted: rgb(var(--content-muted));
+  --color-border-default: rgb(var(--border));
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 html, body {
   height: 100%;
 }
 
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--content));
+}
+
+/* Smooth theme transition for the big surfaces */
+body, aside, header, .theme-transition {
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+
+/* Date inputs — theme the native calendar indicator in dark mode. */
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.7);
+}
+
 /* Thin scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--content-muted)); }

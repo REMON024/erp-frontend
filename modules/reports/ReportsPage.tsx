@@ -1,470 +1,520 @@
 'use client'
-
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
-} from 'recharts'
-import api from '@/lib/api'
-import { formatCurrency, formatNumber, formatDate } from '@/utils/format'
+import { Printer, TrendingUp, ShoppingCart, Receipt, Package, RefreshCw } from 'lucide-react'
+import { useApiData } from '@/hooks/useApiData'
 
-// ─── Report types ─────────────────────────────────────────────────────────────
+function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
+function fmtL(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
+function pct(a: number, b: number) { return b > 0 ? Math.round((a / b) * 100) : 0 }
 
-const REPORT_TYPES = [
-  { id: 'financial',       label: 'Financial',          icon: '💰', description: 'Revenue, expenses, and cash flow by period' },
-  { id: 'projects',        label: 'Project Progress',   icon: '📊', description: 'Budget variance and milestone completion' },
-  { id: 'inventory',       label: 'Inventory',          icon: '📦', description: 'Stock levels, movements, and reorder alerts' },
-  { id: 'equipment',       label: 'Equipment',          icon: '🏗️', description: 'Utilization rates and maintenance costs' },
-  { id: 'contractors',     label: 'Contractors',        icon: '👷', description: 'Attendance, performance, and payment records' },
-  { id: 'budget-variance', label: 'Budget Variance',    icon: '📉', description: 'Planned vs actual spend per category' },
-]
-
-const PIE_COLORS = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#eab308', '#14b8a6', '#ec4899']
-
-// ─── Mock report data generators ─────────────────────────────────────────────
-
-function useReportData(type: string, projectId: string, dateFrom: string, dateTo: string) {
-  return useQuery({
-    queryKey: ['report', type, projectId, dateFrom, dateTo],
-    queryFn: () => {
-      // All data generated from fixtures via MSW aggregation endpoints
-      switch (type) {
-        case 'financial':
-          return api.get('/finance/cashflow').then((r) => ({ chart: r.data, type }))
-        case 'projects':
-          return api.get('/finance/profitability').then((r) => ({ rows: r.data, type }))
-        case 'inventory':
-          return api.get('/materials').then((r) => ({ rows: r.data?.data ?? [], type }))
-        case 'equipment':
-          return api.get('/equipment').then((r) => ({ rows: r.data?.data ?? [], type }))
-        case 'contractors':
-          return api.get('/contractors').then((r) => ({ rows: r.data?.data ?? [], type }))
-        case 'budget-variance':
-          return api.get('/finance/profitability').then((r) => ({ rows: r.data, type }))
-        default:
-          return Promise.resolve({ type })
-      }
-    },
-    enabled: !!type,
-  })
+const STATUS_COLORS: Record<string, string> = {
+  Active:    'bg-green-100 text-green-700',
+  Completed: 'bg-primary/10 text-primary',
+  Planning:  'bg-surface-muted text-content-muted',
+  OnHold:    'bg-amber-100 text-amber-700',
+}
+const INV_STATUS_STYLE: Record<string, string> = {
+  Paid:      'bg-green-100 text-green-700',
+  Partial:   'bg-yellow-100 text-yellow-700',
+  Overdue:   'bg-red-100 text-red-700',
+  Sent:      'bg-primary/10 text-primary',
+  Draft:     'bg-surface-muted text-content-muted',
+  Cancelled: 'bg-surface-muted text-content-muted',
 }
 
-// ─── Report renderers ─────────────────────────────────────────────────────────
+function Spinner() { return <div className="flex justify-center py-12"><RefreshCw className="w-5 h-5 text-content-muted animate-spin" /></div> }
 
-function FinancialReport({ data }: { data: any[] }) {
+function Table({ children, minW = 640 }: { children: React.ReactNode; minW?: number }) {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {['Total Income', 'Total Expense', 'Net Profit'].map((label, i) => {
-          const income = data.reduce((s: number, r: any) => s + r.income, 0)
-          const expense = data.reduce((s: number, r: any) => s + r.expense, 0)
-          const values = [income, expense, income - expense]
-          const colors = ['text-emerald-600', 'text-orange-600', values[2] >= 0 ? 'text-blue-600' : 'text-red-600']
-          return (
-            <div key={label} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-              <p className="text-xs text-gray-500">{label}</p>
-              <p className={`text-lg font-bold mt-1 ${colors[i]}`}>{formatCurrency(values[i])}</p>
-            </div>
-          )
-        })}
-      </div>
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-          <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} tick={{ fontSize: 11 }} width={42} />
-          <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-          <Legend />
-          <Bar dataKey="income"  name="Income"  fill="#22c55e" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="expense" name="Expense" fill="#f97316" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm" style={{ minWidth: minW }}>{children}</table>
     </div>
   )
 }
 
-function ProjectsReport({ data }: { data: any[] }) {
-  return (
-    <div className="space-y-4">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Project', 'Budget', 'Spent', 'Remaining', 'Invoiced', 'Margin', 'Status'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {data.map((row) => {
-              const remaining = row.budget - row.spent
-              const pct = Math.round((row.spent / row.budget) * 100)
-              return (
-                <tr key={row.project} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900 text-xs">{row.project}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCurrency(row.budget)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCurrency(row.spent)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCurrency(remaining)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCurrency(row.invoiced)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`font-semibold ${row.margin >= 35 ? 'text-emerald-600' : 'text-amber-600'}`}>{row.margin}%</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${pct > 80 ? 'bg-red-500' : pct > 60 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                      </div>
-                      <span className="text-xs text-gray-500">{pct}%</span>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
+// ─── Tab: Project Summary ─────────────────────────────────────────────────────
+interface Project { id: number; projectCode: string; projectName: string; status: string; estimatedCost?: number; estimatedRevenue?: number }
+interface Invoice { id: number; totalAmount: number; paidAmount: number; dueAmount: number; status: string; customerName: string }
 
-function InventoryReport({ data }: { data: any[] }) {
-  const categories = [...new Set(data.map((d: any) => d.category).filter(Boolean))]
-  const catData = categories.map((cat) => ({
-    name: cat,
-    count: data.filter((d: any) => d.category === cat).length,
-    low: data.filter((d: any) => d.category === cat && d.stock_quantity < d.reorder_level).length,
-  }))
+function ProjectSummaryReport() {
+  const { data: projects = [], isLoading: lP } = useApiData<Project[]>({ url: '/projects', queryKey: ['rep-projects'] })
+  const { data: invoices = [], isLoading: lI } = useApiData<Invoice[]>({ url: '/invoices',  queryKey: ['rep-invoices'] })
+
+  if (lP || lI) return <Spinner />
+
+  const totalCost      = projects.reduce((s, p) => s + (p.estimatedCost ?? 0), 0)
+  const totalRevenue   = projects.reduce((s, p) => s + (p.estimatedRevenue ?? 0), 0)
+  const totalBilled    = invoices.reduce((s, i) => s + i.totalAmount, 0)
+  const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-500">Total Materials</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{data.length}</p>
-        </div>
-        <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-          <p className="text-xs text-gray-500">Low Stock Items</p>
-          <p className="text-2xl font-bold text-red-600 mt-1">{data.filter((d: any) => d.stock_quantity < d.reorder_level).length}</p>
-        </div>
-        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
-          <p className="text-xs text-gray-500">Healthy Stock</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">{data.filter((d: any) => d.stock_quantity >= d.reorder_level).length}</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-3">Stock by Category</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={catData} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`}>
-                {catData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-3">Low Stock by Category</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={catData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10 }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} />
-              <Tooltip />
-              <Bar dataKey="low" name="Low Stock" fill="#ef4444" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function EquipmentReport({ data }: { data: any[] }) {
-  const statusCounts = ['available', 'allocated', 'maintenance', 'retired'].map((s) => ({
-    name: s, value: data.filter((e: any) => e.status === s).length,
-  }))
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {statusCounts.map((s, i) => (
-          <div key={s.name} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <p className="text-xs text-gray-500 capitalize">{s.name}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: PIE_COLORS[i] }}>{s.value}</p>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Est. Cost',    value: fmtL(totalCost),      color: 'text-red-600'   },
+          { label: 'Total Est. Revenue', value: fmtL(totalRevenue),   color: 'text-primary'  },
+          { label: 'Total Billed',       value: fmt(totalBilled),     color: 'text-green-600' },
+          { label: 'Total Collected',    value: fmt(totalCollected),  color: 'text-teal-600'  },
+        ].map(k => (
+          <div key={k.label} className="bg-surface-muted rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted">{k.label}</p>
+            <p className={`text-base sm:text-lg font-bold mt-1 ${k.color}`}>{k.value}</p>
           </div>
         ))}
       </div>
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart>
-          <Pie data={statusCounts.filter((s) => s.value > 0)} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name} (${value})`}>
-            {statusCounts.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Name', 'Code', 'Category', 'Status', 'Allocated To'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {data.map((eq: any) => (
-              <tr key={eq.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-900 text-sm">{eq.name}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs font-mono">{eq.code}</td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{eq.category}</td>
-                <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    eq.status === 'available' ? 'bg-emerald-100 text-emerald-700' :
-                    eq.status === 'allocated' ? 'bg-blue-100 text-blue-700' :
-                    eq.status === 'maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'
-                  }`}>{eq.status}</span>
-                </td>
-                <td className="px-4 py-3 text-gray-600 text-xs">{eq.allocated_project_id ?? '—'}</td>
+
+      {projects.length === 0 ? (
+        <p className="text-sm text-content-muted text-center py-8">No projects found.</p>
+      ) : (
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+          <Table minW={640}>
+            <thead className="bg-surface-muted border-b border-border-default">
+              <tr>
+                {['Project', 'Status', 'Est. Cost', 'Est. Revenue', 'Net'].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border-default">
+              {projects.map(p => {
+                const net = (p.estimatedRevenue ?? 0) - (p.estimatedCost ?? 0)
+                return (
+                  <tr key={p.id} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3">
+                      <p className="font-medium text-content text-xs">{p.projectName}</p>
+                      <p className="text-[10px] text-content-muted font-mono">{p.projectCode}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[p.status] ?? 'bg-surface-muted text-content-muted'}`}>{p.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-red-700 font-medium text-xs">{p.estimatedCost   ? fmtL(p.estimatedCost)   : '—'}</td>
+                    <td className="px-4 py-3 text-primary font-medium text-xs">{p.estimatedRevenue ? fmtL(p.estimatedRevenue) : '—'}</td>
+                    <td className="px-4 py-3">
+                      {p.estimatedRevenue && p.estimatedCost
+                        ? <span className={`text-xs font-bold ${net >= 0 ? 'text-green-700' : 'text-red-600'}`}>{net >= 0 ? '+' : ''}{fmtL(net)}</span>
+                        : <span className="text-content-muted text-xs">—</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot className="bg-surface-muted border-t border-border-default">
+              <tr>
+                <td colSpan={2} className="px-4 py-3 text-xs font-bold text-content uppercase">Totals</td>
+                <td className="px-4 py-3 text-red-700 font-bold text-xs">{fmtL(totalCost)}</td>
+                <td className="px-4 py-3 text-primary font-bold text-xs">{fmtL(totalRevenue)}</td>
+                <td className="px-4 py-3 font-bold text-xs">
+                  <span className={totalRevenue - totalCost >= 0 ? 'text-green-700' : 'text-red-600'}>
+                    {totalRevenue - totalCost >= 0 ? '+' : ''}{fmtL(totalRevenue - totalCost)}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </Table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Tab: Purchase & Vendor Report ───────────────────────────────────────────
+interface PO     { id: number; poNumber: string; vendorName: string; totalAmount: number; status: string; poDate: string }
+interface Vendor { id: number; vendorName: string; vendorType: string }
+
+function PurchaseVendorReport() {
+  const { data: orders  = [], isLoading: lO } = useApiData<PO[]>    ({ url: '/purchase-orders', queryKey: ['rep-pos'] })
+  const { data: vendors = [], isLoading: lV } = useApiData<Vendor[]>({ url: '/vendors',         queryKey: ['rep-vendors'] })
+
+  if (lO || lV) return <Spinner />
+
+  const totalAmt   = orders.reduce((s, o) => s + o.totalAmount, 0)
+  const approved   = orders.filter(o => o.status === 'Approved').reduce((s, o) => s + o.totalAmount, 0)
+  const draft      = orders.filter(o => o.status === 'Draft').reduce((s, o) => s + o.totalAmount, 0)
+
+  // Vendor spend map
+  const vendorSpend: Record<string, { count: number; amount: number; type: string }> = {}
+  orders.forEach(o => {
+    if (!vendorSpend[o.vendorName]) {
+      const v = vendors.find(v => v.vendorName === o.vendorName)
+      vendorSpend[o.vendorName] = { count: 0, amount: 0, type: v?.vendorType ?? '—' }
+    }
+    vendorSpend[o.vendorName].count++
+    vendorSpend[o.vendorName].amount += o.totalAmount
+  })
+  const vendorRows = Object.entries(vendorSpend).sort((a, b) => b[1].amount - a[1].amount)
+
+  const PO_STATUS: Record<string, string> = {
+    Draft:    'bg-surface-muted text-content-muted',
+    Approved: 'bg-green-100 text-green-700',
+    Received: 'bg-primary/10 text-primary',
+    Cancelled:'bg-red-100 text-red-600',
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { label: 'Total PO Value', value: fmt(totalAmt), color: 'text-content',  pctVal: 100 },
+          { label: 'Approved',       value: fmt(approved), color: 'text-green-700', pctVal: pct(approved, totalAmt) },
+          { label: 'Draft / Pending',value: fmt(draft),    color: 'text-amber-700', pctVal: pct(draft, totalAmt) },
+        ].map(k => (
+          <div key={k.label} className="bg-surface-muted rounded-xl border border-border-default p-4">
+            <p className="text-xs text-content-muted">{k.label}</p>
+            <p className={`text-base sm:text-lg font-bold mt-1 ${k.color}`}>{k.value}</p>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 h-1.5 bg-surface-muted rounded-full">
+                <div className="h-1.5 rounded-full bg-primary" style={{ width: `${k.pctVal}%` }} />
+              </div>
+              <span className="text-xs text-content-muted shrink-0">{k.pctVal}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+          <div className="px-4 py-3 border-b border-border-default">
+            <h3 className="font-semibold text-content text-sm">Spend by Vendor</h3>
+            <p className="text-xs text-content-muted mt-0.5">Total: {fmt(totalAmt)}</p>
+          </div>
+          {vendorRows.length === 0
+            ? <p className="px-4 py-8 text-sm text-content-muted text-center">No purchase orders found.</p>
+            : <Table>
+                <thead className="bg-surface-muted border-b border-border-default">
+                  <tr>{['Vendor', 'Type', 'Orders', 'Amount'].map(h => (
+                    <th key={h} className={`px-4 py-2.5 text-xs font-semibold text-content-muted uppercase ${h !== 'Vendor' ? 'text-right' : 'text-left'}`}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-border-default">
+                  {vendorRows.map(([name, d]) => (
+                    <tr key={name} className="hover:bg-surface-muted">
+                      <td className="px-4 py-2.5 text-xs font-medium text-content">{name}</td>
+                      <td className="px-4 py-2.5 text-right text-xs text-content-muted">{d.type}</td>
+                      <td className="px-4 py-2.5 text-right text-xs text-content-muted">{d.count}</td>
+                      <td className="px-4 py-2.5 text-right text-xs font-semibold text-content">{fmt(d.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-surface-muted border-t border-border-default">
+                  <tr>
+                    <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-content">Total</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold">{orders.length}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold">{fmt(totalAmt)}</td>
+                  </tr>
+                </tfoot>
+              </Table>
+          }
+        </div>
+
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+          <div className="px-4 py-3 border-b border-border-default">
+            <h3 className="font-semibold text-content text-sm">Recent Purchase Orders</h3>
+          </div>
+          {orders.length === 0
+            ? <p className="px-4 py-8 text-sm text-content-muted text-center">No orders found.</p>
+            : <Table>
+                <thead className="bg-surface-muted border-b border-border-default">
+                  <tr>{['PO No.', 'Vendor', 'Date', 'Amount', 'Status'].map(h => (
+                    <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-content-muted uppercase">{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-border-default">
+                  {[...orders].sort((a, b) => b.poDate.localeCompare(a.poDate)).slice(0, 8).map(o => (
+                    <tr key={o.id} className="hover:bg-surface-muted">
+                      <td className="px-3 py-2.5 font-mono text-xs text-primary font-semibold">{o.poNumber}</td>
+                      <td className="px-3 py-2.5 text-xs text-content">{o.vendorName}</td>
+                      <td className="px-3 py-2.5 text-xs text-content-muted">{o.poDate}</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold text-content">{fmt(o.totalAmount)}</td>
+                      <td className="px-3 py-2.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PO_STATUS[o.status] ?? 'bg-surface-muted text-content-muted'}`}>{o.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+          }
+        </div>
       </div>
     </div>
   )
 }
 
-function ContractorsReport({ data }: { data: any[] }) {
+// ─── Tab: Sales & Collections Report ─────────────────────────────────────────
+interface Customer { id: number; fullName: string; mobile: string }
+
+function SalesCollectionsReport() {
+  const { data: invoices  = [], isLoading: lI } = useApiData<Invoice[]> ({ url: '/invoices',  queryKey: ['rep-inv-sales'] })
+  const { data: customers = [], isLoading: lC } = useApiData<Customer[]>({ url: '/customers', queryKey: ['rep-customers'] })
+
+  if (lI || lC) return <Spinner />
+
+  const totalRevenue   = invoices.reduce((s, i) => s + i.totalAmount, 0)
+  const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
+  const outstanding    = totalRevenue - totalCollected
+
+  // Outstanding by customer
+  const customerBalance = customers.map(c => {
+    const invs    = invoices.filter(i => i.customerName === c.fullName)
+    const balance = invs.reduce((s, i) => s + i.dueAmount, 0)
+    return { ...c, balance, invoiceCount: invs.length }
+  }).filter(c => c.invoiceCount > 0).sort((a, b) => b.balance - a.balance)
+
+  // Aging by status
+  const statuses = ['Paid', 'Sent', 'Overdue', 'Draft', 'Cancelled'] as const
+  const aging = statuses.map(status => {
+    const rows = invoices.filter(i => i.status === status)
+    return { status, count: rows.length, amount: rows.reduce((s, i) => s + i.totalAmount, 0), collected: rows.reduce((s, i) => s + i.paidAmount, 0) }
+  }).filter(a => a.count > 0)
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            {['Contractor', 'Specialty', 'Rating', 'Projects', 'Status'].map((h) => (
-              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {data.map((c: any) => (
-            <tr key={c.id} className="hover:bg-gray-50">
-              <td className="px-4 py-3 font-medium text-gray-900">{c.company_name}</td>
-              <td className="px-4 py-3 text-gray-600 text-xs">{c.specialty}</td>
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-1">
-                  {'★'.repeat(Math.round(c.rating ?? 0))}{'☆'.repeat(5 - Math.round(c.rating ?? 0))}
-                  <span className="text-xs text-gray-500 ml-1">{c.rating?.toFixed(1)}</span>
-                </div>
-              </td>
-              <td className="px-4 py-3 text-gray-600 text-xs">{c.active_projects ?? 0}</td>
-              <td className="px-4 py-3">
-                <span className={`text-xs px-2 py-1 rounded-full ${c.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {c.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-surface-muted rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted">Total Revenue Billed</p>
+          <p className="text-base sm:text-lg font-bold text-content mt-1">{fmt(totalRevenue)}</p>
+        </div>
+        <div className="bg-surface-muted rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted">Total Collected</p>
+          <p className="text-base sm:text-lg font-bold text-green-700 mt-1">{fmt(totalCollected)}</p>
+          <p className="text-xs text-content-muted mt-1">Collection rate: {pct(totalCollected, totalRevenue)}%</p>
+        </div>
+        <div className="bg-surface-muted rounded-xl border border-border-default p-4">
+          <p className="text-xs text-content-muted">Outstanding Balance</p>
+          <p className="text-base sm:text-lg font-bold text-red-600 mt-1">{fmt(outstanding)}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+          <div className="px-4 py-3 border-b border-border-default">
+            <h3 className="font-semibold text-content text-sm">Invoice Aging Summary</h3>
+          </div>
+          {aging.length === 0
+            ? <p className="px-4 py-8 text-sm text-content-muted text-center">No invoices found.</p>
+            : <Table>
+                <thead className="bg-surface-muted border-b border-border-default">
+                  <tr>{['Status', 'Count', 'Amount', 'Collected'].map(h => (
+                    <th key={h} className={`px-4 py-2.5 text-xs font-semibold text-content-muted uppercase ${h !== 'Status' ? 'text-right' : 'text-left'}`}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-border-default">
+                  {aging.map(a => (
+                    <tr key={a.status} className="hover:bg-surface-muted">
+                      <td className="px-4 py-2.5">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${INV_STATUS_STYLE[a.status] ?? 'bg-surface-muted text-content-muted'}`}>{a.status}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-xs font-bold">{a.count}</td>
+                      <td className="px-4 py-2.5 text-right text-xs text-content">{fmt(a.amount)}</td>
+                      <td className="px-4 py-2.5 text-right text-xs text-green-700">{fmt(a.collected)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-surface-muted border-t border-border-default">
+                  <tr>
+                    <td className="px-4 py-2.5 text-xs font-bold text-content">Total</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold">{invoices.length}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold">{fmt(totalRevenue)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold text-green-700">{fmt(totalCollected)}</td>
+                  </tr>
+                </tfoot>
+              </Table>
+          }
+        </div>
+
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+          <div className="px-4 py-3 border-b border-border-default">
+            <h3 className="font-semibold text-content text-sm">Outstanding Balance by Client</h3>
+          </div>
+          {customerBalance.length === 0
+            ? <p className="px-4 py-8 text-sm text-content-muted text-center">No outstanding balances.</p>
+            : <Table>
+                <thead className="bg-surface-muted border-b border-border-default">
+                  <tr>{['Client', 'Invoices', 'Balance Due'].map(h => (
+                    <th key={h} className={`px-4 py-2.5 text-xs font-semibold text-content-muted uppercase ${h === 'Balance Due' ? 'text-right' : 'text-left'}`}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody className="divide-y divide-border-default">
+                  {customerBalance.slice(0, 10).map(c => (
+                    <tr key={c.id} className="hover:bg-surface-muted">
+                      <td className="px-4 py-2.5">
+                        <p className="text-xs font-medium text-content">{c.fullName}</p>
+                        <p className="text-[10px] text-content-muted">{c.mobile}</p>
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-content-muted">{c.invoiceCount}</td>
+                      <td className={`px-4 py-2.5 text-right text-xs font-bold ${c.balance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                        {c.balance > 0 ? fmt(c.balance) : 'Settled'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-surface-muted border-t border-border-default">
+                  <tr>
+                    <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-content">Total Outstanding</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold text-red-600">{fmt(outstanding)}</td>
+                  </tr>
+                </tfoot>
+              </Table>
+          }
+        </div>
+      </div>
     </div>
   )
 }
 
-function BudgetVarianceReport({ data }: { data: any[] }) {
-  const chartData = data.map((row: any) => ({
-    name: row.project.split(' (')[0],
-    budget: row.budget,
-    actual: row.spent,
-    variance: row.budget - row.spent,
-  }))
+// ─── Tab: Stock Movement Report ───────────────────────────────────────────────
+interface StockMaterial { id: number; materialName: string; unit: string; currentStock: number; minimumStock: number; isLowStock: boolean; averageCost: number }
+interface StockTx { id: number; materialId: number; materialName: string; transactionType: string; qty: number; unitCost: number; totalCost: number; transactionDate: string; projectName?: string }
+
+function StockMovementReport() {
+  const { data: materials = [], isLoading: lM } = useApiData<StockMaterial[]>({ url: '/materials',          queryKey: ['rep-mats'] })
+  const { data: txIn      = [], isLoading: lI } = useApiData<StockTx[]>      ({ url: '/stock-transactions', params: { type: 'In' },  queryKey: ['rep-tx-in'] })
+  const { data: txOut     = [], isLoading: lO } = useApiData<StockTx[]>      ({ url: '/stock-transactions', params: { type: 'Out' }, queryKey: ['rep-tx-out'] })
+
+  if (lM || lI || lO) return <Spinner />
+
+  const lowCount = materials.filter(m => m.isLowStock).length
+
+  // Build movement rows
+  const rows = materials.map(m => {
+    const totalIn  = txIn.filter(t => t.materialId === m.id).reduce((s, t) => s + t.qty, 0)
+    const totalOut = txOut.filter(t => t.materialId === m.id).reduce((s, t) => s + t.qty, 0)
+    return { ...m, totalIn, totalOut }
+  })
+
+  // Project consumption from out transactions
+  const projectMap: Record<string, { count: number; qty: number }> = {}
+  txOut.forEach(t => {
+    const key = t.projectName ?? 'Unassigned'
+    if (!projectMap[key]) projectMap[key] = { count: 0, qty: 0 }
+    projectMap[key].count++
+    projectMap[key].qty += t.qty
+  })
+  const projectConsumption = Object.entries(projectMap).sort((a, b) => b[1].qty - a[1].qty)
 
   return (
-    <div className="space-y-6">
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-          <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(0)}M`} tick={{ fontSize: 11 }} width={42} />
-          <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-          <Legend />
-          <Bar dataKey="budget" name="Budget" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="actual" name="Actual Spend" fill="#f97316" radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              {['Project', 'Budget', 'Actual', 'Variance', 'Utilization'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {chartData.map((row) => {
-              const utilPct = Math.round((row.actual / row.budget) * 100)
-              return (
-                <tr key={row.name} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900 text-xs">{row.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCurrency(row.budget)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCurrency(row.actual)}</td>
-                  <td className="px-4 py-3">
-                    <span className={`font-semibold ${row.variance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {row.variance >= 0 ? '+' : ''}{formatCurrency(row.variance)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${utilPct > 90 ? 'bg-red-500' : utilPct > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(utilPct, 100)}%` }} />
-                      </div>
-                      <span className="text-xs text-gray-500">{utilPct}%</span>
-                    </div>
-                  </td>
+    <div className="space-y-5">
+      {lowCount > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <Package className="w-4 h-4 text-red-500 shrink-0" />
+          <p className="text-sm text-red-700 font-medium">{lowCount} material(s) at or below reorder level — replenishment required.</p>
+        </div>
+      )}
+
+      <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+        <div className="px-4 py-3 border-b border-border-default">
+          <h3 className="font-semibold text-content text-sm">Stock Movement Summary</h3>
+          <p className="text-xs text-content-muted mt-0.5">Stock In → Issued → Current Balance</p>
+        </div>
+        {rows.length === 0
+          ? <p className="px-4 py-8 text-sm text-content-muted text-center">No materials found.</p>
+          : <Table minW={680}>
+              <thead className="bg-surface-muted border-b border-border-default">
+                <tr>
+                  {['Material', 'Unit', 'Stock In', 'Issued', 'Current Stock', 'Reorder', 'Avg Cost', 'Status'].map(h => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${
+                      ['Stock In','Issued','Current Stock','Reorder','Avg Cost'].includes(h) ? 'text-right' : 'text-left'
+                    }`}>{h}</th>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-border-default">
+                {rows.map(r => (
+                  <tr key={r.id} className={`hover:bg-surface-muted ${r.isLowStock ? 'bg-red-50/40' : ''}`}>
+                    <td className="px-4 py-2.5 font-medium text-content text-xs">{r.materialName}</td>
+                    <td className="px-4 py-2.5 text-content-muted text-xs">{r.unit}</td>
+                    <td className="px-4 py-2.5 text-right text-green-700 font-medium text-xs">+{r.totalIn.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right text-orange-600 font-medium text-xs">−{r.totalOut.toLocaleString()}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold text-xs ${r.isLowStock ? 'text-red-600' : 'text-content'}`}>
+                      {r.currentStock.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-content-muted text-xs">{r.minimumStock.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right text-content-muted text-xs">{fmt(r.averageCost)}</td>
+                    <td className="px-4 py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.isLowStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {r.isLowStock ? 'Low' : 'OK'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+        }
       </div>
+
+      {projectConsumption.length > 0 && (
+        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+          <div className="px-4 py-3 border-b border-border-default">
+            <h3 className="font-semibold text-content text-sm">Material Issues by Project</h3>
+          </div>
+          <Table minW={400}>
+            <thead className="bg-surface-muted border-b border-border-default">
+              <tr>{['Project', 'Transactions', 'Total Qty Issued'].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase">{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody className="divide-y divide-border-default">
+              {projectConsumption.map(([name, d]) => (
+                <tr key={name} className="hover:bg-surface-muted">
+                  <td className="px-4 py-3 font-medium text-content text-xs">{name}</td>
+                  <td className="px-4 py-3 text-center font-bold text-content text-xs">{d.count}</td>
+                  <td className="px-4 py-3 font-semibold text-content text-xs">{d.qty.toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
+      )}
     </div>
   )
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+type Tab = 'projects' | 'purchase' | 'sales' | 'stock'
+
+const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+  { id: 'projects', label: 'Project Summary',    icon: TrendingUp   },
+  { id: 'purchase', label: 'Purchase & Vendor',   icon: ShoppingCart },
+  { id: 'sales',    label: 'Sales & Collections', icon: Receipt      },
+  { id: 'stock',    label: 'Stock Movement',       icon: Package      },
+]
 
 export function ReportsPage() {
-  const [selectedType, setSelectedType] = useState<string>('')
-  const [projectId, setProjectId]       = useState('')
-  const [dateFrom, setDateFrom]         = useState('2025-01-01')
-  const [dateTo, setDateTo]             = useState('2025-12-31')
-  const [generated, setGenerated]       = useState(false)
-
-  const { data, isFetching } = useReportData(
-    generated ? selectedType : '',
-    projectId, dateFrom, dateTo
-  )
-
-  function handleGenerate() {
-    if (!selectedType) return
-    setGenerated(true)
-  }
-
-  function handleExport() {
-    const label = REPORT_TYPES.find((r) => r.id === selectedType)?.label ?? 'Report'
-    const blob = new Blob([`${label} — Mock export (${dateFrom} to ${dateTo})\n\nReal CSV export will be available in Phase 2 backend integration.`], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = `${label.replace(/\s+/g, '_')}_${dateFrom}.txt`
-    a.click(); URL.revokeObjectURL(url)
-  }
-
-  function renderReport() {
-    if (!data) return null
-    const d = data as any
-    switch (d.type) {
-      case 'financial':       return <FinancialReport data={d.chart ?? []} />
-      case 'projects':        return <ProjectsReport data={d.rows ?? []} />
-      case 'inventory':       return <InventoryReport data={d.rows ?? []} />
-      case 'equipment':       return <EquipmentReport data={d.rows ?? []} />
-      case 'contractors':     return <ContractorsReport data={d.rows ?? []} />
-      case 'budget-variance': return <BudgetVarianceReport data={d.rows ?? []} />
-      default: return null
-    }
-  }
+  const [tab, setTab] = useState<Tab>('projects')
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Reports</h1>
-        <p className="text-sm text-gray-500 mt-1">Generate and export reports across all modules</p>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-content">Reports</h1>
+          <p className="text-sm text-content-muted mt-0.5">Operational and financial reports across all modules</p>
+        </div>
+        <button onClick={() => window.print()}
+          className="shrink-0 px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted font-medium flex items-center gap-2 text-content-muted">
+          <Printer className="w-4 h-4" /> Print
+        </button>
       </div>
 
-      {/* Report type selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {REPORT_TYPES.map((rt) => (
-          <button
-            key={rt.id}
-            onClick={() => { setSelectedType(rt.id); setGenerated(false) }}
-            className={`text-left p-4 rounded-xl border transition-all ${
-              selectedType === rt.id
-                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
-            }`}
-          >
-            <span className="text-2xl block mb-2">{rt.icon}</span>
-            <p className="font-semibold text-gray-900 text-sm">{rt.label}</p>
-            <p className="text-xs text-gray-500 mt-0.5 leading-snug">{rt.description}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Filters bar */}
-      {selectedType && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
-            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setGenerated(false) }}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
-            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setGenerated(false) }}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Project (optional)</label>
-            <input value={projectId} onChange={(e) => { setProjectId(e.target.value); setGenerated(false) }}
-              placeholder="p1, p2…"
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-32" />
-          </div>
-          <div className="flex gap-2 mt-2 sm:mt-0">
-            <button onClick={handleGenerate} disabled={isFetching}
-              className="px-5 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-60">
-              {isFetching ? 'Generating…' : 'Generate'}
+      <div className="flex gap-1 flex-wrap border-b border-border-default">
+        {TABS.map(t => {
+          const Icon = t.icon
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-t-lg border transition-colors -mb-px ${
+                tab === t.id
+                  ? 'bg-surface border-border-default border-b-white text-primary'
+                  : 'border-transparent text-content-muted hover:text-content hover:bg-surface-muted'
+              }`}>
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
-            {generated && data && (
-              <button onClick={handleExport}
-                className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
-                Export CSV
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+          )
+        })}
+      </div>
 
-      {/* Report output */}
-      {generated && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200">
-            <div>
-              <h2 className="font-semibold text-gray-900">
-                {REPORT_TYPES.find((r) => r.id === selectedType)?.label} Report
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">{dateFrom} — {dateTo}</p>
-            </div>
-            <span className="text-xs px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full font-medium">Generated</span>
-          </div>
-          <div className="p-4 sm:p-6">
-            {isFetching ? (
-              <div className="py-16 text-center text-gray-400">
-                <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p>Generating report…</p>
-              </div>
-            ) : renderReport()}
-          </div>
-        </div>
-      )}
-
-      {!selectedType && (
-        <div className="py-12 text-center text-gray-400">
-          <p className="text-5xl mb-4">📊</p>
-          <p className="text-sm">Select a report type above to get started</p>
-        </div>
-      )}
+      {tab === 'projects' && <ProjectSummaryReport />}
+      {tab === 'purchase' && <PurchaseVendorReport />}
+      {tab === 'sales'    && <SalesCollectionsReport />}
+      {tab === 'stock'    && <StockMovementReport />}
     </div>
   )
 }

@@ -1,2 +1,5 @@
-import { redirect } from 'next/navigation'
-export default function Page() { redirect('/dashboard') }
+import { InvoicesPage } from '@/modules/sales/InvoicesPage'
+
+export default function Page() {
+  return <InvoicesPage />
+}

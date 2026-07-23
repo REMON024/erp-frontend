@@ -1,34 +1,38 @@
 'use client'
-import { useQuery } from '@tanstack/react-query'
-import api from '@/lib/api'
-import { DashboardSummary, Material, Project } from '@/types'
-import { formatCurrency } from '@/utils/format'
-import {
-  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
-} from 'recharts'
-import { Building2, DollarSign, TrendingUp, Users, Package, AlertTriangle } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { FolderKanban, TrendingUp, ShoppingCart, Package, Receipt, PieChart as PieIcon, RefreshCw } from 'lucide-react'
+import { useApiData } from '@/hooks/useApiData'
 
-const useDashboard = () =>
-  useQuery<DashboardSummary>({ queryKey: ['dashboard'], queryFn: () => api.get('/dashboard/summary').then(r => r.data) })
+const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading: () => (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    {[0, 1].map(i => (
+      <div key={i} className="bg-surface rounded-xl border border-border-default p-5 h-[320px] animate-pulse" />
+    ))}
+  </div>
+)})
 
-const useProjects = () =>
-  useQuery<{ data: Project[] }>({ queryKey: ['projects-list'], queryFn: () => api.get('/projects').then(r => r.data) })
+function fmt(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
+function fmtFull(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 
-const useInventoryAlerts = () =>
-  useQuery<{ data: Material[] }>({ queryKey: ['materials-alerts'], queryFn: () => api.get('/materials/alerts').then(r => r.data) })
+interface Project   { id: number; projectCode: string; projectName: string; status: string; estimatedCost?: number; estimatedRevenue?: number }
+interface Estimate  { id: number; totalEstimated: number; totalActual: number; status: string }
+interface Invoice   { id: number; totalAmount: number; paidAmount: number; dueAmount: number; status: string; invoiceDate: string; customerName: string; invoiceNo: string }
+interface Payment   { id: number; paymentNo: string; customerName: string; amount: number; paymentDate: string; method: string }
+interface Material  { id: number; materialName: string; currentStock: number; minimumStock: number; isLowStock: boolean }
+interface Booking   { id: number; bookingNo: string; customerName: string; netAmount: number; bookingDate: string; unitNo: string }
 
-// ── KPI Card ──────────────────────────────────────────────────────────────────
-function KPICard({ label, value, sub, icon: Icon, iconBg, iconColor }: {
-  label: string; value: string | number; sub?: string
-  icon: React.ElementType; iconBg: string; iconColor: string
+function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor, loading }: {
+  label: string; value: string; sub: string
+  icon: React.ElementType; iconBg: string; iconColor: string; loading?: boolean
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex justify-between items-start">
+    <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
       <div>
-        <p className="text-sm text-gray-500 font-medium">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+        <p className="text-sm text-content-muted font-medium">{label}</p>
+        {loading
+          ? <div className="h-7 w-24 bg-surface-muted rounded animate-pulse mt-1" />
+          : <p className="text-2xl font-bold text-content mt-1">{value}</p>}
+        <p className="text-xs text-content-muted mt-1">{sub}</p>
       </div>
       <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
         <Icon className={`w-5 h-5 ${iconColor}`} />
@@ -37,157 +41,152 @@ function KPICard({ label, value, sub, icon: Icon, iconBg, iconColor }: {
   )
 }
 
-// ── Cost Breakdown Pie ────────────────────────────────────────────────────────
-const COST_DATA = [
-  { name: 'Labor',     value: 45, color: '#3b82f6' },
-  { name: 'Materials', value: 35, color: '#60a5fa' },
-  { name: 'Equipment', value: 5,  color: '#f59e0b' },
-  { name: 'Overhead',  value: 15, color: '#1e293b' },
-]
-
-function CostBreakdown() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="font-semibold text-gray-900 mb-1">Cost Breakdown</h3>
-      <p className="text-xs text-gray-400 mb-4">Distribution of project costs by category</p>
-      <ResponsiveContainer width="100%" height={220}>
-        <PieChart>
-          <Pie data={COST_DATA} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" paddingAngle={2}>
-            {COST_DATA.map((d) => <Cell key={d.name} fill={d.color} />)}
-          </Pie>
-          <Tooltip formatter={(v) => `${v}%`} />
-          <Legend iconType="square" iconSize={10} />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-// ── Material Usage & Wastage Bar ──────────────────────────────────────────────
-const WASTAGE_DATA = [
-  { material: 'Cement', used: 1200, wasted: 80 },
-  { material: 'Steel',  used: 1800, wasted: 120 },
-  { material: 'Bricks', used: 5800, wasted: 300 },
-  { material: 'Sand',   used: 900,  wasted: 60 },
-  { material: 'Gravel', used: 700,  wasted: 40 },
-]
-
-function WastageChart() {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="font-semibold text-gray-900 mb-1">Material Usage & Wastage</h3>
-      <p className="text-xs text-gray-400 mb-4">Comparison of material usage vs wastage across projects</p>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={WASTAGE_DATA} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-          <XAxis dataKey="material" tick={{ fontSize: 11 }} />
-          <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip />
-          <Legend iconType="square" iconSize={10} />
-          <Bar dataKey="used"   name="Used (tons)"   fill="#3b82f6" radius={[3,3,0,0]} />
-          <Bar dataKey="wasted" name="Wasted (tons)" fill="#ef4444" radius={[3,3,0,0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  )
-}
-
-// ── Active Projects List ──────────────────────────────────────────────────────
-const STATUS_COLORS: Record<string, string> = {
-  active:      'bg-green-100 text-green-700',
-  planning:    'bg-blue-100 text-blue-700',
-  on_hold:     'bg-amber-100 text-amber-700',
-  completed:   'bg-gray-100 text-gray-600',
-  cancelled:   'bg-red-100 text-red-700',
-}
-
-function ActiveProjects({ projects }: { projects: Project[] }) {
-  const active = projects.filter(p => p.status === 'active').slice(0, 5)
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-900">Active Projects</h3>
-        <p className="text-xs text-gray-400">Overview of ongoing construction projects</p>
-      </div>
-      <div className="space-y-3">
-        {active.map(p => {
-          const pct = Math.round(((p.budget_spent ?? 0) / (p.budget_total ?? 1)) * 100) || 0
-          return (
-            <div key={p.id} className="flex items-center justify-between border border-gray-100 rounded-lg p-3 hover:bg-gray-50">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-900 text-sm truncate">{p.name}</p>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold capitalize shrink-0 ${STATUS_COLORS[p.status]}`}>
-                    {p.status === 'active' ? 'In Progress' : p.status}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  📍 {p.location} &nbsp;·&nbsp; 📅 {p.end_date?.slice(0, 7) ?? '—'}
-                </p>
-              </div>
-              <div className="text-right ml-4 shrink-0">
-                <p className="font-semibold text-gray-900 text-sm">{formatCurrency(p.budget_total ?? p.budget)}</p>
-                <p className="text-xs text-gray-400">{pct}% budget used</p>
-              </div>
-            </div>
-          )
-        })}
-        {active.length === 0 && <p className="text-sm text-gray-400 text-center py-6">No active projects</p>}
-      </div>
-    </div>
-  )
-}
-
-// ── Main ──────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
-  const { data, isLoading } = useDashboard()
-  const { data: projectsData } = useProjects()
-  const { data: alertData } = useInventoryAlerts()
+  const { data: projects = [],  isLoading: loadP  } = useApiData<Project[]>  ({ url: '/projects',  queryKey: ['dash-projects']  })
+  const { data: invoices = [],  isLoading: loadI  } = useApiData<Invoice[]>  ({ url: '/invoices',  queryKey: ['dash-invoices']  })
+  const { data: payments = [],  isLoading: loadPy } = useApiData<Payment[]>  ({ url: '/payments',  queryKey: ['dash-payments']  })
+  const { data: materials = [], isLoading: loadM  } = useApiData<Material[]> ({ url: '/materials', queryKey: ['dash-materials'] })
+  const { data: bookings = [],   isLoading: loadB  } = useApiData<Booking[]>  ({ url: '/bookings',       queryKey: ['dash-bookings']  })
+  const { data: estimates = [],  isLoading: loadE  } = useApiData<Estimate[]> ({ url: '/cost-estimates', params: { status: 'Approved' }, queryKey: ['dash-estimates'] })
 
-  const projects: Project[] = projectsData?.data ?? []
-  const alerts: Material[] = alertData?.data ?? []
+  const loading = loadP || loadI || loadM
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-64 bg-gray-200 rounded" />
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-4">
-          {Array.from({length: 6}).map((_, i) => <div key={i} className="h-24 bg-gray-200 rounded-xl" />)}
-        </div>
-      </div>
-    )
+  const activeProjects = projects.filter(p => p.status === 'Active').length
+  const totalRevenue   = invoices.reduce((s, i) => s + i.totalAmount, 0)
+  const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
+  const totalCost      = projects.reduce((s, p) => s + (p.estimatedCost ?? 0), 0)
+  const lowStockCount  = materials.filter(m => m.isLowStock).length
+  const totalBudget      = estimates.reduce((s, e) => s + e.totalEstimated, 0)
+  const totalActualCost  = estimates.reduce((s, e) => s + e.totalActual, 0)
+  const budgetUtilPct    = totalBudget > 0 ? Math.round(totalActualCost / totalBudget * 100) : 0
+  const overBudgetCount  = estimates.filter(e => e.totalActual > e.totalEstimated && e.totalActual > 0).length
+
+  const collectionStats = {
+    collected: invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + i.paidAmount, 0),
+    pending:   invoices.filter(i => i.status === 'Sent' || i.status === 'Draft').reduce((s, i) => s + i.dueAmount, 0),
+    overdue:   invoices.filter(i => i.status === 'Overdue').reduce((s, i) => s + i.dueAmount, 0),
   }
 
-  if (!data) return null
+  // Build chart data from real projects
+  const chartData = projects.map(p => ({
+    project:    p.projectCode,
+    investment: p.estimatedCost ?? 0,
+    cost:       p.estimatedCost ?? 0,
+    revenue:    p.estimatedRevenue ?? 0,
+  }))
 
-  const budgetPct = Math.round((data.budget_utilized / data.budget_total) * 100) || 0
-  const activeCount = projects.filter(p => p.status === 'active').length
+  // Build recent activity from latest payments + bookings
+  const recentPayments = [...payments]
+    .sort((a, b) => b.paymentDate.localeCompare(a.paymentDate))
+    .slice(0, 3)
+    .map(p => ({ key: `pay-${p.id}`, action: 'Payment collected', detail: `${p.customerName} paid ${fmtFull(p.amount)}`, type: 'sales', date: p.paymentDate }))
+
+  const recentBookings = [...bookings]
+    .sort((a, b) => b.bookingDate.localeCompare(a.bookingDate))
+    .slice(0, 3)
+    .map(b => ({ key: `book-${b.id}`, action: 'Booking confirmed', detail: `${b.customerName} booked ${b.unitNo}`, type: 'investment', date: b.bookingDate }))
+
+  const activity = [...recentPayments, ...recentBookings]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 6)
+
+  const ACTIVITY_COLORS: Record<string, string> = {
+    investment: 'bg-primary/10 text-primary',
+    sales:      'bg-green-100 text-green-600',
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Welcome back! Here's what's happening with your projects today.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-content">Dashboard</h1>
+          <p className="text-sm text-content-muted mt-0.5">Welcome back! Here's your construction business overview.</p>
+        </div>
+        {loading && <RefreshCw className="w-4 h-4 text-content-muted animate-spin" />}
       </div>
 
-      {/* 6 KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KPICard label="Active Projects"    value={activeCount}           sub="+2 from last month"     icon={Building2}     iconBg="bg-blue-50"   iconColor="text-blue-500" />
-        <KPICard label="Budget Utilization" value={`${budgetPct}%`}       sub="+5.2% this quarter"     icon={DollarSign}    iconBg="bg-green-50"  iconColor="text-green-500" />
-        <KPICard label="Project Progress"   value="64.2%"                 sub="On track"               icon={TrendingUp}    iconBg="bg-purple-50" iconColor="text-purple-500" />
-        <KPICard label="Labor Attendance"   value="94.8%"                 sub="+1.2% vs average"       icon={Users}         iconBg="bg-orange-50" iconColor="text-orange-500" />
-        <KPICard label="Material Stock"     value={`${87 - alerts.length}%`} sub={`${alerts.length} items low stock`} icon={Package} iconBg="bg-cyan-50" iconColor="text-cyan-500" />
-        <KPICard label="Safety Incidents"   value={data.equipment_alerts ?? 2} sub="-50% this month"   icon={AlertTriangle} iconBg="bg-red-50"    iconColor="text-red-500" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <KpiCard label="Active Projects"     value={String(activeProjects)}    sub={`${projects.length} total`}        icon={FolderKanban} iconBg="bg-primary/10"   iconColor="text-primary"   loading={loadP} />
+        <KpiCard label="Total Revenue Billed"value={fmt(totalRevenue)}          sub="From all invoices"                 icon={Receipt}      iconBg="bg-green-50"  iconColor="text-green-600"  loading={loadI} />
+        <KpiCard label="Collected"           value={fmt(totalCollected)}        sub={`${totalRevenue > 0 ? Math.round(totalCollected / totalRevenue * 100) : 0}% collection rate`} icon={TrendingUp} iconBg="bg-teal-50" iconColor="text-teal-600" loading={loadI} />
+        <KpiCard label="Budget Utilization"
+          value={totalBudget > 0 ? `${budgetUtilPct}%` : '—'}
+          sub={overBudgetCount > 0 ? `⚠ ${overBudgetCount} estimate(s) over budget` : `${fmt(totalBudget)} total budgeted`}
+          icon={ShoppingCart} iconBg={overBudgetCount > 0 ? 'bg-red-50' : 'bg-orange-50'}
+          iconColor={overBudgetCount > 0 ? 'text-red-600' : 'text-orange-600'} loading={loadE} />
+        <KpiCard label="Outstanding Balance" value={fmt(totalRevenue - totalCollected)} sub="Unpaid invoices"
+          icon={PieIcon} iconBg="bg-yellow-50" iconColor="text-yellow-600" loading={loadI} />
+        <KpiCard label="Low Stock Alerts"    value={String(lowStockCount)}
+          sub={`${materials.length} materials tracked`}
+          icon={Package} iconBg="bg-red-50" iconColor="text-red-600" loading={loadM} />
       </div>
 
-      {/* Charts row */}
+      {chartData.length > 0 && <Charts data={chartData} collectionStats={collectionStats} />}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <CostBreakdown />
-        <WastageChart />
-      </div>
+        {/* Project financial summary */}
+        <div className="bg-surface rounded-xl border border-border-default">
+          <div className="px-5 py-4 border-b border-border-default">
+            <h3 className="font-semibold text-content">Project Overview</h3>
+          </div>
+          {loadP ? (
+            <div className="divide-y divide-border-default">
+              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-surface-muted" />)}
+            </div>
+          ) : projects.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-content-muted text-center">No projects yet.</p>
+          ) : (
+            <div className="divide-y divide-border-default">
+              {projects.slice(0, 6).map(p => (
+                <div key={p.id} className="px-5 py-3">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="font-medium text-content text-sm">{p.projectName}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                      p.status === 'Active' ? 'bg-green-100 text-green-700' :
+                      p.status === 'Completed' ? 'bg-primary/10 text-primary' :
+                      'bg-surface-muted text-content-muted'
+                    }`}>{p.status}</span>
+                  </div>
+                  <div className="flex gap-4 text-xs text-content-muted">
+                    <span className="font-mono text-content-muted">{p.projectCode}</span>
+                    {p.estimatedCost   && <span>Est. Cost: <strong className="text-content">{fmt(p.estimatedCost)}</strong></span>}
+                    {p.estimatedRevenue && <span>Est. Revenue: <strong className="text-content">{fmt(p.estimatedRevenue)}</strong></span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Active Projects */}
-      <ActiveProjects projects={projects} />
+        {/* Recent activity */}
+        <div className="bg-surface rounded-xl border border-border-default">
+          <div className="px-5 py-4 border-b border-border-default">
+            <h3 className="font-semibold text-content">Recent Activity</h3>
+          </div>
+          {(loadPy || loadB) ? (
+            <div className="divide-y divide-border-default">
+              {[1,2,3].map(i => <div key={i} className="px-5 py-4 h-14 animate-pulse bg-surface-muted" />)}
+            </div>
+          ) : activity.length === 0 ? (
+            <p className="px-5 py-8 text-sm text-content-muted text-center">No recent activity.</p>
+          ) : (
+            <div className="divide-y divide-border-default">
+              {activity.map(a => (
+                <div key={a.key} className="px-5 py-3 flex items-start gap-3">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${ACTIVITY_COLORS[a.type] ?? 'bg-surface-muted text-content-muted'}`}>
+                    {a.type === 'sales' ? '৳' : '★'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-content">{a.action}</p>
+                    <p className="text-xs text-content-muted truncate">{a.detail}</p>
+                  </div>
+                  <p className="text-xs text-content-muted shrink-0">{a.date}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

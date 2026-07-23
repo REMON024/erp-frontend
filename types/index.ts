@@ -1,31 +1,32 @@
 // ─── Auth ───────────────────────────────────────────────────────────────────
 export type Role =
   | 'super_admin'
-  | 'company_admin'
-  | 'project_manager'
-  | 'site_engineer'
-  | 'procurement_officer'
-  | 'accountant'
-  | 'store_manager'
-  | 'contractor'
-  | 'vendor'
-  | 'employee'
+  | 'operations'
+  | 'inventory'
+  | 'engineer'
 
 export interface User {
   id: string
-  first_name: string
-  last_name: string
+  firstName: string
+  lastName: string
+  fullName: string
   email: string
-  role: Role
-  phone?: string
-  status: boolean
-  created_at: string
+  role: Role            // primary role (first of the set) — kept for legacy reads
+  roleId: string
+  roles: Role[]         // full role set (multi-role union model)
+  roleIds: string[]
+  projects?: string[]   // assigned project ids (relevant when roles includes 'engineer')
+  phoneNumber?: string | null
+  isActive: boolean
+  createdAt: string
+  lastLoginAt?: string | null
 }
 
 export interface AuthTokens {
-  token: string
-  refresh_token: string
-  expires_in: number
+  accessToken: string
+  refreshToken: string
+  expiresAt: string
+  user: User
 }
 
 // ─── Project ─────────────────────────────────────────────────────────────────

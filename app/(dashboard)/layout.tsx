@@ -5,14 +5,14 @@ import { useAuthStore } from '@/store/auth.store'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 
 export default function DashboardRootLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, _hasHydrated } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isAuthenticated) router.replace('/login')
-  }, [isAuthenticated, router])
+    if (_hasHydrated && !isAuthenticated) router.replace('/login')
+  }, [_hasHydrated, isAuthenticated, router])
 
-  if (!isAuthenticated) return null
+  if (!_hasHydrated || !isAuthenticated) return null
 
   return <DashboardLayout>{children}</DashboardLayout>
 }
