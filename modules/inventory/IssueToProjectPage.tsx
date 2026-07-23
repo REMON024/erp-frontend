@@ -13,9 +13,10 @@ import { z } from 'zod'
 import { Plus, PackageCheck, AlertTriangle } from 'lucide-react'
 import api from '@/lib/api'
 
-interface Material { id: number; materialName: string; unit: string; currentStock: number }
 interface Project  { id: number; projectName: string; projectCode: string }
 interface BudgetLine { materialId: number; budgetedQty: number; issuedQty: number; unit: string }
+interface StockBalanceRow { warehouseId: number | null; balance: number }
+interface MaterialRollup { materialId: number; materialName: string; unit: string; warehouses: StockBalanceRow[] }
 interface StockTxn {
   id: number; materialName: string; unit: string; projectName?: string
   qty: number; totalCost: number; referenceNo?: string; transactionDate: string
@@ -28,9 +29,9 @@ const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm fo
 const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
+  warehouseId:     z.coerce.number().min(1, 'Required'),
   materialId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
-  warehouseId:     z.coerce.number().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
@@ -38,20 +39,33 @@ const schema = z.object({
 })
 type Form = z.infer<typeof schema>
 
-function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
-  materials: Material[]; projects: Project[]; warehouses: { id: number; name: string }[]; onClose: () => void; onSaved: () => void
+function IssueModal({ projects, warehouses, onClose, onSaved }: {
+  projects: Project[]; warehouses: { id: number; name: string }[]; onClose: () => void; onSaved: () => void
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, watch, resetField, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: { transactionDate: isoToday() },
   })
 
-  const selectedMat  = materials.find(m => m.id === Number(watch('materialId')))
+  const watchedWh    = Number(watch('warehouseId'))
   const watchedMat   = Number(watch('materialId'))
   const watchedProj  = Number(watch('projectId'))
   const watchedQty   = Number(watch('qty')) || 0
+
+  // Per-warehouse stock for the selected warehouse; drives the material list and "Available".
+  const { data: rollups = [] } = useApiData<MaterialRollup[]>({
+    url: '/stock-transactions/balances',
+    params: { warehouseId: watchedWh || undefined },
+    queryKey: ['issue-wh-balances', String(watchedWh)],
+    enabled: !!watchedWh,
+  })
+  // Only materials that have a positive balance in the chosen warehouse.
+  const availableMaterials = rollups
+    .map(r => ({ id: r.materialId, name: r.materialName, unit: r.unit, balance: r.warehouses.find(w => w.warehouseId === watchedWh)?.balance ?? 0 }))
+    .filter(m => m.balance > 0)
+  const selectedMat = availableMaterials.find(m => m.id === watchedMat)
 
   const { data: budgetLines = [] } = useApiData<BudgetLine[]>({
     url: `/cost-estimates/material-budget/${watchedProj || '0'}`,
@@ -77,16 +91,26 @@ function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div>
-          <label className={lbl}>Material <span className="text-red-500">*</span></label>
-          <Select {...register('materialId')}>
-            <option value="">Select material</option>
-            {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} — {m.currentStock.toLocaleString()} {m.unit} available</option>)}
+          <label className={lbl}>Warehouse <span className="text-red-500">*</span></label>
+          <Select {...register('warehouseId', { onChange: () => resetField('materialId') })}>
+            <option value="">Select warehouse</option>
+            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
+          {errors.warehouseId && <p className="text-xs text-red-600 mt-1">{errors.warehouseId.message}</p>}
+        </div>
+        <div>
+          <label className={lbl}>Material <span className="text-red-500">*</span></label>
+          <Select {...register('materialId')} disabled={!watchedWh}>
+            <option value="">{watchedWh ? 'Select material' : 'Select a warehouse first'}</option>
+            {availableMaterials.map(m => <option key={m.id} value={m.id}>{m.name} — {m.balance.toLocaleString()} {m.unit} available</option>)}
+          </Select>
+          {watchedWh && availableMaterials.length === 0 &&
+            <p className="text-xs text-content-muted mt-1">No materials in stock in this warehouse.</p>}
           {errors.materialId && <p className="text-xs text-red-600 mt-1">{errors.materialId.message}</p>}
         </div>
         {selectedMat && (
           <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
-            Available: <strong>{selectedMat.currentStock.toLocaleString()} {selectedMat.unit}</strong>
+            Available: <strong>{selectedMat.balance.toLocaleString()} {selectedMat.unit}</strong>
           </div>
         )}
         <div>
@@ -96,13 +120,6 @@ function IssueModal({ materials, projects, warehouses, onClose, onSaved }: {
             {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
           </Select>
           {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
-        </div>
-        <div>
-          <label className={lbl}>Warehouse <span className="text-content-muted font-normal">(guards that warehouse's balance)</span></label>
-          <Select {...register('warehouseId')}>
-            <option value="">Unassigned (central store)</option>
-            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -150,7 +167,6 @@ export function IssueToProjectPage() {
   const qc = useQueryClient()
   const [showNew, setShowNew] = useState(false)
 
-  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
   const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
   const { data: warehouses = [] } = useApiData<{ id: number; name: string }[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
   const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
@@ -213,7 +229,7 @@ export function IssueToProjectPage() {
         </div>
       </DataState>
 
-      {showNew && <IssueModal materials={materials} projects={projects} warehouses={warehouses} onClose={() => setShowNew(false)} onSaved={invalidate} />}
+      {showNew && <IssueModal projects={projects} warehouses={warehouses} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }
