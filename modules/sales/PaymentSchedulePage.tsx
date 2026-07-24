@@ -49,10 +49,11 @@ export function PaymentSchedulePage() {
     setGenResult(null)
     try {
       await api.post('/invoices', {
-        customerId:  inst.customerId,
-        projectId:   inst.projectId,
-        bookingId:   inst.bookingId,
-        invoiceType: 'Installment',
+        customerId:    inst.customerId,
+        projectId:     inst.projectId,
+        bookingId:     inst.bookingId,
+        installmentId: inst.id,
+        invoiceType:   'Installment',
         invoiceDate: new Date().toISOString().split('T')[0],
         dueDate:     inst.dueDate,
         subTotal:    inst.amount,
