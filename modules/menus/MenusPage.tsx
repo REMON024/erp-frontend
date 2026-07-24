@@ -68,17 +68,17 @@ function MenuModal({ menu, roots, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Menu' : 'Add Menu Item'} size="md">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Display Name</label>
             <input {...register('name')} className={inp} placeholder="e.g. Projects" />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
+            {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className={lbl}>Code <span className="text-content-muted font-normal">(unique)</span></label>
             <input {...register('code')} className={inp} placeholder="e.g. PROJECTS" disabled={isEdit} />
-            {errors.code && <p className="text-xs text-red-600 mt-1">{errors.code.message}</p>}
+            {errors.code && <p className="text-xs text-danger mt-1">{errors.code.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -148,7 +148,7 @@ function MenuRow({ menu, children, depth, onEdit, onDelete, onToggle }: {
         <td className="px-4 py-3 text-center text-xs font-medium text-content-muted">{menu.sortOrder}</td>
         <td className="px-4 py-3">
           <button onClick={() => onToggle(menu)}
-            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-colors ${menu.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-surface-muted text-content-muted hover:bg-surface-muted'}`}>
+            className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full transition-colors ${menu.isActive ? 'bg-success/10 text-success hover:bg-success' : 'bg-surface-muted text-content-muted hover:bg-surface-muted'}`}>
             {menu.isActive ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
             {menu.isActive ? 'Active' : 'Inactive'}
           </button>
@@ -160,7 +160,7 @@ function MenuRow({ menu, children, depth, onEdit, onDelete, onToggle }: {
               <Edit2 className="w-3.5 h-3.5" />
             </button>
             <button onClick={() => onDelete(menu.id)} disabled={hasChildren}
-              className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+              className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -256,16 +256,16 @@ export function MenusPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide">Sub-Menus</p>
-          <p className="text-3xl font-bold text-indigo-600 mt-1">{flat.filter(m => m.parentId !== null).length}</p>
+          <p className="text-3xl font-bold text-info mt-1">{flat.filter(m => m.parentId !== null).length}</p>
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide">Active</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{flat.filter(m => m.isActive).length}</p>
+          <p className="text-3xl font-bold text-success mt-1">{flat.filter(m => m.isActive).length}</p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />{error}
         </div>
       )}
@@ -318,7 +318,7 @@ export function MenusPage() {
             <p className="text-sm text-content-muted">Delete this menu item? Associated role permissions will also be removed.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setDelId(null)} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
-              <button onClick={deleteMenu} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Delete</button>
+              <button onClick={deleteMenu} className="px-4 py-2 text-sm bg-danger text-white rounded-lg hover:bg-danger font-medium">Delete</button>
             </div>
           </div>
         </Modal>

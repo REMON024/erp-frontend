@@ -27,10 +27,10 @@ const PREVIEW_MODULES = [
 ]
 
 const ROLE_COLORS: Record<string, { label: string; color: string; bg: string }> = {
-  super_admin:   { label: 'Super Admin',   color: 'text-purple-700', bg: 'bg-purple-100' },
+  super_admin:   { label: 'Super Admin',   color: 'text-primary', bg: 'bg-primary/10' },
   operations:    { label: 'Operations',    color: 'text-primary',   bg: 'bg-primary/10'   },
-  inventory:     { label: 'Inventory',     color: 'text-orange-700', bg: 'bg-orange-100' },
-  engineer:      { label: 'Engineer',      color: 'text-teal-700',   bg: 'bg-teal-100'   },
+  inventory:     { label: 'Inventory',     color: 'text-warning', bg: 'bg-warning/15' },
+  engineer:      { label: 'Engineer',      color: 'text-success',   bg: 'bg-success/10'   },
 }
 const roleMeta = (name: string) => ROLE_COLORS[name] ?? {
   label: name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
@@ -87,24 +87,24 @@ function UserModal({ user, roles, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit User' : 'Add New User'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>First Name</label>
             <input {...register('firstName')} className={inp} placeholder="First name" />
-            {errors.firstName && <p className="text-xs text-red-600 mt-1">{errors.firstName.message}</p>}
+            {errors.firstName && <p className="text-xs text-danger mt-1">{errors.firstName.message}</p>}
           </div>
           <div>
             <label className={lbl}>Last Name</label>
             <input {...register('lastName')} className={inp} placeholder="Last name" />
-            {errors.lastName && <p className="text-xs text-red-600 mt-1">{errors.lastName.message}</p>}
+            {errors.lastName && <p className="text-xs text-danger mt-1">{errors.lastName.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Email</label>
             <input type="email" {...register('email')} className={inp} placeholder="user@company.com" disabled={isEdit} />
-            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-danger mt-1">{errors.email.message}</p>}
           </div>
           <div>
             <label className={lbl}>Phone</label>
@@ -129,7 +129,7 @@ function UserModal({ user, roles, onClose, onSaved }: {
               {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>}
+          {errors.password && <p className="text-xs text-danger mt-1">{errors.password.message}</p>}
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
@@ -192,7 +192,7 @@ function AssignRoleModal({ user, roles, onClose, onSaved }: {
     <Modal open onClose={onClose} title="Assign Roles" size="md">
       <div className="space-y-4">
         <p className="text-sm text-content-muted">Role set for <strong>{user.fullName}</strong> — effective access is the union of all selected roles.</p>
-        {err && <p className="text-xs text-red-600">{err}</p>}
+        {err && <p className="text-xs text-danger">{err}</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {roles.map(r => {
@@ -217,7 +217,7 @@ function AssignRoleModal({ user, roles, onClose, onSaved }: {
               {PREVIEW_MODULES.map(m => {
                 const granted = effectiveAccess(previewRoles, m) === 'FULL'
                 return (
-                  <span key={m} className={`text-xs px-2 py-0.5 rounded-full ${granted ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted line-through'}`}>
+                  <span key={m} className={`text-xs px-2 py-0.5 rounded-full ${granted ? 'bg-success/10 text-success' : 'bg-surface-muted text-content-muted line-through'}`}>
                     {m}
                   </span>
                 )
@@ -228,8 +228,8 @@ function AssignRoleModal({ user, roles, onClose, onSaved }: {
 
         {/* Engineer project scoping */}
         {hasEngineer && (
-          <div className="rounded-lg border border-teal-200 bg-teal-50 p-3">
-            <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-2">Assigned projects (Engineer scope)</p>
+          <div className="rounded-lg border border-success/20 bg-success/10 p-3">
+            <p className="text-xs font-semibold text-success uppercase tracking-wide mb-2">Assigned projects (Engineer scope)</p>
             <div className="max-h-40 overflow-y-auto space-y-1">
               {projects.length === 0 && <p className="text-xs text-content-muted">No projects available.</p>}
               {projects.map(p => (
@@ -326,7 +326,7 @@ export function UsersPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide">Active</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{users.filter(u => u.isActive).length}</p>
+          <p className="text-3xl font-bold text-success mt-1">{users.filter(u => u.isActive).length}</p>
         </div>
         {roles.slice(0, 2).map(r => (
           <div key={r.id} className="bg-surface rounded-xl border border-border-default p-4">
@@ -357,7 +357,7 @@ export function UsersPage() {
       {/* Table */}
       <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
         {error && (
-          <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border-b border-red-100 text-red-700 text-sm">
+          <div className="flex items-center gap-2 px-4 py-3 bg-danger/10 border-b border-danger/20 text-danger text-sm">
             <AlertCircle className="w-4 h-4 shrink-0" />{error}
           </div>
         )}
@@ -389,7 +389,7 @@ export function UsersPage() {
                   <tr key={u.id} className={`hover:bg-surface-muted ${!u.isActive ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-info to-info text-white flex items-center justify-center text-xs font-bold shrink-0">
                           {initials}
                         </div>
                         <div>
@@ -414,7 +414,7 @@ export function UsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => toggleStatus(u)}
-                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${u.isActive ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-surface-muted text-content-muted hover:bg-surface-muted'}`}>
+                        className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-colors ${u.isActive ? 'bg-success/10 text-success hover:bg-success' : 'bg-surface-muted text-content-muted hover:bg-surface-muted'}`}>
                         {u.isActive ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
                         {u.isActive ? 'Active' : 'Inactive'}
                       </button>
@@ -426,11 +426,11 @@ export function UsersPage() {
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => { setTarget(u); setModal('role') }} title="Assign role"
-                          className="p-1.5 text-content-muted hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                           <UserCheck className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => resetPassword(u)} title="Reset password"
-                          className="p-1.5 text-content-muted hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-warning hover:bg-warning/15 rounded-lg transition-colors">
                           <KeyRound className="w-3.5 h-3.5" />
                         </button>
                       </div>

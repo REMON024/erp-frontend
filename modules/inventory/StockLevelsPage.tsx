@@ -38,12 +38,12 @@ export function StockLevelsPage() {
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Package className="w-5 h-5 text-primary" /></div>
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
-          <div><p className="text-sm text-content-muted">Low Stock Alerts</p><p className="text-2xl font-bold text-red-600 mt-1">{lowStock}</p><p className="text-xs text-content-muted mt-1">Below reorder level</p></div>
-          <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
+          <div><p className="text-sm text-content-muted">Low Stock Alerts</p><p className="text-2xl font-bold text-danger mt-1">{lowStock}</p><p className="text-xs text-content-muted mt-1">Below reorder level</p></div>
+          <div className="w-10 h-10 rounded-lg bg-danger/10 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-danger" /></div>
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
-          <div><p className="text-sm text-content-muted">Stock Value</p><p className="text-2xl font-bold text-indigo-600 mt-1">{fmt(stockValue)}</p></div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center"><Package className="w-5 h-5 text-indigo-600" /></div>
+          <div><p className="text-sm text-content-muted">Stock Value</p><p className="text-2xl font-bold text-info mt-1">{fmt(stockValue)}</p></div>
+          <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center"><Package className="w-5 h-5 text-info" /></div>
         </div>
       </div>
 
@@ -51,7 +51,7 @@ export function StockLevelsPage() {
         {(['all', 'low'] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`px-3 py-2 text-xs rounded-lg border font-medium capitalize ${
-              filter === f ? 'bg-primary text-white border-primary' : 'border-border-default text-content-muted hover:border-blue-400'
+              filter === f ? 'bg-primary text-white border-primary' : 'border-border-default text-content-muted hover:border-info/20'
             }`}>{f === 'all' ? 'All' : 'Low Stock'}</button>
         ))}
       </SearchBar>
@@ -63,21 +63,24 @@ export function StockLevelsPage() {
             <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Material', 'Code', 'Unit', 'Current Stock', 'Reorder Level', 'Status'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Material' }, { h: 'Code' }, { h: 'Unit' },
+                    { h: 'Current Stock', num: true }, { h: 'Reorder Level', num: true }, { h: 'Status' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-default">
                 {displayed.map(m => (
-                  <tr key={m.id} className={`hover:bg-surface-muted ${m.isLowStock ? 'bg-red-50/40' : ''}`}>
+                  <tr key={m.id} className={`hover:bg-surface-muted ${m.isLowStock ? 'bg-danger/10' : ''}`}>
                     <td className="px-4 py-3 font-medium text-content">{m.materialName}</td>
                     <td className="px-4 py-3 text-content-muted text-xs font-mono">{m.materialCode}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{m.unit}</td>
-                    <td className={`px-4 py-3 font-bold ${m.isLowStock ? 'text-red-600' : 'text-content'}`}>{m.currentStock.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-content-muted text-xs">{m.minimumStock.toLocaleString()}</td>
+                    <td className={`px-4 py-3 font-bold text-right tabular-nums ${m.isLowStock ? 'text-danger' : 'text-content'}`}>{m.currentStock.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs text-right tabular-nums">{m.minimumStock.toLocaleString()}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${m.isLowStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${m.isLowStock ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
                         {m.isLowStock ? 'Low' : 'OK'}
                       </span>
                     </td>

@@ -29,8 +29,8 @@ interface Invoice {
 const STATUS_COLORS: Record<string, string> = {
   Draft:     'bg-surface-muted text-content-muted',
   Sent:      'bg-primary/10 text-primary',
-  Paid:      'bg-green-100 text-green-700',
-  Overdue:   'bg-red-100 text-red-700',
+  Paid:      'bg-success/10 text-success',
+  Overdue:   'bg-danger/10 text-danger',
   Cancelled: 'bg-surface-muted text-content-muted',
 }
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
@@ -81,23 +81,23 @@ function InvoiceModal({ customers, projects, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title="New Invoice" size="lg">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Client <span className="text-red-500">*</span></label>
+            <label className={lbl}>Client <span className="text-danger">*</span></label>
             <Select {...register('customerId')} invalid={!!errors.customerId}>
               <option value="">Select client</option>
               {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
             </Select>
-            {errors.customerId && <p className="text-xs text-red-600 mt-1">{errors.customerId.message}</p>}
+            {errors.customerId && <p className="text-xs text-danger mt-1">{errors.customerId.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Project <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project <span className="text-danger">*</span></label>
             <Select {...register('projectId')} invalid={!!errors.projectId}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
-            {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
+            {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -108,7 +108,7 @@ function InvoiceModal({ customers, projects, onClose, onSaved }: {
             </select>
           </div>
           <div>
-            <label className={lbl}>Invoice Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>Invoice Date <span className="text-danger">*</span></label>
             <DateField {...register('invoiceDate')} />
           </div>
           <div>
@@ -118,9 +118,9 @@ function InvoiceModal({ customers, projects, onClose, onSaved }: {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
-            <label className={lbl}>Sub Total (৳) <span className="text-red-500">*</span></label>
+            <label className={lbl}>Sub Total (৳) <span className="text-danger">*</span></label>
             <input type="number" {...register('subTotal')} className={inp} placeholder="0" />
-            {errors.subTotal && <p className="text-xs text-red-600 mt-1">{errors.subTotal.message}</p>}
+            {errors.subTotal && <p className="text-xs text-danger mt-1">{errors.subTotal.message}</p>}
           </div>
           <div>
             <label className={lbl}>Discount</label>
@@ -195,9 +195,9 @@ export function InvoicesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Invoices',  value: invoices.length,      color: 'text-content' },
-          { label: 'Total Billed',    value: fmt(totalBilled),     color: 'text-indigo-600' },
-          { label: 'Collected',       value: fmt(totalCollected),  color: 'text-green-600' },
-          { label: 'Outstanding',     value: fmt(outstanding),     color: 'text-red-600' },
+          { label: 'Total Billed',    value: fmt(totalBilled),     color: 'text-info' },
+          { label: 'Collected',       value: fmt(totalCollected),  color: 'text-success' },
+          { label: 'Outstanding',     value: fmt(outstanding),     color: 'text-danger' },
         ].map(s => (
           <div key={s.label} className="bg-surface rounded-xl border border-border-default p-4">
             <p className="text-xs text-content-muted uppercase tracking-wide">{s.label}</p>
@@ -220,8 +220,12 @@ export function InvoicesPage() {
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Invoice No.', 'Client', 'Type', 'Date', 'Total', 'Paid', 'Due', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Invoice No.' }, { h: 'Client' }, { h: 'Type' }, { h: 'Date' },
+                    { h: 'Total', num: true }, { h: 'Paid', num: true }, { h: 'Due', num: true },
+                    { h: 'Status' }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -234,9 +238,9 @@ export function InvoicesPage() {
                     <td className="px-4 py-3 text-content text-sm">{i.customerName}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{i.invoiceType}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{i.invoiceDate}</td>
-                    <td className="px-4 py-3 font-semibold text-content">{fmt(i.totalAmount)}</td>
-                    <td className="px-4 py-3 text-green-700 text-xs">{fmt(i.paidAmount)}</td>
-                    <td className="px-4 py-3 text-red-600 text-xs">{fmt(i.dueAmount)}</td>
+                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(i.totalAmount)}</td>
+                    <td className="px-4 py-3 text-success text-xs text-right tabular-nums">{fmt(i.paidAmount)}</td>
+                    <td className="px-4 py-3 text-danger text-xs text-right tabular-nums">{fmt(i.dueAmount)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[i.status] ?? 'bg-surface-muted text-content-muted'}`}>{i.status}</span>
                     </td>
@@ -246,7 +250,7 @@ export function InvoicesPage() {
                           <Link
                             href={`/sales/collections?invoice=${i.id}&customer=${i.customerId}`}
                             title="Collect payment"
-                            className="p-1.5 text-content-muted hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                            className="p-1.5 text-content-muted hover:text-success hover:bg-success/10 rounded-lg transition-colors">
                             <Wallet className="w-3.5 h-3.5" />
                           </Link>
                         )}
@@ -258,7 +262,7 @@ export function InvoicesPage() {
                         </button>
                         {(i.status === 'Draft' || i.status === 'Sent') && (
                           <button onClick={() => cancelInvoice(i.id)} title="Cancel Invoice"
-                            className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors">
                             <XCircle className="w-3.5 h-3.5" />
                           </button>
                         )}

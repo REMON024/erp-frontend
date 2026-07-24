@@ -32,9 +32,9 @@ interface CostEstimate {
 const BOQ_CATEGORIES: BOQCategory[] = ['Civil', 'Structural', 'Architectural', 'Electrical', 'Plumbing', 'HVAC', 'Finishing', 'Miscellaneous']
 const STATUS_COLORS: Record<EstimateStatus, string> = {
   Draft:    'bg-surface-muted text-content-muted',
-  Approved: 'bg-green-100 text-green-700',
-  Revised:  'bg-amber-100 text-amber-700',
-  Rejected: 'bg-red-100 text-red-700',
+  Approved: 'bg-success/10 text-success',
+  Revised:  'bg-warning/15 text-warning',
+  Rejected: 'bg-danger/10 text-danger',
 }
 
 function fmt(n: number)  { return `৳${n.toLocaleString('en-BD')}` }
@@ -105,12 +105,12 @@ function BOQEditor({ items, materials, onChange }: {
             {items.map(item => {
               const amount = (Number(item.quantity) || 0) * (Number(item.unitRate) || 0)
               return (
-                <tr key={item.key} className={item.materialId ? 'hover:bg-surface-muted' : 'bg-amber-50/30 hover:bg-amber-50/50'}>
+                <tr key={item.key} className={item.materialId ? 'hover:bg-surface-muted' : 'bg-warning/15 hover:bg-warning/15'}>
                   <td className="px-2 py-1.5">
                     <Select
                       value={item.materialId ?? ''}
                       onChange={e => handleMaterialChange(item.key, e.target.value)}
-                      className={'text-xs py-1' + (item.materialId ? '' : ' border-amber-300')}
+                      className={'text-xs py-1' + (item.materialId ? '' : ' border-warning/20')}
                     >
                       <option value="">— select material —</option>
                       {materials.map(m => (
@@ -118,7 +118,7 @@ function BOQEditor({ items, materials, onChange }: {
                       ))}
                     </Select>
                     {!item.materialId && (
-                      <p className="text-[10px] text-amber-600 mt-0.5">Link material for budget tracking</p>
+                      <p className="text-[10px] text-warning mt-0.5">Link material for budget tracking</p>
                     )}
                   </td>
                   <td className="px-2 py-1.5">
@@ -148,7 +148,7 @@ function BOQEditor({ items, materials, onChange }: {
                   <td className="px-2 py-1.5 text-center">
                     {items.length > 1 && (
                       <button type="button" onClick={() => remove(item.key)}
-                        className="text-content-muted/50 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                        className="text-content-muted/50 hover:text-danger"><Trash2 className="w-3.5 h-3.5" /></button>
                     )}
                   </td>
                 </tr>
@@ -165,7 +165,7 @@ function BOQEditor({ items, materials, onChange }: {
         </table>
       </div>
       {items.some(i => !i.materialId) && (
-        <p className="text-xs text-amber-600 flex items-center gap-1">
+        <p className="text-xs text-warning flex items-center gap-1">
           ⚠ Lines without a material won't appear in Material Budget vs Actual tracking.
         </p>
       )}
@@ -232,23 +232,23 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Cost Estimate' : 'New Cost Estimate'} size="xl">
       <div className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Project <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project <span className="text-danger">*</span></label>
             <Select value={projectId} onChange={e => setProjectId(e.target.value)}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
           </div>
           <div>
-            <label className={lbl}>Estimate Title <span className="text-red-500">*</span></label>
+            <label className={lbl}>Estimate Title <span className="text-danger">*</span></label>
             <input value={title} onChange={e => setTitle(e.target.value)} className={inp} placeholder="e.g. Phase 1 Construction Budget" />
           </div>
         </div>
 
         {materials.length === 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <div className="rounded-lg border border-warning/20 bg-warning/15 px-3 py-2 text-xs text-warning">
             ⚠ No materials found in the master list. <a href="/inventory/materials" className="underline font-medium">Add materials first</a> so you can link BOQ lines for budget tracking.
           </div>
         )}
@@ -256,13 +256,13 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
         <BOQEditor items={items} materials={materials} onChange={setItems} />
 
         {totalEstimated > 0 && (
-          <div className="bg-primary/10 border border-blue-200 rounded-lg px-4 py-2 flex justify-between text-sm">
+          <div className="bg-primary/10 border border-info/20 rounded-lg px-4 py-2 flex justify-between text-sm">
             <span className="text-primary font-medium">Total Estimated Cost</span>
             <div className="flex items-center gap-3">
               {unlinkedCount > 0 && (
-                <span className="text-xs text-amber-600">{unlinkedCount} line{unlinkedCount !== 1 ? 's' : ''} not linked to material</span>
+                <span className="text-xs text-warning">{unlinkedCount} line{unlinkedCount !== 1 ? 's' : ''} not linked to material</span>
               )}
-              <span className="font-bold text-blue-900">{fmt(totalEstimated)}</span>
+              <span className="font-bold text-info">{fmt(totalEstimated)}</span>
             </div>
           </div>
         )}
@@ -298,18 +298,18 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div className="bg-primary/10 rounded-lg p-3">
             <p className="text-xs text-primary font-medium uppercase">Total Estimated</p>
-            <p className="text-lg font-bold text-blue-900 mt-1">{fmt(estimate.totalEstimated)}</p>
+            <p className="text-lg font-bold text-info mt-1">{fmt(estimate.totalEstimated)}</p>
           </div>
-          <div className="bg-orange-50 rounded-lg p-3">
-            <p className="text-xs text-orange-600 font-medium uppercase">Actual Cost</p>
-            <p className="text-lg font-bold text-orange-900 mt-1">{estimate.totalActual > 0 ? fmt(estimate.totalActual) : '—'}</p>
+          <div className="bg-warning/15 rounded-lg p-3">
+            <p className="text-xs text-warning font-medium uppercase">Actual Cost</p>
+            <p className="text-lg font-bold text-warning mt-1">{estimate.totalActual > 0 ? fmt(estimate.totalActual) : '—'}</p>
           </div>
-          <div className={`rounded-lg p-3 ${isOverBudget ? 'bg-red-50' : 'bg-green-50'}`}>
-            <p className={`text-xs font-medium uppercase ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>Variance</p>
-            <p className={`text-lg font-bold mt-1 ${isOverBudget ? 'text-red-800' : 'text-green-800'}`}>
+          <div className={`rounded-lg p-3 ${isOverBudget ? 'bg-danger/10' : 'bg-success/10'}`}>
+            <p className={`text-xs font-medium uppercase ${isOverBudget ? 'text-danger' : 'text-success'}`}>Variance</p>
+            <p className={`text-lg font-bold mt-1 ${isOverBudget ? 'text-danger' : 'text-success'}`}>
               {estimate.totalActual > 0 ? `${variancePct}% used` : '—'}
             </p>
-            {isOverBudget && <p className="text-xs text-red-600 font-medium">⚠ Over budget by {fmt(estimate.totalActual - estimate.totalEstimated)}</p>}
+            {isOverBudget && <p className="text-xs text-danger font-medium">⚠ Over budget by {fmt(estimate.totalActual - estimate.totalEstimated)}</p>}
           </div>
         </div>
 
@@ -318,7 +318,7 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 {['Material', 'Category', 'Description', 'Unit', 'Qty', 'Rate', 'Estimated', 'Actual'].map(h => (
-                  <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                  <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Qty','Rate','Estimated','Actual'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -340,7 +340,7 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
                   <td className="px-3 py-2 text-xs font-semibold text-primary text-right">{fmt(item.estimatedAmount)}</td>
                   <td className="px-3 py-2 text-xs text-right">
                     {item.actualAmount > 0
-                      ? <span className={item.actualAmount > item.estimatedAmount ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold'}>{fmt(item.actualAmount)}</span>
+                      ? <span className={item.actualAmount > item.estimatedAmount ? 'text-danger font-semibold' : 'text-success font-semibold'}>{fmt(item.actualAmount)}</span>
                       : <span className="text-content-muted/50">—</span>}
                   </td>
                 </tr>
@@ -349,10 +349,10 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
             <tfoot className="bg-surface-muted border-t border-border-default font-bold">
               <tr>
                 <td colSpan={6} className="px-3 py-2 text-xs text-content uppercase">Total</td>
-                <td className="px-3 py-2 text-xs text-blue-800 text-right">{fmt(estimate.totalEstimated)}</td>
+                <td className="px-3 py-2 text-xs text-info text-right">{fmt(estimate.totalEstimated)}</td>
                 <td className="px-3 py-2 text-xs text-right">
                   {estimate.totalActual > 0
-                    ? <span className={isOverBudget ? 'text-red-700' : 'text-green-700'}>{fmt(estimate.totalActual)}</span>
+                    ? <span className={isOverBudget ? 'text-danger' : 'text-success'}>{fmt(estimate.totalActual)}</span>
                     : <span className="text-content-muted/50">—</span>}
                 </td>
               </tr>
@@ -433,8 +433,8 @@ export function CostEstimatesPage() {
         {[
           { label: 'Total Estimates',  value: estimates.length,       color: 'text-content',  bg: 'bg-surface' },
           { label: 'Total Budgeted',   value: fmt(totalEstimated),    color: 'text-primary',  bg: 'bg-primary/10' },
-          { label: 'Actual Cost',      value: fmt(totalActual),       color: 'text-orange-600',bg: 'bg-orange-50' },
-          { label: 'Over Budget',      value: overBudget,             color: overBudget > 0 ? 'text-red-600' : 'text-green-600', bg: overBudget > 0 ? 'bg-red-50' : 'bg-green-50' },
+          { label: 'Actual Cost',      value: fmt(totalActual),       color: 'text-warning',bg: 'bg-warning/15' },
+          { label: 'Over Budget',      value: overBudget,             color: overBudget > 0 ? 'text-danger' : 'text-success', bg: overBudget > 0 ? 'bg-danger/10' : 'bg-success/10' },
         ].map(k => (
           <div key={k.label} className={`rounded-xl border border-border-default p-4 ${k.bg}`}>
             <p className="text-xs text-content-muted uppercase tracking-wide">{k.label}</p>
@@ -458,8 +458,11 @@ export function CostEstimatesPage() {
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Title', 'Project', 'Ver.', 'Status', 'Total Estimated', 'Actual Cost', 'Variance', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Title' }, { h: 'Project' }, { h: 'Ver.', align: 'center' as const }, { h: 'Status' },
+                    { h: 'Total Estimated', num: true }, { h: 'Actual Cost', num: true }, { h: 'Variance' }, { h: '' },
+                  ].map(({ h, num, align }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -484,21 +487,21 @@ export function CostEstimatesPage() {
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[e.status]}`}>{e.status}</span>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-primary">{fmt(e.totalEstimated)}</td>
-                      <td className="px-4 py-3 font-semibold">
+                      <td className="px-4 py-3 font-semibold text-primary text-right tabular-nums">{fmt(e.totalEstimated)}</td>
+                      <td className="px-4 py-3 font-semibold text-right tabular-nums">
                         {e.totalActual > 0
-                          ? <span className={isOver ? 'text-red-600' : 'text-green-700'}>{fmt(e.totalActual)}</span>
+                          ? <span className={isOver ? 'text-danger' : 'text-success'}>{fmt(e.totalActual)}</span>
                           : <span className="text-content-muted/50 font-normal">Not started</span>}
                       </td>
                       <td className="px-4 py-3">
                         {variancePct !== null
                           ? <div className="flex items-center gap-2">
                               <div className="w-16 h-1.5 bg-surface-muted rounded-full overflow-hidden">
-                                <div className={`h-1.5 rounded-full ${isOver ? 'bg-red-500' : 'bg-green-500'}`}
+                                <div className={`h-1.5 rounded-full ${isOver ? 'bg-danger' : 'bg-success'}`}
                                   style={{ width: `${Math.min(variancePct, 100)}%` }} />
                               </div>
-                              <span className={`text-xs font-semibold ${isOver ? 'text-red-600' : 'text-green-600'}`}>{variancePct}%</span>
-                              {isOver && <span className="text-xs text-red-500 font-medium">Over</span>}
+                              <span className={`text-xs font-semibold ${isOver ? 'text-danger' : 'text-success'}`}>{variancePct}%</span>
+                              {isOver && <span className="text-xs text-danger font-medium">Over</span>}
                             </div>
                           : <span className="text-content-muted/50 text-xs">—</span>}
                       </td>
@@ -507,7 +510,7 @@ export function CostEstimatesPage() {
                           <button onClick={() => setViewing(e)} title="View BOQ"
                             className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
                           <button onClick={() => { setTarget(e); setModal('edit') }} title="Edit"
-                            className="p-1.5 text-content-muted hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
+                            className="p-1.5 text-content-muted hover:text-info hover:bg-info/10 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
                           {e.status === 'Draft' && (
                             <>
                               <label title="Import BOQ from CSV"
@@ -517,9 +520,9 @@ export function CostEstimatesPage() {
                                   onChange={ev => { const f = ev.target.files?.[0]; if (f) importCsv(e.id, f); ev.target.value = '' }} />
                               </label>
                               <button onClick={() => approve(e.id)} title="Approve"
-                                className="p-1.5 text-content-muted hover:text-green-600 hover:bg-green-50 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
+                                className="p-1.5 text-content-muted hover:text-success hover:bg-success/10 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
                               <button onClick={() => reject(e.id)} title="Reject"
-                                className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg"><XCircle className="w-3.5 h-3.5" /></button>
+                                className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg"><XCircle className="w-3.5 h-3.5" /></button>
                             </>
                           )}
                         </div>

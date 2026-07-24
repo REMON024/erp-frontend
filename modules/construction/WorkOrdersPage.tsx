@@ -11,18 +11,25 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Edit2, ClipboardList, Receipt, BookOpen, CreditCard } from 'lucide-react'
+import { Plus, Edit2, ClipboardList, Receipt, BookOpen, CreditCard, Trash2 } from 'lucide-react'
 import api from '@/lib/api'
 
 interface Account { id: number; accountCode: string; accountName: string; accountType: string }
 
 interface Project { id: number; projectName: string; projectCode: string }
 interface Vendor  { id: number; vendorName: string; vendorType: string }
+interface Material { id: number; materialName: string; unit: string }
+interface WorkOrderMaterial {
+  id: number; materialId?: number | null; materialName?: string | null
+  description: string; unit: string; quantity: number; unitRate: number
+  budgetAmount: number; receivedQty: number
+}
 interface WorkOrder {
   id: number; workOrderNo: string; projectId: number; projectName: string
   vendorId: number; vendorName: string; scope: string
   startDate?: string; endDate?: string
   contractAmount: number; advanceAmount: number; retentionPercent: number; status: string
+  materials?: WorkOrderMaterial[]
 }
 interface WorkOrderBill {
   id: number; workOrderId: number; workOrderNo: string; vendorName: string
@@ -32,21 +39,116 @@ interface WorkOrderBill {
 
 const STATUS_COLORS: Record<string, string> = {
   Draft:     'bg-surface-muted text-content-muted',
-  Active:    'bg-green-100 text-green-700',
+  Active:    'bg-success/10 text-success',
   Completed: 'bg-primary/10 text-primary',
-  Cancelled: 'bg-red-100 text-red-600',
+  Cancelled: 'bg-danger/10 text-danger',
 }
 const BILL_STATUS_COLORS: Record<string, string> = {
-  Pending:  'bg-amber-100 text-amber-700',
-  Approved: 'bg-green-100 text-green-700',
+  Pending:  'bg-warning/15 text-warning',
+  Approved: 'bg-success/10 text-success',
   Paid:     'bg-primary/10 text-primary',
 }
 function fmt(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
 function fmtFull(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
 
-const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
-const lbl = 'block text-sm font-medium text-content mb-1'
+const inp  = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
+const lbl  = 'block text-sm font-medium text-content mb-1'
+const tinp = 'border border-border-default rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none w-full'
+
+// ── Budget material line-item editor ────────────────────────────────────────────
+interface DraftMaterial {
+  key: string; materialId?: number; description: string; unit: string; quantity: number; unitRate: number
+}
+function newMaterialLine(): DraftMaterial {
+  return { key: Math.random().toString(36).slice(2), materialId: undefined, description: '', unit: '', quantity: 1, unitRate: 0 }
+}
+
+function WOMaterialEditor({ items, materials, onChange }: {
+  items: DraftMaterial[]; materials: Material[]; onChange: (items: DraftMaterial[]) => void
+}) {
+  const update = (key: string, patch: Partial<DraftMaterial>) =>
+    onChange(items.map(i => i.key === key ? { ...i, ...patch } : i))
+  const remove = (key: string) => onChange(items.filter(i => i.key !== key))
+  const total  = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitRate) || 0), 0)
+
+  const handleMaterialChange = (key: string, materialId: string) => {
+    const mat = materials.find(m => m.id === Number(materialId))
+    if (mat) update(key, { materialId: mat.id, description: mat.materialName, unit: mat.unit })
+    else     update(key, { materialId: undefined })
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-sm font-medium text-content">Budget Materials <span className="text-xs text-content-muted font-normal">— optional planned material list</span></span>
+        <button type="button" onClick={() => onChange([...items, newMaterialLine()])}
+          className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1 shrink-0">
+          <Plus className="w-3.5 h-3.5" /> Add Line
+        </button>
+      </div>
+      {items.length > 0 && (
+        <div className="border border-border-default rounded-lg overflow-x-auto">
+          <table className="w-full min-w-[720px] text-xs">
+            <thead className="bg-surface-muted border-b border-border-default">
+              <tr>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-48">Material</th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-16">Unit</th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-20">Qty</th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-28">Unit Rate (৳)</th>
+                <th className="px-2 py-2 text-right font-semibold text-content-muted w-28">Amount (৳)</th>
+                <th className="px-2 py-2 w-8" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-default">
+              {items.map(item => {
+                const amount = (Number(item.quantity) || 0) * (Number(item.unitRate) || 0)
+                return (
+                  <tr key={item.key} className="hover:bg-surface-muted">
+                    <td className="px-2 py-1.5">
+                      <Select value={item.materialId ?? ''} onChange={e => handleMaterialChange(item.key, e.target.value)} className="text-xs py-1">
+                        <option value="">— free text —</option>
+                        {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input value={item.description} onChange={e => update(item.key, { description: e.target.value })}
+                        className={tinp} placeholder="Material / work description…" />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input value={item.unit} onChange={e => update(item.key, { unit: e.target.value })} className={tinp} placeholder="Bag" />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input type="number" min={0} step="any" value={item.quantity}
+                        onChange={e => update(item.key, { quantity: Number(e.target.value) })} className={tinp} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input type="number" min={0} step="any" value={item.unitRate}
+                        onChange={e => update(item.key, { unitRate: Number(e.target.value) })} className={tinp} />
+                    </td>
+                    <td className="px-2 py-1.5 font-semibold text-content text-right pr-3">{fmtFull(amount)}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      <button type="button" onClick={() => remove(item.key)}
+                        className="text-content-muted/50 hover:text-danger"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot className="bg-surface-muted border-t border-border-default">
+              <tr>
+                <td colSpan={5} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Budget</td>
+                <td className="px-2 py-2 text-right font-bold text-content pr-3">{fmtFull(total)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Work order form ────────────────────────────────────────────────────────────
 const schema = z.object({
@@ -67,6 +169,15 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
   const isEdit = !!wo
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
+  const [materialItems, setMaterialItems] = useState<DraftMaterial[]>(
+    wo?.materials?.length
+      ? wo.materials.map(m => ({
+          key: String(m.id ?? Math.random()), materialId: m.materialId ?? undefined,
+          description: m.description, unit: m.unit, quantity: m.quantity, unitRate: m.unitRate,
+        }))
+      : []
+  )
+  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
   const { register, handleSubmit, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: wo
@@ -78,8 +189,18 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
   const onSubmit = async (d: Form) => {
     setSaving(true); setErr('')
     try {
-      if (isEdit) await api.put(`/work-orders/${wo!.id}`, d)
-      else        await api.post('/work-orders', d)
+      const materialsPayload = materialItems
+        .filter(i => i.description.trim() && Number(i.quantity) > 0)
+        .map(i => ({
+          materialId: i.materialId ?? null,
+          description: i.description.trim(),
+          unit: i.unit,
+          quantity: Number(i.quantity),
+          unitRate: Number(i.unitRate),
+        }))
+      const payload = { ...d, materials: materialsPayload }
+      if (isEdit) await api.put(`/work-orders/${wo!.id}`, payload)
+      else        await api.post('/work-orders', payload)
       onSaved(); onClose()
     } catch (e: any) {
       setErr(e.response?.data?.errors?.[0] ?? 'Save failed')
@@ -89,31 +210,31 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
   const contractors = vendors.filter(v => v.vendorType === 'Contractor' || v.vendorType === 'Both')
 
   return (
-    <Modal open onClose={onClose} title={isEdit ? 'Edit Work Order' : 'New Work Order'} size="lg">
+    <Modal open onClose={onClose} title={isEdit ? 'Edit Work Order' : 'New Work Order'} size="xl">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Project <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project <span className="text-danger">*</span></label>
             <Select {...register('projectId')}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
-            {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
+            {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Contractor <span className="text-red-500">*</span></label>
+            <label className={lbl}>Contractor <span className="text-danger">*</span></label>
             <Select {...register('vendorId')}>
               <option value="">Select contractor</option>
               {contractors.map(v => <option key={v.id} value={v.id}>{v.vendorName}</option>)}
             </Select>
-            {errors.vendorId && <p className="text-xs text-red-600 mt-1">{errors.vendorId.message}</p>}
+            {errors.vendorId && <p className="text-xs text-danger mt-1">{errors.vendorId.message}</p>}
           </div>
         </div>
         <div>
-          <label className={lbl}>Scope of Work <span className="text-red-500">*</span></label>
+          <label className={lbl}>Scope of Work <span className="text-danger">*</span></label>
           <textarea {...register('scope')} className={inp} rows={2} placeholder="Describe the work…" />
-          {errors.scope && <p className="text-xs text-red-600 mt-1">{errors.scope.message}</p>}
+          {errors.scope && <p className="text-xs text-danger mt-1">{errors.scope.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -127,9 +248,9 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className={lbl}>Contract Amount (৳) <span className="text-red-500">*</span></label>
+            <label className={lbl}>Contract Amount (৳) <span className="text-danger">*</span></label>
             <input type="number" {...register('contractAmount')} className={inp} placeholder="5000000" />
-            {errors.contractAmount && <p className="text-xs text-red-600 mt-1">{errors.contractAmount.message}</p>}
+            {errors.contractAmount && <p className="text-xs text-danger mt-1">{errors.contractAmount.message}</p>}
           </div>
           <div>
             <label className={lbl}>Advance (৳)</label>
@@ -140,6 +261,7 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
             <input type="number" step="any" {...register('retentionPercent')} className={inp} placeholder="5" min={0} max={100} />
           </div>
         </div>
+        <WOMaterialEditor items={materialItems} materials={materials} onChange={setMaterialItems} />
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
           <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
@@ -163,6 +285,7 @@ function VoucherFromBillModal({ bill, wo, mode, accounts, onClose, onSaved }: {
   const [err,           setErr]           = useState('')
   const [debitAccountId,  setDebitAccountId]  = useState('')
   const [creditAccountId, setCreditAccountId] = useState('')
+  const [method, setMethod] = useState('Bank')
   const [narration, setNarration] = useState(
     mode === 'expense'
       ? `Work Order Bill ${bill.billNo} — ${wo.vendorName} (${wo.workOrderNo})`
@@ -176,47 +299,72 @@ function VoucherFromBillModal({ bill, wo, mode, accounts, onClose, onSaved }: {
   const creditLabel = mode === 'expense' ? 'Contractor Payable Account (Credit)' : 'Bank / Cash Account (Credit)'
 
   const onSubmit = async () => {
-    if (!debitAccountId || !creditAccountId) { setErr('Select both accounts'); return }
-    if (debitAccountId === creditAccountId)  { setErr('Debit and credit accounts must differ'); return }
     setSaving(true); setErr('')
     try {
-      await api.post('/vouchers', {
-        voucherType: mode === 'expense' ? 'JV' : 'PV',
-        voucherDate: isoToday(),
-        narration,
-        referenceNo: bill.billNo,
-        lines: [
-          { accountId: Number(debitAccountId),  debitAmount: amount, creditAmount: 0, description: narration, projectId: wo.projectId },
-          { accountId: Number(creditAccountId), debitAmount: 0, creditAmount: amount, description: narration, projectId: wo.projectId },
-        ],
-      })
+      if (mode === 'payment') {
+        // Records the contractor payment (DR Contractor Payable / CR Bank·Cash) AND marks the bill Paid.
+        await api.post('/payments/contractor', {
+          vendorId:        wo.vendorId,
+          workOrderBillId: bill.id,
+          paymentDate:     isoToday(),
+          amount,
+          method,
+          referenceNo:     bill.billNo,
+          notes:           narration,
+        })
+      } else {
+        if (!debitAccountId || !creditAccountId) { setErr('Select both accounts'); return }
+        if (debitAccountId === creditAccountId)  { setErr('Debit and credit accounts must differ'); return }
+        await api.post('/vouchers', {
+          voucherType: 'JV',
+          voucherDate: isoToday(),
+          narration,
+          referenceNo: bill.billNo,
+          lines: [
+            { accountId: Number(debitAccountId),  debitAmount: amount, creditAmount: 0, description: narration, projectId: wo.projectId },
+            { accountId: Number(creditAccountId), debitAmount: 0, creditAmount: amount, description: narration, projectId: wo.projectId },
+          ],
+        })
+      }
       onSaved(); onClose()
     } catch (e: any) {
-      setErr(e.response?.data?.errors?.[0] ?? 'Failed to create voucher')
+      setErr(e.response?.data?.errors?.[0] ?? (mode === 'payment' ? 'Failed to record payment' : 'Failed to create voucher'))
     } finally { setSaving(false) }
   }
 
   return (
     <Modal open onClose={onClose} title={title} size="md">
       <div className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="bg-primary/10 rounded-lg px-4 py-2 text-xs text-primary">
           Amount: <strong>{fmtFull(amount)}</strong> · Bill: <strong>{bill.billNo}</strong> · Project: <strong>{wo.projectName}</strong>
         </div>
-        <div>
-          <label className={lbl}>{debitLabel} <span className="text-red-500">*</span></label>
-          <Select value={debitAccountId} onChange={e => setDebitAccountId(e.target.value)}>
-            <option value="">Select account</option>
-            {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
-          </Select>
-        </div>
-        <div>
-          <label className={lbl}>{creditLabel} <span className="text-red-500">*</span></label>
-          <Select value={creditAccountId} onChange={e => setCreditAccountId(e.target.value)}>
-            <option value="">Select account</option>
-            {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
-          </Select>
-        </div>
+        {mode === 'payment' ? (
+          <div>
+            <label className={lbl}>Payment Method <span className="text-danger">*</span></label>
+            <Select value={method} onChange={e => setMethod(e.target.value)}>
+              <option value="Bank">Bank</option>
+              <option value="Cash">Cash</option>
+            </Select>
+          </div>
+        ) : (
+          <>
+            <div>
+              <label className={lbl}>{debitLabel} <span className="text-danger">*</span></label>
+              <Select value={debitAccountId} onChange={e => setDebitAccountId(e.target.value)}>
+                <option value="">Select account</option>
+                {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+              </Select>
+            </div>
+            <div>
+              <label className={lbl}>{creditLabel} <span className="text-danger">*</span></label>
+              <Select value={creditAccountId} onChange={e => setCreditAccountId(e.target.value)}>
+                <option value="">Select account</option>
+                {postingAccounts.map(a => <option key={a.id} value={a.id}>{a.accountCode} — {a.accountName}</option>)}
+              </Select>
+            </div>
+          </>
+        )}
         <div>
           <label className={lbl}>Narration</label>
           <input value={narration} onChange={e => setNarration(e.target.value)} className={inp} />
@@ -225,7 +373,7 @@ function VoucherFromBillModal({ bill, wo, mode, accounts, onClose, onSaved }: {
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
           <button onClick={onSubmit} disabled={saving}
             className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">
-            {saving ? 'Posting…' : 'Post Voucher'}
+            {saving ? (mode === 'payment' ? 'Recording…' : 'Posting…') : (mode === 'payment' ? 'Record Payment' : 'Post Voucher')}
           </button>
         </div>
       </div>
@@ -300,7 +448,7 @@ function BillsModal({ wo, onClose, onChanged }: {
           </button>
         ) : (
           <div className="border border-border-default rounded-lg p-3 space-y-3">
-            {err && <p className="text-xs text-red-600">{err}</p>}
+            {err && <p className="text-xs text-danger">{err}</p>}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>Bill Amount (৳)</label>
@@ -313,7 +461,7 @@ function BillsModal({ wo, onClose, onChanged }: {
             </div>
             {amount && (
               <p className="text-xs text-content-muted">
-                Retention ({wo.retentionPercent}%): <strong>{fmtFull(retention)}</strong> · Net payable: <strong className="text-green-700">{fmtFull(netPayable)}</strong>
+                Retention ({wo.retentionPercent}%): <strong>{fmtFull(retention)}</strong> · Net payable: <strong className="text-success">{fmtFull(netPayable)}</strong>
               </p>
             )}
             <div className="flex justify-end gap-2">
@@ -328,8 +476,11 @@ function BillsModal({ wo, onClose, onChanged }: {
             <table className="w-full min-w-[520px] text-sm border border-border-default rounded-lg overflow-hidden">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Bill No.', 'Date', 'Amount', 'Retention', 'Net Payable', 'Status', ''].map(h => (
-                    <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                  {[
+                    { h: 'Bill No.' }, { h: 'Date' }, { h: 'Amount', num: true },
+                    { h: 'Retention', num: true }, { h: 'Net Payable', num: true }, { h: 'Status' }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -338,9 +489,9 @@ function BillsModal({ wo, onClose, onChanged }: {
                   <tr key={b.id}>
                     <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{b.billNo}</td>
                     <td className="px-3 py-2 text-content-muted text-xs">{b.billDate}</td>
-                    <td className="px-3 py-2 font-medium text-content text-xs">{fmtFull(b.billAmount)}</td>
-                    <td className="px-3 py-2 text-red-600 text-xs">{fmtFull(b.retentionAmount)}</td>
-                    <td className="px-3 py-2 font-semibold text-green-700 text-xs">{fmtFull(b.netPayable)}</td>
+                    <td className="px-3 py-2 font-medium text-content text-xs text-right tabular-nums">{fmtFull(b.billAmount)}</td>
+                    <td className="px-3 py-2 text-danger text-xs text-right tabular-nums">{fmtFull(b.retentionAmount)}</td>
+                    <td className="px-3 py-2 font-semibold text-success text-xs text-right tabular-nums">{fmtFull(b.netPayable)}</td>
                     <td className="px-3 py-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${BILL_STATUS_COLORS[b.status] ?? 'bg-surface-muted text-content-muted'}`}>{b.status}</span>
                     </td>
@@ -348,16 +499,16 @@ function BillsModal({ wo, onClose, onChanged }: {
                       <div className="flex items-center gap-1">
                         {b.status === 'Pending' && (
                           <button onClick={() => approve(b.id)}
-                            className="text-xs text-green-600 hover:text-green-700 font-medium hover:underline">Approve</button>
+                            className="text-xs text-success hover:text-success font-medium hover:underline">Approve</button>
                         )}
                         {b.status === 'Approved' && (
                           <>
                             <button onClick={() => setVoucherBill({ bill: b, mode: 'expense' })} title="Create Expense Voucher"
-                              className="p-1 text-content-muted hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                              className="p-1 text-content-muted hover:text-info hover:bg-info/10 rounded transition-colors">
                               <BookOpen className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => setVoucherBill({ bill: b, mode: 'payment' })} title="Create Payment Voucher"
-                              className="p-1 text-content-muted hover:text-green-600 hover:bg-green-50 rounded transition-colors">
+                              className="p-1 text-content-muted hover:text-success hover:bg-success/10 rounded transition-colors">
                               <CreditCard className="w-3.5 h-3.5" />
                             </button>
                           </>
@@ -418,9 +569,9 @@ export function WorkOrdersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Orders', value: orders.length,                                  color: 'text-content' },
-          { label: 'Active',       value: active,                                          color: 'text-green-600' },
+          { label: 'Active',       value: active,                                          color: 'text-success' },
           { label: 'Completed',    value: orders.filter(o => o.status === 'Completed').length, color: 'text-primary' },
-          { label: 'Contract Value', value: fmt(totalContract),                            color: 'text-purple-600' },
+          { label: 'Contract Value', value: fmt(totalContract),                            color: 'text-primary' },
         ].map(k => (
           <div key={k.label} className="bg-surface rounded-xl border border-border-default p-4">
             <p className="text-xs text-content-muted uppercase tracking-wide font-medium">{k.label}</p>
@@ -449,8 +600,12 @@ export function WorkOrdersPage() {
             <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Work Order', 'Project', 'Contractor', 'Contract', 'Advance', 'Retention', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Work Order' }, { h: 'Project' }, { h: 'Contractor' },
+                    { h: 'Contract', num: true }, { h: 'Advance', num: true }, { h: 'Retention', num: true },
+                    { h: 'Status' }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -470,20 +625,20 @@ export function WorkOrdersPage() {
                       <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">{o.projectName.split(' ')[0]}</span>
                     </td>
                     <td className="px-4 py-3 text-content text-xs font-medium">{o.vendorName}</td>
-                    <td className="px-4 py-3 font-semibold text-content">{fmt(o.contractAmount)}</td>
-                    <td className="px-4 py-3 text-content-muted">{fmt(o.advanceAmount)}</td>
-                    <td className="px-4 py-3 text-content-muted">{o.retentionPercent}%</td>
+                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(o.contractAmount)}</td>
+                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{fmt(o.advanceAmount)}</td>
+                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{o.retentionPercent}%</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[o.status] ?? 'bg-surface-muted text-content-muted'}`}>{o.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => setBillsFor(o)} title="Progress Bills"
-                          className="p-1.5 text-content-muted hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Receipt className="w-3.5 h-3.5" /></button>
+                          className="p-1.5 text-content-muted hover:text-info hover:bg-info/10 rounded-lg"><Receipt className="w-3.5 h-3.5" /></button>
                         <button onClick={() => { setTarget(o); setModal('edit') }} title="Edit"
                           className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
                         {o.status === 'Draft' && (
-                          <button onClick={() => approve(o.id)} className="text-xs text-green-600 hover:text-green-700 font-medium hover:underline px-1">Approve</button>
+                          <button onClick={() => approve(o.id)} className="text-xs text-success hover:text-success font-medium hover:underline px-1">Approve</button>
                         )}
                       </div>
                     </td>

@@ -22,8 +22,8 @@ interface Vendor {
 
 const TYPE_COLORS: Record<string, string> = {
   Supplier:   'bg-primary/10 text-primary',
-  Contractor: 'bg-orange-100 text-orange-700',
-  Both:       'bg-purple-100 text-purple-700',
+  Contractor: 'bg-warning/15 text-warning',
+  Both:       'bg-primary/10 text-primary',
 }
 const TYPES = ['Supplier', 'Contractor', 'Both']
 
@@ -69,15 +69,15 @@ function VendorModal({ vendor, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Vendor' : 'Add Vendor'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Vendor Name <span className="text-red-500">*</span></label>
+            <label className={lbl}>Vendor Name <span className="text-danger">*</span></label>
             <input {...register('vendorName')} className={inp} placeholder="ABC Supplies Ltd." />
-            {errors.vendorName && <p className="text-xs text-red-600 mt-1">{errors.vendorName.message}</p>}
+            {errors.vendorName && <p className="text-xs text-danger mt-1">{errors.vendorName.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Type <span className="text-red-500">*</span></label>
+            <label className={lbl}>Type <span className="text-danger">*</span></label>
             <Select {...register('vendorType')}>
               {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </Select>
@@ -97,7 +97,7 @@ function VendorModal({ vendor, onClose, onSaved }: {
           <div>
             <label className={lbl}>Email</label>
             <input type="email" {...register('email')} className={inp} />
-            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-danger mt-1">{errors.email.message}</p>}
           </div>
           <div>
             <label className={lbl}>Address</label>
@@ -180,7 +180,7 @@ export function VendorsPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-sm text-content-muted">Contractors</p>
-          <p className="text-2xl font-bold text-orange-600 mt-1">{contractors}</p>
+          <p className="text-2xl font-bold text-warning mt-1">{contractors}</p>
         </div>
       </div>
 
@@ -223,11 +223,11 @@ export function VendorsPage() {
                     </td>
                     <td className="px-4 py-3 text-content-muted text-xs font-mono">{v.binNumber ?? '—'}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${v.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted'}`}>{v.status}</span>
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${v.status === 'Active' ? 'bg-success/10 text-success' : 'bg-surface-muted text-content-muted'}`}>{v.status}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setHistory(v)} title="View History" className="text-content-muted hover:text-purple-600 hover:bg-purple-50 p-1.5 rounded-lg">
+                        <button onClick={() => setHistory(v)} title="View History" className="text-content-muted hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg">
                           <History className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => { setTarget(v); setModal('edit') }} title="Edit" className="text-content-muted hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg">

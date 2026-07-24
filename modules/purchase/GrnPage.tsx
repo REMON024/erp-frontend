@@ -80,11 +80,11 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
   return (
     <Modal open onClose={onClose} title="New Goods Receipt (GRN)" size="lg">
       <div className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Purchase Order <span className="text-red-500">*</span></label>
+            <label className={lbl}>Purchase Order <span className="text-danger">*</span></label>
             <Select
               value={selectedPoId}
               onChange={e => handlePoSelect(Number(e.target.value))}
@@ -95,11 +95,11 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
               ))}
             </Select>
             {approvedPos.length === 0 && (
-              <p className="text-xs text-amber-600 mt-1">No approved POs available</p>
+              <p className="text-xs text-warning mt-1">No approved POs available</p>
             )}
           </div>
           <div>
-            <label className={lbl}>Receipt Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>Receipt Date <span className="text-danger">*</span></label>
             <DateField value={receiptDate} onChange={e => setReceiptDate(e.target.value)} />
           </div>
         </div>
@@ -111,8 +111,11 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted border-b border-border-default">
                   <tr>
-                    {['Material', 'Ordered', 'Received Qty', 'Unit Cost (৳)', 'Total'].map(h => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                    {[
+                      { h: 'Material' }, { h: 'Ordered', align: 'center' as const }, { h: 'Received Qty' },
+                      { h: 'Unit Cost (৳)' }, { h: 'Total', num: true },
+                    ].map(({ h, num, align }) => (
+                      <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -137,7 +140,7 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
                           className="w-28 border border-border-default rounded px-2 py-1 text-sm focus:ring-1 focus:ring-primary/40 focus:outline-none"
                         />
                       </td>
-                      <td className="px-3 py-2 text-content text-xs font-semibold">
+                      <td className="px-3 py-2 text-content text-xs font-semibold text-right tabular-nums">
                         {fmt((Number(l.receivedQty) || 0) * (Number(l.unitCost) || 0))}
                       </td>
                     </tr>
@@ -209,7 +212,7 @@ export function GrnPage() {
         {[
           { label: 'Total GRNs',      value: grns.length,      color: 'text-content' },
           { label: 'Total Received',  value: fmt(totalReceived), color: 'text-primary' },
-          { label: 'Pending POs',     value: pos.filter(p => p.status === 'Approved').length, color: 'text-amber-600' },
+          { label: 'Pending POs',     value: pos.filter(p => p.status === 'Approved').length, color: 'text-warning' },
         ].map(s => (
           <div key={s.label} className="bg-surface rounded-xl border border-border-default p-4">
             <p className="text-xs text-content-muted uppercase tracking-wide">{s.label}</p>
@@ -227,8 +230,11 @@ export function GrnPage() {
             <table className="w-full min-w-[700px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['GRN No.', 'PO No.', 'Vendor', 'Receipt Date', 'Total Amount', 'Status'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'GRN No.' }, { h: 'PO No.' }, { h: 'Vendor' }, { h: 'Receipt Date' },
+                    { h: 'Total Amount', num: true }, { h: 'Status' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -241,9 +247,9 @@ export function GrnPage() {
                     <td className="px-4 py-3 text-content-muted text-xs font-mono">{g.poNumber}</td>
                     <td className="px-4 py-3 text-content text-sm">{g.vendorName}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{g.receiptDate}</td>
-                    <td className="px-4 py-3 font-semibold text-content">{fmt(g.totalAmount)}</td>
+                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(g.totalAmount)}</td>
                     <td className="px-4 py-3">
-                      <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-700">{g.status}</span>
+                      <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-success/10 text-success">{g.status}</span>
                     </td>
                   </tr>
                 ))}

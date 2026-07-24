@@ -45,7 +45,7 @@ export function LoginForm() {
       <div className="bg-surface rounded-2xl shadow-xl p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-info to-info text-white flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Building2 className="w-7 h-7" />
           </div>
           <h1 className="text-2xl font-bold text-content">Construction ERP</h1>
@@ -54,7 +54,7 @@ export function LoginForm() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex items-start gap-2">
+          <div className="mb-4 px-4 py-3 bg-danger/10 border border-danger/20 text-danger text-sm rounded-lg flex items-start gap-2">
             <span className="shrink-0 mt-0.5">⚠</span>
             <span>{error}</span>
           </div>
@@ -70,10 +70,10 @@ export function LoginForm() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@company.com"
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent ${errors.email ? 'border-red-400' : 'border-border-default'}`}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent ${errors.email ? 'border-danger/20' : 'border-border-default'}`}
               />
             </div>
-            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-danger mt-1">{errors.email.message}</p>}
           </div>
 
           <div>
@@ -88,14 +88,14 @@ export function LoginForm() {
                 type={showPass ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent ${errors.password ? 'border-red-400' : 'border-border-default'}`}
+                className={`w-full pl-10 pr-10 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent ${errors.password ? 'border-danger/20' : 'border-border-default'}`}
               />
               <button type="button" onClick={() => setShowPass(v => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-content-muted hover:text-content-muted">
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-danger mt-1">{errors.password.message}</p>}
           </div>
 
           <button

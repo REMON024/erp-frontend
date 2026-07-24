@@ -29,25 +29,25 @@ export function ProfitLossPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-surface rounded-xl border border-border-default p-5">
             <p className="text-sm text-content-muted">Total Revenue</p>
-            <p className="text-2xl font-bold text-green-600 mt-1">{fmt(pl.totalRevenue)}</p>
+            <p className="text-2xl font-bold text-success mt-1">{fmt(pl.totalRevenue)}</p>
           </div>
           <div className="bg-surface rounded-xl border border-border-default p-5">
             <p className="text-sm text-content-muted">Total Expenses</p>
-            <p className="text-2xl font-bold text-red-600 mt-1">{fmt(pl.totalExpenses)}</p>
+            <p className="text-2xl font-bold text-danger mt-1">{fmt(pl.totalExpenses)}</p>
           </div>
-          <div className={`rounded-xl border p-5 ${isProfit ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+          <div className={`rounded-xl border p-5 ${isProfit ? 'bg-success/10 border-success/20' : 'bg-danger/10 border-danger/20'}`}>
             <p className="text-sm text-content-muted flex items-center gap-1">
-              {isProfit ? <TrendingUp className="w-4 h-4 text-green-600" /> : <TrendingDown className="w-4 h-4 text-red-600" />}
+              {isProfit ? <TrendingUp className="w-4 h-4 text-success" /> : <TrendingDown className="w-4 h-4 text-danger" />}
               Net {isProfit ? 'Profit' : 'Loss'}
             </p>
-            <p className={`text-2xl font-bold mt-1 ${isProfit ? 'text-green-700' : 'text-red-700'}`}>{fmt(Math.abs(pl.netProfit))}</p>
+            <p className={`text-2xl font-bold mt-1 ${isProfit ? 'text-success' : 'text-danger'}`}>{fmt(Math.abs(pl.netProfit))}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-            <div className="px-5 py-3 border-b border-border-default bg-green-50">
-              <h3 className="font-semibold text-green-800 text-sm">Revenue</h3>
+            <div className="px-5 py-3 border-b border-border-default bg-success/10">
+              <h3 className="font-semibold text-success text-sm">Revenue</h3>
             </div>
             <table className="w-full text-sm">
               <tbody className="divide-y divide-border-default">
@@ -60,14 +60,14 @@ export function ProfitLossPage() {
                 {pl.revenue.length === 0 && <tr><td className="px-5 py-6 text-center text-content-muted text-sm" colSpan={2}>No revenue posted</td></tr>}
               </tbody>
               <tfoot className="bg-surface-muted border-t border-border-default">
-                <tr><td className="px-5 py-2.5 font-bold text-content">Total Revenue</td><td className="px-5 py-2.5 text-right font-bold text-green-700">{fmt(pl.totalRevenue)}</td></tr>
+                <tr><td className="px-5 py-2.5 font-bold text-content">Total Revenue</td><td className="px-5 py-2.5 text-right font-bold text-success">{fmt(pl.totalRevenue)}</td></tr>
               </tfoot>
             </table>
           </div>
 
           <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-            <div className="px-5 py-3 border-b border-border-default bg-red-50">
-              <h3 className="font-semibold text-red-800 text-sm">Expenses</h3>
+            <div className="px-5 py-3 border-b border-border-default bg-danger/10">
+              <h3 className="font-semibold text-danger text-sm">Expenses</h3>
             </div>
             <table className="w-full text-sm">
               <tbody className="divide-y divide-border-default">
@@ -80,7 +80,7 @@ export function ProfitLossPage() {
                 {pl.expenses.length === 0 && <tr><td className="px-5 py-6 text-center text-content-muted text-sm" colSpan={2}>No expenses posted</td></tr>}
               </tbody>
               <tfoot className="bg-surface-muted border-t border-border-default">
-                <tr><td className="px-5 py-2.5 font-bold text-content">Total Expenses</td><td className="px-5 py-2.5 text-right font-bold text-red-700">{fmt(pl.totalExpenses)}</td></tr>
+                <tr><td className="px-5 py-2.5 font-bold text-content">Total Expenses</td><td className="px-5 py-2.5 text-right font-bold text-danger">{fmt(pl.totalExpenses)}</td></tr>
               </tfoot>
             </table>
           </div>

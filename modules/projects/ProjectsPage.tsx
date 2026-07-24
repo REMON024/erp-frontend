@@ -24,8 +24,8 @@ interface Project {
 
 const STATUS_COLORS: Record<string, string> = {
   Planning:  'bg-surface-muted text-content-muted',
-  Active:    'bg-green-100 text-green-700',
-  OnHold:    'bg-amber-100 text-amber-700',
+  Active:    'bg-success/10 text-success',
+  OnHold:    'bg-warning/15 text-warning',
   Completed: 'bg-primary/10 text-primary',
 }
 const STATUSES = ['Planning', 'Active', 'OnHold', 'Completed']
@@ -74,17 +74,17 @@ function ProjectModal({ project, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Project' : 'New Housing Project'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Project Name <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project Name <span className="text-danger">*</span></label>
             <input {...register('projectName')} className={inp} placeholder="Block-E Residential" />
-            {errors.projectName && <p className="text-xs text-red-600 mt-1">{errors.projectName.message}</p>}
+            {errors.projectName && <p className="text-xs text-danger mt-1">{errors.projectName.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Project Code <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project Code <span className="text-danger">*</span></label>
             <input {...register('projectCode')} className={inp} placeholder="BLK-E-001" />
-            {errors.projectCode && <p className="text-xs text-red-600 mt-1">{errors.projectCode.message}</p>}
+            {errors.projectCode && <p className="text-xs text-danger mt-1">{errors.projectCode.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -93,7 +93,7 @@ function ProjectModal({ project, onClose, onSaved }: {
             <input {...register('projectType')} className={inp} placeholder="Residential" />
           </div>
           <div>
-            <label className={lbl}>Status <span className="text-red-500">*</span></label>
+            <label className={lbl}>Status <span className="text-danger">*</span></label>
             <Select {...register('status')}>
               {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </Select>
@@ -152,24 +152,24 @@ function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: (
           <button onClick={onEdit} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Edit project">
             <Edit2 className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onSetup} className="p-1.5 text-content-muted hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Setup checklist">
+          <button onClick={onSetup} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Setup checklist">
             <ClipboardList className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border-default">
         <div className="flex items-center gap-2 text-xs text-content-muted">
-          <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+          <TrendingUp className="w-3.5 h-3.5 text-info" />
           <span>Cost: <span className="font-medium text-content">{fmt(project.estimatedCost)}</span></span>
         </div>
         <div className="flex items-center gap-2 text-xs text-content-muted">
-          <Building2 className="w-3.5 h-3.5 text-green-400" />
+          <Building2 className="w-3.5 h-3.5 text-success" />
           <span>Revenue: <span className="font-medium text-content">{fmt(project.estimatedRevenue)}</span></span>
         </div>
       </div>
       <button
         onClick={onSetup}
-        className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium border border-purple-100 hover:border-purple-300 bg-purple-50 hover:bg-purple-100 rounded-lg py-1.5 transition-colors"
+        className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs text-primary hover:text-primary font-medium border border-primary/20 hover:border-primary/20 bg-primary/10 hover:bg-primary/10 rounded-lg py-1.5 transition-colors"
       >
         <CheckCircle2 className="w-3.5 h-3.5" /> View Setup Checklist
       </button>
@@ -227,11 +227,11 @@ export function ProjectsPage() {
       />
 
       {overBudgetProjects.length > 0 && (
-        <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          <span className="text-red-500 text-lg shrink-0">⚠</span>
+        <div className="flex items-start gap-3 bg-danger/10 border border-danger/20 rounded-xl px-4 py-3">
+          <span className="text-danger text-lg shrink-0">⚠</span>
           <div>
-            <p className="text-sm font-semibold text-red-800">Budget Overrun Alert</p>
-            <p className="text-xs text-red-600 mt-0.5">
+            <p className="text-sm font-semibold text-danger">Budget Overrun Alert</p>
+            <p className="text-xs text-danger mt-0.5">
               {overBudgetProjects.length} approved estimate(s) have exceeded their budget. Visit the{' '}
               <a href="/budget" className="underline font-medium">Budget Tracker</a> for details.
             </p>
@@ -246,7 +246,7 @@ export function ProjectsPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-sm text-content-muted">Active</p>
-          <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>
+          <p className="text-2xl font-bold text-success mt-1">{activeCount}</p>
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-sm text-content-muted">Completed</p>
@@ -260,23 +260,23 @@ export function ProjectsPage() {
 
       {/* Material budget health widget */}
       {matSummary && (matSummary.overBudgetCount > 0 || matSummary.atRiskCount > 0) && (
-        <div className={`rounded-xl border p-4 flex items-start gap-3 ${matSummary.overBudgetCount > 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-          <div className={`p-2 rounded-lg shrink-0 ${matSummary.overBudgetCount > 0 ? 'bg-red-100' : 'bg-amber-100'}`}>
-            <Package className={`w-4 h-4 ${matSummary.overBudgetCount > 0 ? 'text-red-600' : 'text-amber-600'}`} />
+        <div className={`rounded-xl border p-4 flex items-start gap-3 ${matSummary.overBudgetCount > 0 ? 'bg-danger/10 border-danger/20' : 'bg-warning/15 border-warning/20'}`}>
+          <div className={`p-2 rounded-lg shrink-0 ${matSummary.overBudgetCount > 0 ? 'bg-danger/10' : 'bg-warning/15'}`}>
+            <Package className={`w-4 h-4 ${matSummary.overBudgetCount > 0 ? 'text-danger' : 'text-warning'}`} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-semibold ${matSummary.overBudgetCount > 0 ? 'text-red-800' : 'text-amber-800'}`}>
+            <p className={`text-sm font-semibold ${matSummary.overBudgetCount > 0 ? 'text-danger' : 'text-warning'}`}>
               Material Budget Alert
             </p>
             <div className="flex items-center gap-4 mt-1 flex-wrap">
               {matSummary.overBudgetCount > 0 && (
-                <span className="flex items-center gap-1 text-xs text-red-700">
+                <span className="flex items-center gap-1 text-xs text-danger">
                   <AlertTriangle className="w-3 h-3" />
                   <strong>{matSummary.overBudgetCount}</strong> material{matSummary.overBudgetCount !== 1 ? 's' : ''} over budget
                 </span>
               )}
               {matSummary.atRiskCount > 0 && (
-                <span className="text-xs text-amber-700">
+                <span className="text-xs text-warning">
                   <strong>{matSummary.atRiskCount}</strong> at risk (&gt;80% committed)
                 </span>
               )}
@@ -286,7 +286,7 @@ export function ProjectsPage() {
             </div>
           </div>
           <a href="/material-budget"
-            className={`text-xs font-medium shrink-0 underline ${matSummary.overBudgetCount > 0 ? 'text-red-700' : 'text-amber-700'}`}>
+            className={`text-xs font-medium shrink-0 underline ${matSummary.overBudgetCount > 0 ? 'text-danger' : 'text-warning'}`}>
             Review →
           </a>
         </div>

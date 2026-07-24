@@ -31,9 +31,9 @@ const KNOWN_TABLES = [
 ]
 
 const ACTION_COLORS: Record<AuditAction, string> = {
-  Create: 'bg-emerald-100 text-emerald-700',
+  Create: 'bg-success/10 text-success',
   Update: 'bg-primary/10 text-primary',
-  Delete: 'bg-red-100 text-red-700',
+  Delete: 'bg-danger/10 text-danger',
 }
 
 const PAGE_SIZE = 8
@@ -186,9 +186,9 @@ export function AuditLogsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total Events',  value: counts.total,  color: 'text-content',   bg: 'bg-surface-muted'   },
-          { label: 'Creates',       value: counts.create, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+          { label: 'Creates',       value: counts.create, color: 'text-success', bg: 'bg-success/10' },
           { label: 'Updates',       value: counts.update, color: 'text-primary',    bg: 'bg-primary/10'    },
-          { label: 'Deletes',       value: counts.delete, color: 'text-red-700',     bg: 'bg-red-50'     },
+          { label: 'Deletes',       value: counts.delete, color: 'text-danger',     bg: 'bg-danger/10'     },
         ].map(k => (
           <div key={k.label} className={`${k.bg} rounded-xl p-4`}>
             <p className="text-xs text-content-muted">{k.label}</p>
@@ -203,7 +203,7 @@ export function AuditLogsPage() {
           <Filter className="w-4 h-4 text-content-muted" />
           <span className="text-sm font-medium text-content">Filters</span>
           {hasFilter && (
-            <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
+            <button onClick={clearFilters} className="ml-auto flex items-center gap-1 text-xs text-danger hover:text-danger">
               <X className="w-3.5 h-3.5" /> Clear all
             </button>
           )}
@@ -272,7 +272,7 @@ export function AuditLogsPage() {
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 {['#', 'Table', 'Entity ID', 'Action', 'Changed By', 'Date & Time', 'IP Address'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide whitespace-nowrap">
+                  <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide whitespace-nowrap ${h === '#' ? 'text-center' : 'text-left'}`}>
                     {h}
                   </th>
                 ))}

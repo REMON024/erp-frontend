@@ -57,7 +57,7 @@ export function ProjectLedgerPage() {
                 </div>
                 <div className="bg-surface rounded-xl border border-border-default p-4">
                   <p className="text-xs text-content-muted uppercase tracking-wide">Closing Balance</p>
-                  <p className="text-xl font-bold text-indigo-600 mt-1">{fmt(ledger.closingBalance)}</p>
+                  <p className="text-xl font-bold text-info mt-1">{fmt(ledger.closingBalance)}</p>
                 </div>
               </div>
 
@@ -70,7 +70,7 @@ export function ProjectLedgerPage() {
                     <thead className="bg-surface-muted border-b border-border-default">
                       <tr>
                         {['Date', 'Voucher', 'Narration', 'Debit', 'Credit', 'Balance'].map(h => (
-                          <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                          <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${['Debit','Credit','Balance'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                         ))}
                       </tr>
                     </thead>

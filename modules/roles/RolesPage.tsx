@@ -22,9 +22,9 @@ interface RolePermissionsDto {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  super_admin: 'bg-purple-100 text-purple-700 border-purple-200',
-  operations:  'bg-primary/10 text-primary border-blue-200',
-  inventory:   'bg-orange-100 text-orange-700 border-orange-200',
+  super_admin: 'bg-primary/10 text-primary border-primary/20',
+  operations:  'bg-primary/10 text-primary border-info/20',
+  inventory:   'bg-warning/15 text-warning border-warning/20',
 }
 const roleColor = (name: string) => ROLE_COLORS[name] ?? 'bg-surface-muted text-content border-border-default'
 const roleLabel = (name: string) => name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
@@ -62,11 +62,11 @@ function RoleModal({ role, onClose, onSaved }: { role?: RoleDto; onClose: () => 
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Role' : 'Create Role'} size="sm">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
           <label className={lbl}>Role Code <span className="text-content-muted font-normal">(system identifier)</span></label>
           <input {...register('name')} className={inp} placeholder="e.g. site_manager" disabled={isEdit} />
-          {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
+          {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
           {!isEdit && <p className="text-xs text-content-muted mt-1">Lowercase letters and underscores only. Cannot be changed later.</p>}
         </div>
         <div>
@@ -122,7 +122,7 @@ function PermissionsModal({ role, onClose, onSaved }: {
 
   const Chk = ({ checked, onClick }: { checked: boolean; onClick: () => void }) => (
     <button type="button" onClick={onClick}
-      className={`w-6 h-6 rounded flex items-center justify-center border transition-colors ${checked ? 'bg-primary border-primary text-white' : 'border-border-default hover:border-blue-400'}`}>
+      className={`w-6 h-6 rounded flex items-center justify-center border transition-colors ${checked ? 'bg-primary border-primary text-white' : 'border-border-default hover:border-info/20'}`}>
       {checked && <Check className="w-3.5 h-3.5" />}
     </button>
   )
@@ -130,7 +130,7 @@ function PermissionsModal({ role, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={`Permissions — ${roleLabel(role.name)}`} size="xl">
       <div className="space-y-3">
-        {err && <p className="text-xs text-red-600">{err}</p>}
+        {err && <p className="text-xs text-danger">{err}</p>}
         {loading ? (
           <div className="flex items-center justify-center py-12 gap-2 text-content-muted">
             <Loader2 className="w-5 h-5 animate-spin" /> Loading permissions…
@@ -244,7 +244,7 @@ export function RolesPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide">Active</p>
-          <p className="text-3xl font-bold text-green-600 mt-1">{roles.filter(r => r.isActive).length}</p>
+          <p className="text-3xl font-bold text-success mt-1">{roles.filter(r => r.isActive).length}</p>
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide">Total Users</p>
@@ -252,12 +252,12 @@ export function RolesPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide">Roles Configured</p>
-          <p className="text-3xl font-bold text-indigo-600 mt-1">{roles.filter(r => r.userCount > 0).length}</p>
+          <p className="text-3xl font-bold text-info mt-1">{roles.filter(r => r.userCount > 0).length}</p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-danger/10 border border-danger/20 rounded-xl text-danger text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />{error}
         </div>
       )}
@@ -307,7 +307,7 @@ export function RolesPage() {
                     </button>
                     <button onClick={() => { setTarget(role); setModal('delete') }}
                       disabled={role.userCount > 0}
-                      className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                      className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                       <Trash2 className="w-4 h-4" />
                     </button>
                     <button onClick={() => toggleExpand(role.id)}
@@ -362,7 +362,7 @@ export function RolesPage() {
             </p>
             <div className="flex justify-end gap-3">
               <button onClick={() => { setModal(null); setTarget(null) }} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
-              <button onClick={deleteRole} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Delete</button>
+              <button onClick={deleteRole} className="px-4 py-2 text-sm bg-danger text-white rounded-lg hover:bg-danger font-medium">Delete</button>
             </div>
           </div>
         </Modal>

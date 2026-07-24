@@ -21,10 +21,10 @@ interface Account {
 
 const TYPE_COLORS: Record<string, string> = {
   Asset:     'bg-primary/10 text-primary',
-  Liability: 'bg-orange-100 text-orange-700',
-  Equity:    'bg-purple-100 text-purple-700',
-  Revenue:   'bg-green-100 text-green-700',
-  Expense:   'bg-red-100 text-red-700',
+  Liability: 'bg-warning/15 text-warning',
+  Equity:    'bg-primary/10 text-primary',
+  Revenue:   'bg-success/10 text-success',
+  Expense:   'bg-danger/10 text-danger',
 }
 const TYPES = ['Asset', 'Liability', 'Equity', 'Revenue', 'Expense']
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
@@ -68,15 +68,15 @@ function AccountModal({ account, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Account' : 'Add Account'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Account Name <span className="text-red-500">*</span></label>
+            <label className={lbl}>Account Name <span className="text-danger">*</span></label>
             <input {...register('accountName')} className={inp} placeholder="Cash in Hand" />
-            {errors.accountName && <p className="text-xs text-red-600 mt-1">{errors.accountName.message}</p>}
+            {errors.accountName && <p className="text-xs text-danger mt-1">{errors.accountName.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Type <span className="text-red-500">*</span></label>
+            <label className={lbl}>Type <span className="text-danger">*</span></label>
             <Select {...register('accountType')}>
               {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </Select>

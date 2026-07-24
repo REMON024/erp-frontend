@@ -45,21 +45,21 @@ function AddModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
   return (
     <Modal open onClose={onClose} title="Open New Fiscal Year" size="sm">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
-          <label className={lbl}>Fiscal Year Name <span className="text-red-500">*</span></label>
+          <label className={lbl}>Fiscal Year Name <span className="text-danger">*</span></label>
           <input {...register('name')} className={inp} placeholder="FY 2026-2027" />
-          {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
+          {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Start Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>Start Date <span className="text-danger">*</span></label>
             <DateField {...register('startDate')} />
           </div>
           <div>
-            <label className={lbl}>End Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>End Date <span className="text-danger">*</span></label>
             <DateField {...register('endDate')} />
-            {errors.endDate && <p className="text-xs text-red-600 mt-1">{errors.endDate.message}</p>}
+            {errors.endDate && <p className="text-xs text-danger mt-1">{errors.endDate.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
@@ -109,22 +109,22 @@ export function FiscalYearsPage() {
       />
 
       {toast && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
-          <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />{toast}
+        <div className="flex items-center gap-2 px-4 py-3 bg-success/10 border border-success/20 rounded-xl text-sm text-success">
+          <CheckCircle className="w-4 h-4 text-success shrink-0" />{toast}
         </div>
       )}
 
       {activeYear && (
-        <div className="bg-primary/10 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="bg-primary/10 border border-info/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0">
             <Unlock className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-semibold text-blue-900">Current Active Period: {activeYear.name}</p>
+            <p className="text-sm font-semibold text-info">Current Active Period: {activeYear.name}</p>
             <p className="text-xs text-primary mt-0.5">{activeYear.startDate} → {activeYear.endDate} · {activeYear.voucherCount} vouchers</p>
           </div>
           <button onClick={() => setClosing(activeYear)}
-            className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex items-center gap-1.5 shrink-0">
+            className="px-3 py-1.5 text-xs bg-danger text-white rounded-lg hover:bg-danger font-medium flex items-center gap-1.5 shrink-0">
             <Lock className="w-3.5 h-3.5" /> Close Year
           </button>
         </div>
@@ -151,14 +151,14 @@ export function FiscalYearsPage() {
                     <td className="px-4 py-3 text-content-muted text-xs">{y.startDate} → {y.endDate}</td>
                     <td className="px-4 py-3 font-medium text-content">{y.voucherCount}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${y.isClosed ? 'bg-surface-muted text-content-muted' : 'bg-green-100 text-green-700'}`}>
+                      <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${y.isClosed ? 'bg-surface-muted text-content-muted' : 'bg-success/10 text-success'}`}>
                         {y.isClosed ? <><Lock className="w-3 h-3" />Closed</> : <><Unlock className="w-3 h-3" />Active</>}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-content-muted text-xs">{y.closedAt ? `${y.closedAt} by ${y.closedBy}` : '—'}</td>
                     <td className="px-4 py-3">
                       {!y.isClosed && (
-                        <button onClick={() => setClosing(y)} className="text-xs text-red-600 hover:text-red-700 font-medium hover:underline">Close</button>
+                        <button onClick={() => setClosing(y)} className="text-xs text-danger hover:text-danger font-medium hover:underline">Close</button>
                       )}
                     </td>
                   </tr>
@@ -174,16 +174,16 @@ export function FiscalYearsPage() {
       {closing && (
         <Modal open onClose={() => setClosing(null)} title="Close Fiscal Year" size="sm">
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 bg-danger/10 border border-danger/20 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-red-800">This action cannot be undone</p>
-                <p className="text-xs text-red-700 mt-1">Closing <strong>{closing.name}</strong> will lock all {closing.voucherCount} vouchers. No new entries can be posted after closing.</p>
+                <p className="text-sm font-semibold text-danger">This action cannot be undone</p>
+                <p className="text-xs text-danger mt-1">Closing <strong>{closing.name}</strong> will lock all {closing.voucherCount} vouchers. No new entries can be posted after closing.</p>
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
               <button onClick={() => setClosing(null)} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
-              <button onClick={handleClose} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Yes, Close Fiscal Year</button>
+              <button onClick={handleClose} className="px-4 py-2 text-sm bg-danger text-white rounded-lg hover:bg-danger font-medium">Yes, Close Fiscal Year</button>
             </div>
           </div>
         </Modal>

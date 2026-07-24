@@ -27,9 +27,9 @@ interface Investment {
 const PAYMENT_MODES = ['Bank', 'Cash', 'Cheque', 'Online']
 const MODE_COLOR: Record<string, string> = {
   Bank:   'bg-primary/10 text-primary',
-  Cash:   'bg-green-100 text-green-700',
-  Cheque: 'bg-amber-100 text-amber-700',
-  Online: 'bg-purple-100 text-purple-700',
+  Cash:   'bg-success/10 text-success',
+  Cheque: 'bg-warning/15 text-warning',
+  Online: 'bg-primary/10 text-primary',
 }
 
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
@@ -75,47 +75,47 @@ function CreateModal({ investors, projects, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title="Record Investment" size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Investor <span className="text-red-500">*</span></label>
+            <label className={lbl}>Investor <span className="text-danger">*</span></label>
             <Select {...register('investorId')}>
               <option value="">Select investor</option>
               {activeInvestors.map(i => (
                 <option key={i.id} value={i.id}>{i.fullName} — {i.role}</option>
               ))}
             </Select>
-            {errors.investorId && <p className="text-xs text-red-600 mt-1">{errors.investorId.message}</p>}
+            {errors.investorId && <p className="text-xs text-danger mt-1">{errors.investorId.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Project <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project <span className="text-danger">*</span></label>
             <Select {...register('projectId')}>
               <option value="">Select project</option>
               {projects.map(p => (
                 <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>
               ))}
             </Select>
-            {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
+            {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Investment Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>Investment Date <span className="text-danger">*</span></label>
             <DateField {...register('investmentDate')} />
-            {errors.investmentDate && <p className="text-xs text-red-600 mt-1">{errors.investmentDate.message}</p>}
+            {errors.investmentDate && <p className="text-xs text-danger mt-1">{errors.investmentDate.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Amount (৳) <span className="text-red-500">*</span></label>
+            <label className={lbl}>Amount (৳) <span className="text-danger">*</span></label>
             <input type="number" min={1} step="any" {...register('amount')} className={inp} placeholder="0.00" />
-            {errors.amount && <p className="text-xs text-red-600 mt-1">{errors.amount.message}</p>}
+            {errors.amount && <p className="text-xs text-danger mt-1">{errors.amount.message}</p>}
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Payment Mode <span className="text-red-500">*</span></label>
+            <label className={lbl}>Payment Mode <span className="text-danger">*</span></label>
             <Select {...register('paymentMode')}>
               {PAYMENT_MODES.map(m => <option key={m} value={m}>{m}</option>)}
             </Select>
@@ -165,23 +165,23 @@ function ReverseModal({ investment, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title="Reverse Investment" size="sm">
       <div className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm">
-          <p className="font-semibold text-amber-800">Reversing: {investment.investmentNo}</p>
-          <p className="text-amber-700 text-xs mt-0.5">
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
+        <div className="bg-warning/15 border border-warning/20 rounded-lg px-4 py-3 text-sm">
+          <p className="font-semibold text-warning">Reversing: {investment.investmentNo}</p>
+          <p className="text-warning text-xs mt-0.5">
             {investment.investorName} · {fmt(investment.amount)} · {investment.investmentDate}
           </p>
-          <p className="text-xs text-amber-600 mt-1">This will post a reversal journal entry and mark this investment as reversed.</p>
+          <p className="text-xs text-warning mt-1">This will post a reversal journal entry and mark this investment as reversed.</p>
         </div>
         <div>
-          <label className={lbl}>Reason for Reversal <span className="text-red-500">*</span></label>
+          <label className={lbl}>Reason for Reversal <span className="text-danger">*</span></label>
           <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} className={inp}
             placeholder="Explain why this investment is being reversed…" />
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
           <button onClick={onSubmit} disabled={saving}
-            className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-60">
+            className="px-4 py-2 text-sm bg-danger text-white rounded-lg hover:bg-danger font-medium disabled:opacity-60">
             {saving ? 'Reversing…' : 'Confirm Reversal'}
           </button>
         </div>
@@ -237,7 +237,7 @@ export function InvestmentsPage() {
         {[
           { label: 'Total Invested',    value: fmt(totalAmount),         color: 'text-primary',  bg: 'bg-primary/10' },
           { label: 'Active Entries',    value: activeInvestments.length, color: 'text-content',  bg: 'bg-surface' },
-          { label: 'Reversed Entries',  value: reversedCount,            color: reversedCount > 0 ? 'text-red-600' : 'text-content-muted', bg: reversedCount > 0 ? 'bg-red-50' : 'bg-surface' },
+          { label: 'Reversed Entries',  value: reversedCount,            color: reversedCount > 0 ? 'text-danger' : 'text-content-muted', bg: reversedCount > 0 ? 'bg-danger/10' : 'bg-surface' },
           { label: 'Investors',         value: [...new Set(activeInvestments.map(i => i.investorId))].length, color: 'text-content', bg: 'bg-surface' },
         ].map(k => (
           <div key={k.label} className={`rounded-xl border border-border-default p-4 ${k.bg}`}>
@@ -288,8 +288,11 @@ export function InvestmentsPage() {
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Entry No', 'Date', 'Investor', 'Project', 'Amount', 'Mode', 'Reference', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Entry No' }, { h: 'Date' }, { h: 'Investor' }, { h: 'Project' },
+                    { h: 'Amount', num: true }, { h: 'Mode' }, { h: 'Reference' }, { h: 'Status' }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -305,7 +308,7 @@ export function InvestmentsPage() {
                     <td className="px-4 py-3">
                       <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">{inv.projectCode}</span>
                     </td>
-                    <td className="px-4 py-3 font-bold text-green-700">{fmt(inv.amount)}</td>
+                    <td className="px-4 py-3 font-bold text-success text-right tabular-nums">{fmt(inv.amount)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${MODE_COLOR[inv.paymentMode] ?? 'bg-surface-muted text-content-muted'}`}>
                         {inv.paymentMode}
@@ -314,10 +317,10 @@ export function InvestmentsPage() {
                     <td className="px-4 py-3 text-xs text-content-muted">{inv.referenceNo || '—'}</td>
                     <td className="px-4 py-3">
                       {inv.isReversed
-                        ? <span className="flex items-center gap-1 text-xs text-red-600 font-medium">
+                        ? <span className="flex items-center gap-1 text-xs text-danger font-medium">
                             <RotateCcw className="w-3 h-3" /> Reversed
                           </span>
-                        : <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                        : <span className="flex items-center gap-1 text-xs text-success font-medium">
                             <CheckCircle className="w-3 h-3" /> Active
                           </span>
                       }
@@ -325,7 +328,7 @@ export function InvestmentsPage() {
                     <td className="px-4 py-3">
                       {!inv.isReversed && (
                         <button onClick={() => setReversing(inv)} title="Reverse this entry"
-                          className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors">
                           <RotateCcw className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -343,7 +346,7 @@ export function InvestmentsPage() {
                   <td colSpan={4} className="px-4 py-2 text-xs font-bold text-content uppercase">
                     Total Active Investment
                   </td>
-                  <td className="px-4 py-2 font-bold text-green-700">{fmt(totalAmount)}</td>
+                  <td className="px-4 py-2 font-bold text-success text-right tabular-nums">{fmt(totalAmount)}</td>
                   <td colSpan={4} />
                 </tr>
               </tfoot>

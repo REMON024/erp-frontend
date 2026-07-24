@@ -12,16 +12,16 @@ import type { Task, TaskStatus, TaskPriority } from '@/types'
 
 const COLUMNS: { id: TaskStatus; label: string; color: string; icon: React.ReactNode }[] = [
   { id: 'pending',     label: 'Pending',     color: 'bg-surface-muted border-border-default',   icon: <Circle className="w-4 h-4 text-content-muted" /> },
-  { id: 'in_progress', label: 'In Progress', color: 'bg-primary/10 border-blue-200',    icon: <Clock className="w-4 h-4 text-primary" /> },
-  { id: 'review',      label: 'Review',      color: 'bg-amber-50 border-amber-200',  icon: <Eye className="w-4 h-4 text-amber-500" /> },
-  { id: 'done',        label: 'Done',        color: 'bg-green-50 border-green-200',  icon: <CheckCircle2 className="w-4 h-4 text-green-500" /> },
+  { id: 'in_progress', label: 'In Progress', color: 'bg-primary/10 border-info/20',    icon: <Clock className="w-4 h-4 text-primary" /> },
+  { id: 'review',      label: 'Review',      color: 'bg-warning/15 border-warning/20',  icon: <Eye className="w-4 h-4 text-warning" /> },
+  { id: 'done',        label: 'Done',        color: 'bg-success/10 border-success/20',  icon: <CheckCircle2 className="w-4 h-4 text-success" /> },
 ]
 
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
   low:      'bg-surface-muted text-content-muted',
   medium:   'bg-primary/10 text-primary',
-  high:     'bg-orange-100 text-orange-700',
-  critical: 'bg-red-100 text-red-700',
+  high:     'bg-warning/15 text-warning',
+  critical: 'bg-danger/10 text-danger',
 }
 
 const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
@@ -59,11 +59,11 @@ function TaskModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
   return (
     <Modal open onClose={onClose} title="New Task" size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
           <label className={lbl}>Title</label>
           <input {...register('title')} className={inp} placeholder="Task title" />
-          {errors.title && <p className="text-xs text-red-600 mt-1">{errors.title.message}</p>}
+          {errors.title && <p className="text-xs text-danger mt-1">{errors.title.message}</p>}
         </div>
         <div>
           <label className={lbl}>Description</label>
@@ -73,12 +73,12 @@ function TaskModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           <div>
             <label className={lbl}>Project ID</label>
             <input {...register('project_id')} className={inp} placeholder="p1" />
-            {errors.project_id && <p className="text-xs text-red-600 mt-1">{errors.project_id.message}</p>}
+            {errors.project_id && <p className="text-xs text-danger mt-1">{errors.project_id.message}</p>}
           </div>
           <div>
             <label className={lbl}>Assign To (User ID)</label>
             <input {...register('assigned_to')} className={inp} placeholder="u1" />
-            {errors.assigned_to && <p className="text-xs text-red-600 mt-1">{errors.assigned_to.message}</p>}
+            {errors.assigned_to && <p className="text-xs text-danger mt-1">{errors.assigned_to.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -98,7 +98,7 @@ function TaskModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => v
           <div>
             <label className={lbl}>Due Date</label>
             <DateField {...register('due_date')} />
-            {errors.due_date && <p className="text-xs text-red-600 mt-1">{errors.due_date.message}</p>}
+            {errors.due_date && <p className="text-xs text-danger mt-1">{errors.due_date.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
@@ -125,7 +125,7 @@ function TaskCard({ task, onStatusChange }: { task: Task; onStatusChange: (id: s
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${PRIORITY_COLORS[task.priority]}`}>
           {task.priority}
         </span>
-        <span className={`text-xs ${overdue ? 'text-red-600 font-medium' : 'text-content-muted'}`}>
+        <span className={`text-xs ${overdue ? 'text-danger font-medium' : 'text-content-muted'}`}>
           {overdue ? 'Overdue ' : ''}{task.due_date}
         </span>
       </div>
@@ -214,7 +214,7 @@ export function TasksPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />{error}
         </div>
       )}

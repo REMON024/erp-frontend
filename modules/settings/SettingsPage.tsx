@@ -114,8 +114,8 @@ export function SettingsPage() {
           </div>
 
           {profileMsg && (
-            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${profileMsg.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-              {profileMsg.ok ? <CheckCircle className="w-4 h-4 text-green-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${profileMsg.ok ? 'bg-success/10 border-success/20 text-success' : 'bg-danger/10 border-danger/20 text-danger'}`}>
+              {profileMsg.ok ? <CheckCircle className="w-4 h-4 text-success" /> : <AlertCircle className="w-4 h-4 text-danger" />}
               <p className="text-sm font-medium">{profileMsg.text}</p>
             </div>
           )}
@@ -123,17 +123,17 @@ export function SettingsPage() {
           <form onSubmit={profileForm.handleSubmit(onProfileSave as any)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={lbl}>First Name <span className="text-red-500">*</span></label>
+                <label className={lbl}>First Name <span className="text-danger">*</span></label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 w-4 h-4 text-content-muted" />
                   <input {...profileForm.register('firstName')} className={inp + ' pl-9'} />
                 </div>
-                {profileForm.formState.errors.firstName && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.firstName.message}</p>}
+                {profileForm.formState.errors.firstName && <p className="text-xs text-danger mt-1">{profileForm.formState.errors.firstName.message}</p>}
               </div>
               <div>
-                <label className={lbl}>Last Name <span className="text-red-500">*</span></label>
+                <label className={lbl}>Last Name <span className="text-danger">*</span></label>
                 <input {...profileForm.register('lastName')} className={inp} />
-                {profileForm.formState.errors.lastName && <p className="text-xs text-red-600 mt-1">{profileForm.formState.errors.lastName.message}</p>}
+                {profileForm.formState.errors.lastName && <p className="text-xs text-danger mt-1">{profileForm.formState.errors.lastName.message}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -172,28 +172,28 @@ export function SettingsPage() {
           <p className="text-sm text-content-muted mb-6">Ensure your account uses a strong and secure password</p>
 
           {pwMsg && (
-            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${pwMsg.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-              {pwMsg.ok ? <CheckCircle className="w-4 h-4 text-green-600" /> : <AlertCircle className="w-4 h-4 text-red-600" />}
+            <div className={`mb-4 flex items-center gap-2 px-4 py-3 rounded-lg border ${pwMsg.ok ? 'bg-success/10 border-success/20 text-success' : 'bg-danger/10 border-danger/20 text-danger'}`}>
+              {pwMsg.ok ? <CheckCircle className="w-4 h-4 text-success" /> : <AlertCircle className="w-4 h-4 text-danger" />}
               <p className="text-sm font-medium">{pwMsg.text}</p>
             </div>
           )}
 
           <form onSubmit={passwordForm.handleSubmit(onPasswordSave as any)} className="space-y-4">
             <div>
-              <label className={lbl}>Current Password <span className="text-red-500">*</span></label>
+              <label className={lbl}>Current Password <span className="text-danger">*</span></label>
               <input type="password" {...passwordForm.register('currentPassword')} className={inp} placeholder="••••••••" />
-              {passwordForm.formState.errors.currentPassword && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.currentPassword.message}</p>}
+              {passwordForm.formState.errors.currentPassword && <p className="text-xs text-danger mt-1">{passwordForm.formState.errors.currentPassword.message}</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className={lbl}>New Password <span className="text-red-500">*</span></label>
+                <label className={lbl}>New Password <span className="text-danger">*</span></label>
                 <input type="password" {...passwordForm.register('newPassword')} className={inp} placeholder="••••••••" />
-                {passwordForm.formState.errors.newPassword && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.newPassword.message}</p>}
+                {passwordForm.formState.errors.newPassword && <p className="text-xs text-danger mt-1">{passwordForm.formState.errors.newPassword.message}</p>}
               </div>
               <div>
-                <label className={lbl}>Confirm New Password <span className="text-red-500">*</span></label>
+                <label className={lbl}>Confirm New Password <span className="text-danger">*</span></label>
                 <input type="password" {...passwordForm.register('confirmPassword')} className={inp} placeholder="••••••••" />
-                {passwordForm.formState.errors.confirmPassword && <p className="text-xs text-red-600 mt-1">{passwordForm.formState.errors.confirmPassword.message}</p>}
+                {passwordForm.formState.errors.confirmPassword && <p className="text-xs text-danger mt-1">{passwordForm.formState.errors.confirmPassword.message}</p>}
               </div>
             </div>
             <div className="flex justify-end pt-2">
@@ -226,7 +226,7 @@ export function SettingsPage() {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" defaultChecked={n.defaultOn} />
-                  <div className="w-10 h-5 bg-surface-muted peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-5 peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-surface after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                  <div className="w-10 h-5 bg-surface-muted peer-focus:ring-2 peer-focus:ring-info/40 rounded-full peer peer-checked:after:translate-x-5 peer-checked:bg-primary after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-surface after:rounded-full after:h-4 after:w-4 after:transition-all" />
                 </label>
               </div>
             ))}
