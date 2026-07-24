@@ -425,14 +425,6 @@ function BillsModal({ wo, onClose, onChanged }: {
 
   return (
     <>
-    {voucherBill && (
-      <VoucherFromBillModal
-        bill={voucherBill.bill} wo={wo} mode={voucherBill.mode}
-        accounts={accounts}
-        onClose={() => setVoucherBill(null)}
-        onSaved={() => { setVoucherBill(null); onVoucherSaved() }}
-      />
-    )}
     <Modal open onClose={onClose} title={`Bills — ${wo.workOrderNo}`} size="lg">
       <div className="space-y-4">
         <div className="bg-surface-muted rounded-lg px-4 py-2 text-xs text-content-muted flex flex-wrap gap-4">
@@ -523,6 +515,14 @@ function BillsModal({ wo, onClose, onChanged }: {
         </DataState>
       </div>
     </Modal>
+    {voucherBill && (
+      <VoucherFromBillModal
+        bill={voucherBill.bill} wo={wo} mode={voucherBill.mode}
+        accounts={accounts}
+        onClose={() => setVoucherBill(null)}
+        onSaved={() => { setVoucherBill(null); onVoucherSaved() }}
+      />
+    )}
     </>
   )
 }
