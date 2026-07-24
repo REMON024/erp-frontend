@@ -70,11 +70,11 @@ export function WorkOrderMaterialBudgetPage() {
             </div>
             <div className="rounded-xl border border-border-default bg-primary/10 p-4">
               <p className="text-xs text-primary uppercase font-semibold">Total Received</p>
-              <p className="text-2xl font-bold text-blue-900 mt-1">{fmt(data?.totalReceivedValue ?? 0)}</p>
+              <p className="text-2xl font-bold text-info mt-1">{fmt(data?.totalReceivedValue ?? 0)}</p>
             </div>
             <div className="rounded-xl border border-border-default bg-surface p-4">
               <p className="text-xs text-content-muted uppercase font-semibold">Remaining Budget</p>
-              <p className={`text-2xl font-bold mt-1 ${totalRemaining < 0 ? 'text-red-700' : 'text-content'}`}>{fmt(totalRemaining)}</p>
+              <p className={`text-2xl font-bold mt-1 ${totalRemaining < 0 ? 'text-danger' : 'text-content'}`}>{fmt(totalRemaining)}</p>
             </div>
           </div>
 
@@ -84,7 +84,7 @@ export function WorkOrderMaterialBudgetPage() {
                 <thead className="bg-surface-muted border-b border-border-default">
                   <tr>
                     {['Work Order', 'Project', 'Material', 'Unit', 'Budget Qty', 'Received', 'Remaining', 'Received %', 'Budget Amount', 'Received Value'].map(h => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                      <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Budget Qty','Received','Remaining','Received %','Budget Amount','Received Value'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -96,8 +96,8 @@ export function WorkOrderMaterialBudgetPage() {
                       <td className="px-3 py-2 font-medium text-content">{r.materialName}</td>
                       <td className="px-3 py-2 text-content-muted">{r.unit}</td>
                       <td className="px-3 py-2 text-right text-content">{fmtQ(r.budgetQty)}</td>
-                      <td className="px-3 py-2 text-right text-green-700">{fmtQ(r.receivedQty)}</td>
-                      <td className={`px-3 py-2 text-right font-semibold ${r.remainingQty < 0 ? 'text-red-700' : 'text-content'}`}>{fmtQ(r.remainingQty)}</td>
+                      <td className="px-3 py-2 text-right text-success">{fmtQ(r.receivedQty)}</td>
+                      <td className={`px-3 py-2 text-right font-semibold ${r.remainingQty < 0 ? 'text-danger' : 'text-content'}`}>{fmtQ(r.remainingQty)}</td>
                       <td className="px-3 py-2 text-right text-content-muted">{r.receivedPct}%</td>
                       <td className="px-3 py-2 text-right text-content-muted">{fmt(r.budgetAmount)}</td>
                       <td className="px-3 py-2 text-right font-semibold text-primary">{fmt(r.receivedValue)}</td>
@@ -108,7 +108,7 @@ export function WorkOrderMaterialBudgetPage() {
                   <tr>
                     <td colSpan={8} className="px-3 py-2 text-xs uppercase text-content">Totals</td>
                     <td className="px-3 py-2 text-right text-content">{fmt(data?.totalBudgetAmount ?? 0)}</td>
-                    <td className="px-3 py-2 text-right text-blue-800">{fmt(data?.totalReceivedValue ?? 0)}</td>
+                    <td className="px-3 py-2 text-right text-info">{fmt(data?.totalReceivedValue ?? 0)}</td>
                   </tr>
                 </tfoot>
               </table>

@@ -17,11 +17,11 @@ interface ArAgingDto { rows: ArAgingRow[]; totalOutstanding: number }
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 
 const BUCKET_COLOR: Record<string, string> = {
-  'Current':    'bg-green-100 text-green-700',
-  '1-30 days':  'bg-yellow-100 text-yellow-700',
-  '31-60 days': 'bg-orange-100 text-orange-700',
-  '61-90 days': 'bg-red-100 text-red-700',
-  '90+ days':   'bg-red-200 text-red-800',
+  'Current':    'bg-success/10 text-success',
+  '1-30 days':  'bg-warning/15 text-warning',
+  '31-60 days': 'bg-warning/15 text-warning',
+  '61-90 days': 'bg-danger/10 text-danger',
+  '90+ days':   'bg-danger text-danger',
 }
 
 export function ArAgingPage() {
@@ -78,34 +78,34 @@ export function ArAgingPage() {
             <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
               <div className="px-4 py-3 border-b border-border-default flex items-center justify-between">
                 <h3 className="font-semibold text-content">Invoice Detail</h3>
-                <span className="text-sm font-bold text-red-700">Total Outstanding: {fmt(data?.totalOutstanding ?? 0)}</span>
+                <span className="text-sm font-bold text-danger">Total Outstanding: {fmt(data?.totalOutstanding ?? 0)}</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[780px] text-sm">
                   <thead className="bg-surface-muted border-b border-border-default">
                     <tr>
                       {['Invoice No', 'Customer', 'Invoice Date', 'Due Date', 'Total', 'Paid', 'Outstanding', 'Days Overdue', 'Bucket'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                        <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Total','Paid','Outstanding'].includes(h) ? 'text-right' : h === 'Days Overdue' ? 'text-center' : 'text-left'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-default">
                     {data?.rows.map(r => (
-                      <tr key={r.invoiceId} className={r.daysOverdue > 90 ? 'bg-red-50/40' : r.daysOverdue > 60 ? 'bg-orange-50/40' : 'hover:bg-surface-muted'}>
+                      <tr key={r.invoiceId} className={r.daysOverdue > 90 ? 'bg-danger/10' : r.daysOverdue > 60 ? 'bg-warning/15' : 'hover:bg-surface-muted'}>
                         <td className="px-3 py-2 font-medium text-primary">{r.invoiceNo}</td>
                         <td className="px-3 py-2 text-content">{r.customerName}</td>
                         <td className="px-3 py-2 text-content-muted">{r.invoiceDate}</td>
                         <td className="px-3 py-2 text-content-muted">{r.dueDate || '—'}</td>
                         <td className="px-3 py-2 text-right">{fmt(r.totalAmount)}</td>
-                        <td className="px-3 py-2 text-right text-green-700">{fmt(r.paidAmount)}</td>
-                        <td className="px-3 py-2 text-right font-semibold text-red-700">{fmt(r.outstanding)}</td>
+                        <td className="px-3 py-2 text-right text-success">{fmt(r.paidAmount)}</td>
+                        <td className="px-3 py-2 text-right font-semibold text-danger">{fmt(r.outstanding)}</td>
                         <td className="px-3 py-2 text-center">
                           {r.daysOverdue > 0 && (
-                            <span className="flex items-center gap-1 justify-center text-red-600">
+                            <span className="flex items-center gap-1 justify-center text-danger">
                               <AlertTriangle className="w-3 h-3" /> {r.daysOverdue}d
                             </span>
                           )}
-                          {r.daysOverdue === 0 && <span className="text-green-600">Current</span>}
+                          {r.daysOverdue === 0 && <span className="text-success">Current</span>}
                         </td>
                         <td className="px-3 py-2">
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BUCKET_COLOR[r.agingBucket] ?? 'bg-surface-muted text-content-muted'}`}>{r.agingBucket}</span>
@@ -116,7 +116,7 @@ export function ArAgingPage() {
                   <tfoot className="border-t border-border-default bg-surface-muted font-bold">
                     <tr>
                       <td colSpan={6} className="px-3 py-2 text-xs uppercase text-content">Total Outstanding</td>
-                      <td className="px-3 py-2 text-right text-red-700">{fmt(data?.totalOutstanding ?? 0)}</td>
+                      <td className="px-3 py-2 text-right text-danger">{fmt(data?.totalOutstanding ?? 0)}</td>
                       <td colSpan={2} />
                     </tr>
                   </tfoot>

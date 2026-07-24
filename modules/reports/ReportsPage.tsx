@@ -8,15 +8,15 @@ function fmtL(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
 function pct(a: number, b: number) { return b > 0 ? Math.round((a / b) * 100) : 0 }
 
 const STATUS_COLORS: Record<string, string> = {
-  Active:    'bg-green-100 text-green-700',
+  Active:    'bg-success/10 text-success',
   Completed: 'bg-primary/10 text-primary',
   Planning:  'bg-surface-muted text-content-muted',
-  OnHold:    'bg-amber-100 text-amber-700',
+  OnHold:    'bg-warning/15 text-warning',
 }
 const INV_STATUS_STYLE: Record<string, string> = {
-  Paid:      'bg-green-100 text-green-700',
-  Partial:   'bg-yellow-100 text-yellow-700',
-  Overdue:   'bg-red-100 text-red-700',
+  Paid:      'bg-success/10 text-success',
+  Partial:   'bg-warning/15 text-warning',
+  Overdue:   'bg-danger/10 text-danger',
   Sent:      'bg-primary/10 text-primary',
   Draft:     'bg-surface-muted text-content-muted',
   Cancelled: 'bg-surface-muted text-content-muted',
@@ -51,10 +51,10 @@ function ProjectSummaryReport() {
     <div className="space-y-5">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Est. Cost',    value: fmtL(totalCost),      color: 'text-red-600'   },
+          { label: 'Total Est. Cost',    value: fmtL(totalCost),      color: 'text-danger'   },
           { label: 'Total Est. Revenue', value: fmtL(totalRevenue),   color: 'text-primary'  },
-          { label: 'Total Billed',       value: fmt(totalBilled),     color: 'text-green-600' },
-          { label: 'Total Collected',    value: fmt(totalCollected),  color: 'text-teal-600'  },
+          { label: 'Total Billed',       value: fmt(totalBilled),     color: 'text-success' },
+          { label: 'Total Collected',    value: fmt(totalCollected),  color: 'text-success'  },
         ].map(k => (
           <div key={k.label} className="bg-surface-muted rounded-xl border border-border-default p-4">
             <p className="text-xs text-content-muted">{k.label}</p>
@@ -70,8 +70,11 @@ function ProjectSummaryReport() {
           <Table minW={640}>
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
-                {['Project', 'Status', 'Est. Cost', 'Est. Revenue', 'Net'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                {[
+                  { h: 'Project' }, { h: 'Status' }, { h: 'Est. Cost', num: true },
+                  { h: 'Est. Revenue', num: true }, { h: 'Net', num: true },
+                ].map(({ h, num }) => (
+                  <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -87,11 +90,11 @@ function ProjectSummaryReport() {
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[p.status] ?? 'bg-surface-muted text-content-muted'}`}>{p.status}</span>
                     </td>
-                    <td className="px-4 py-3 text-red-700 font-medium text-xs">{p.estimatedCost   ? fmtL(p.estimatedCost)   : '—'}</td>
-                    <td className="px-4 py-3 text-primary font-medium text-xs">{p.estimatedRevenue ? fmtL(p.estimatedRevenue) : '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-danger font-medium text-xs text-right tabular-nums">{p.estimatedCost   ? fmtL(p.estimatedCost)   : '—'}</td>
+                    <td className="px-4 py-3 text-primary font-medium text-xs text-right tabular-nums">{p.estimatedRevenue ? fmtL(p.estimatedRevenue) : '—'}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">
                       {p.estimatedRevenue && p.estimatedCost
-                        ? <span className={`text-xs font-bold ${net >= 0 ? 'text-green-700' : 'text-red-600'}`}>{net >= 0 ? '+' : ''}{fmtL(net)}</span>
+                        ? <span className={`text-xs font-bold ${net >= 0 ? 'text-success' : 'text-danger'}`}>{net >= 0 ? '+' : ''}{fmtL(net)}</span>
                         : <span className="text-content-muted text-xs">—</span>}
                     </td>
                   </tr>
@@ -101,10 +104,10 @@ function ProjectSummaryReport() {
             <tfoot className="bg-surface-muted border-t border-border-default">
               <tr>
                 <td colSpan={2} className="px-4 py-3 text-xs font-bold text-content uppercase">Totals</td>
-                <td className="px-4 py-3 text-red-700 font-bold text-xs">{fmtL(totalCost)}</td>
-                <td className="px-4 py-3 text-primary font-bold text-xs">{fmtL(totalRevenue)}</td>
-                <td className="px-4 py-3 font-bold text-xs">
-                  <span className={totalRevenue - totalCost >= 0 ? 'text-green-700' : 'text-red-600'}>
+                <td className="px-4 py-3 text-danger font-bold text-xs text-right tabular-nums">{fmtL(totalCost)}</td>
+                <td className="px-4 py-3 text-primary font-bold text-xs text-right tabular-nums">{fmtL(totalRevenue)}</td>
+                <td className="px-4 py-3 font-bold text-xs text-right tabular-nums">
+                  <span className={totalRevenue - totalCost >= 0 ? 'text-success' : 'text-danger'}>
                     {totalRevenue - totalCost >= 0 ? '+' : ''}{fmtL(totalRevenue - totalCost)}
                   </span>
                 </td>
@@ -145,9 +148,9 @@ function PurchaseVendorReport() {
 
   const PO_STATUS: Record<string, string> = {
     Draft:    'bg-surface-muted text-content-muted',
-    Approved: 'bg-green-100 text-green-700',
+    Approved: 'bg-success/10 text-success',
     Received: 'bg-primary/10 text-primary',
-    Cancelled:'bg-red-100 text-red-600',
+    Cancelled:'bg-danger/10 text-danger',
   }
 
   return (
@@ -155,8 +158,8 @@ function PurchaseVendorReport() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: 'Total PO Value', value: fmt(totalAmt), color: 'text-content',  pctVal: 100 },
-          { label: 'Approved',       value: fmt(approved), color: 'text-green-700', pctVal: pct(approved, totalAmt) },
-          { label: 'Draft / Pending',value: fmt(draft),    color: 'text-amber-700', pctVal: pct(draft, totalAmt) },
+          { label: 'Approved',       value: fmt(approved), color: 'text-success', pctVal: pct(approved, totalAmt) },
+          { label: 'Draft / Pending',value: fmt(draft),    color: 'text-warning', pctVal: pct(draft, totalAmt) },
         ].map(k => (
           <div key={k.label} className="bg-surface-muted rounded-xl border border-border-default p-4">
             <p className="text-xs text-content-muted">{k.label}</p>
@@ -214,8 +217,8 @@ function PurchaseVendorReport() {
             ? <p className="px-4 py-8 text-sm text-content-muted text-center">No orders found.</p>
             : <Table>
                 <thead className="bg-surface-muted border-b border-border-default">
-                  <tr>{['PO No.', 'Vendor', 'Date', 'Amount', 'Status'].map(h => (
-                    <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-content-muted uppercase">{h}</th>
+                  <tr>{[{ h: 'PO No.' }, { h: 'Vendor' }, { h: 'Date' }, { h: 'Amount', num: true }, { h: 'Status' }].map(({ h, num }) => (
+                    <th key={h} className={`px-3 py-2.5 text-xs font-semibold text-content-muted uppercase ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody className="divide-y divide-border-default">
@@ -224,7 +227,7 @@ function PurchaseVendorReport() {
                       <td className="px-3 py-2.5 font-mono text-xs text-primary font-semibold">{o.poNumber}</td>
                       <td className="px-3 py-2.5 text-xs text-content">{o.vendorName}</td>
                       <td className="px-3 py-2.5 text-xs text-content-muted">{o.poDate}</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold text-content">{fmt(o.totalAmount)}</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold text-content text-right tabular-nums">{fmt(o.totalAmount)}</td>
                       <td className="px-3 py-2.5">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PO_STATUS[o.status] ?? 'bg-surface-muted text-content-muted'}`}>{o.status}</span>
                       </td>
@@ -275,12 +278,12 @@ function SalesCollectionsReport() {
         </div>
         <div className="bg-surface-muted rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted">Total Collected</p>
-          <p className="text-base sm:text-lg font-bold text-green-700 mt-1">{fmt(totalCollected)}</p>
+          <p className="text-base sm:text-lg font-bold text-success mt-1">{fmt(totalCollected)}</p>
           <p className="text-xs text-content-muted mt-1">Collection rate: {pct(totalCollected, totalRevenue)}%</p>
         </div>
         <div className="bg-surface-muted rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted">Outstanding Balance</p>
-          <p className="text-base sm:text-lg font-bold text-red-600 mt-1">{fmt(outstanding)}</p>
+          <p className="text-base sm:text-lg font-bold text-danger mt-1">{fmt(outstanding)}</p>
         </div>
       </div>
 
@@ -305,7 +308,7 @@ function SalesCollectionsReport() {
                       </td>
                       <td className="px-4 py-2.5 text-right text-xs font-bold">{a.count}</td>
                       <td className="px-4 py-2.5 text-right text-xs text-content">{fmt(a.amount)}</td>
-                      <td className="px-4 py-2.5 text-right text-xs text-green-700">{fmt(a.collected)}</td>
+                      <td className="px-4 py-2.5 text-right text-xs text-success">{fmt(a.collected)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -314,7 +317,7 @@ function SalesCollectionsReport() {
                     <td className="px-4 py-2.5 text-xs font-bold text-content">Total</td>
                     <td className="px-4 py-2.5 text-right text-xs font-bold">{invoices.length}</td>
                     <td className="px-4 py-2.5 text-right text-xs font-bold">{fmt(totalRevenue)}</td>
-                    <td className="px-4 py-2.5 text-right text-xs font-bold text-green-700">{fmt(totalCollected)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold text-success">{fmt(totalCollected)}</td>
                   </tr>
                 </tfoot>
               </Table>
@@ -341,7 +344,7 @@ function SalesCollectionsReport() {
                         <p className="text-[10px] text-content-muted">{c.mobile}</p>
                       </td>
                       <td className="px-4 py-2.5 text-xs text-content-muted">{c.invoiceCount}</td>
-                      <td className={`px-4 py-2.5 text-right text-xs font-bold ${c.balance > 0 ? 'text-red-600' : 'text-green-700'}`}>
+                      <td className={`px-4 py-2.5 text-right text-xs font-bold ${c.balance > 0 ? 'text-danger' : 'text-success'}`}>
                         {c.balance > 0 ? fmt(c.balance) : 'Settled'}
                       </td>
                     </tr>
@@ -350,7 +353,7 @@ function SalesCollectionsReport() {
                 <tfoot className="bg-surface-muted border-t border-border-default">
                   <tr>
                     <td colSpan={2} className="px-4 py-2.5 text-xs font-bold text-content">Total Outstanding</td>
-                    <td className="px-4 py-2.5 text-right text-xs font-bold text-red-600">{fmt(outstanding)}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-bold text-danger">{fmt(outstanding)}</td>
                   </tr>
                 </tfoot>
               </Table>
@@ -394,9 +397,9 @@ function StockMovementReport() {
   return (
     <div className="space-y-5">
       {lowCount > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
-          <Package className="w-4 h-4 text-red-500 shrink-0" />
-          <p className="text-sm text-red-700 font-medium">{lowCount} material(s) at or below reorder level — replenishment required.</p>
+        <div className="bg-danger/10 border border-danger/20 rounded-xl p-4 flex items-center gap-3">
+          <Package className="w-4 h-4 text-danger shrink-0" />
+          <p className="text-sm text-danger font-medium">{lowCount} material(s) at or below reorder level — replenishment required.</p>
         </div>
       )}
 
@@ -419,18 +422,18 @@ function StockMovementReport() {
               </thead>
               <tbody className="divide-y divide-border-default">
                 {rows.map(r => (
-                  <tr key={r.id} className={`hover:bg-surface-muted ${r.isLowStock ? 'bg-red-50/40' : ''}`}>
+                  <tr key={r.id} className={`hover:bg-surface-muted ${r.isLowStock ? 'bg-danger/10' : ''}`}>
                     <td className="px-4 py-2.5 font-medium text-content text-xs">{r.materialName}</td>
                     <td className="px-4 py-2.5 text-content-muted text-xs">{r.unit}</td>
-                    <td className="px-4 py-2.5 text-right text-green-700 font-medium text-xs">+{r.totalIn.toLocaleString()}</td>
-                    <td className="px-4 py-2.5 text-right text-orange-600 font-medium text-xs">−{r.totalOut.toLocaleString()}</td>
-                    <td className={`px-4 py-2.5 text-right font-bold text-xs ${r.isLowStock ? 'text-red-600' : 'text-content'}`}>
+                    <td className="px-4 py-2.5 text-right text-success font-medium text-xs">+{r.totalIn.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-right text-warning font-medium text-xs">−{r.totalOut.toLocaleString()}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold text-xs ${r.isLowStock ? 'text-danger' : 'text-content'}`}>
                       {r.currentStock.toLocaleString()}
                     </td>
                     <td className="px-4 py-2.5 text-right text-content-muted text-xs">{r.minimumStock.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-right text-content-muted text-xs">{fmt(r.averageCost)}</td>
                     <td className="px-4 py-2.5">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.isLowStock ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.isLowStock ? 'bg-danger/10 text-danger' : 'bg-success/10 text-success'}`}>
                         {r.isLowStock ? 'Low' : 'OK'}
                       </span>
                     </td>
@@ -448,8 +451,8 @@ function StockMovementReport() {
           </div>
           <Table minW={400}>
             <thead className="bg-surface-muted border-b border-border-default">
-              <tr>{['Project', 'Transactions', 'Total Qty Issued'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase">{h}</th>
+              <tr>{[{ h: 'Project' }, { h: 'Transactions', align: 'center' as const }, { h: 'Total Qty Issued', num: true }].map(({ h, num, align }) => (
+                <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
               ))}</tr>
             </thead>
             <tbody className="divide-y divide-border-default">
@@ -457,7 +460,7 @@ function StockMovementReport() {
                 <tr key={name} className="hover:bg-surface-muted">
                   <td className="px-4 py-3 font-medium text-content text-xs">{name}</td>
                   <td className="px-4 py-3 text-center font-bold text-content text-xs">{d.count}</td>
-                  <td className="px-4 py-3 font-semibold text-content text-xs">{d.qty.toLocaleString()}</td>
+                  <td className="px-4 py-3 font-semibold text-content text-xs text-right tabular-nums">{d.qty.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

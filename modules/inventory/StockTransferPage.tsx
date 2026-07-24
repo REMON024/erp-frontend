@@ -53,12 +53,12 @@ export function StockTransferPage() {
 
       <div className="bg-surface rounded-xl border border-border-default p-5 max-w-2xl space-y-4">
         {msg && (
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${msg.ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${msg.ok ? 'bg-success/10 text-success border border-success/20' : 'bg-danger/10 text-danger border border-danger/20'}`}>
             {msg.ok ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}{msg.text}
           </div>
         )}
         <div>
-          <label className={lbl}>Material <span className="text-red-500">*</span></label>
+          <label className={lbl}>Material <span className="text-danger">*</span></label>
           <Select value={materialId} onChange={e => setMaterialId(e.target.value)}>
             <option value="">Select material</option>
             {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
@@ -66,24 +66,24 @@ export function StockTransferPage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
           <div>
-            <label className={lbl}>From warehouse <span className="text-red-500">*</span></label>
+            <label className={lbl}>From warehouse <span className="text-danger">*</span></label>
             <Select value={from} onChange={e => setFrom(e.target.value)}>
               <option value="">Select source</option>
               {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </Select>
           </div>
           <div>
-            <label className={lbl}>To warehouse <span className="text-red-500">*</span></label>
+            <label className={lbl}>To warehouse <span className="text-danger">*</span></label>
             <Select value={to} onChange={e => setTo(e.target.value)}>
               <option value="">Select destination</option>
               {warehouses.filter(w => String(w.id) !== from).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </Select>
           </div>
         </div>
-        {from && to && from === to && <p className="text-xs text-red-600">Source and destination must differ.</p>}
+        {from && to && from === to && <p className="text-xs text-danger">Source and destination must differ.</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Quantity <span className="text-red-500">*</span></label>
+            <label className={lbl}>Quantity <span className="text-danger">*</span></label>
             <input type="number" step="any" value={qty} onChange={e => setQty(e.target.value)} className={inp} placeholder="0" />
           </div>
           <div>

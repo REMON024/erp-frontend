@@ -23,10 +23,10 @@ export interface Unit {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  Available: 'bg-emerald-100 text-emerald-700',
+  Available: 'bg-success/10 text-success',
   Booked:    'bg-primary/10 text-primary',
   Sold:      'bg-surface-muted text-content-muted',
-  Cancelled: 'bg-red-100 text-red-600',
+  Cancelled: 'bg-danger/10 text-danger',
 }
 const STATUSES = ['Available', 'Booked', 'Sold', 'Cancelled']
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
@@ -84,30 +84,30 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Unit' : 'Add Unit'} size="lg">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Project <span className="text-red-500">*</span></label>
+            <label className={lbl}>Project <span className="text-danger">*</span></label>
             <Select {...register('projectId')}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
-            {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
+            {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Block <span className="text-red-500">*</span></label>
+            <label className={lbl}>Block <span className="text-danger">*</span></label>
             <Select {...register('blockId')}>
               <option value="">Select block</option>
               {eligibleBlocks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
-            {errors.blockId && <p className="text-xs text-red-600 mt-1">{errors.blockId.message}</p>}
+            {errors.blockId && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className={lbl}>Unit No. <span className="text-red-500">*</span></label>
+            <label className={lbl}>Unit No. <span className="text-danger">*</span></label>
             <input {...register('unitNo')} className={inp} placeholder="A-101" />
-            {errors.unitNo && <p className="text-xs text-red-600 mt-1">{errors.unitNo.message}</p>}
+            {errors.unitNo && <p className="text-xs text-danger mt-1">{errors.unitNo.message}</p>}
           </div>
           <div>
             <label className={lbl}>Floor</label>
@@ -139,9 +139,9 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Base Price (৳) <span className="text-red-500">*</span></label>
+            <label className={lbl}>Base Price (৳) <span className="text-danger">*</span></label>
             <input type="number" {...register('basePrice')} className={inp} placeholder="5000000" />
-            {errors.basePrice && <p className="text-xs text-red-600 mt-1">{errors.basePrice.message}</p>}
+            {errors.basePrice && <p className="text-xs text-danger mt-1">{errors.basePrice.message}</p>}
           </div>
           <div>
             <label className={lbl}>Additional Price (৳)</label>
@@ -208,10 +208,10 @@ export function UnitsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {[
           { label: 'Total Units',     value: units.length,        color: 'text-content',    bg: 'bg-surface' },
-          { label: 'Available',       value: available,           color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Available',       value: available,           color: 'text-success', bg: 'bg-success/10' },
           { label: 'Booked',          value: booked,              color: 'text-primary',    bg: 'bg-primary/10' },
           { label: 'Sold',            value: sold,                color: 'text-content-muted',    bg: 'bg-surface-muted' },
-          { label: 'Available Value', value: fmt(availableValue), color: 'text-indigo-600',  bg: 'bg-indigo-50' },
+          { label: 'Available Value', value: fmt(availableValue), color: 'text-info',  bg: 'bg-info/10' },
         ].map(s => (
           <div key={s.label} className={`rounded-xl border border-border-default p-4 ${s.bg}`}>
             <p className="text-xs text-content-muted uppercase tracking-wide leading-tight">{s.label}</p>
@@ -240,8 +240,12 @@ export function UnitsPage() {
             <table className="w-full min-w-[860px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Unit No.', 'Block', 'Type', 'Floor', 'Area (sqft)', 'Total Price', 'Facing', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Unit No.' }, { h: 'Block' }, { h: 'Type' }, { h: 'Floor', align: 'center' as const },
+                    { h: 'Area (sqft)', num: true }, { h: 'Total Price', num: true },
+                    { h: 'Facing' }, { h: 'Status' }, { h: '' },
+                  ].map(({ h, num, align }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -254,8 +258,8 @@ export function UnitsPage() {
                     </td>
                     <td className="px-4 py-3 text-content-muted text-xs">{u.unitType ?? '—'}</td>
                     <td className="px-4 py-3 text-content-muted text-center">{u.floorNo ?? '—'}</td>
-                    <td className="px-4 py-3 text-content font-medium">{u.sizeSqFt?.toLocaleString() ?? '—'}</td>
-                    <td className="px-4 py-3 font-semibold text-content">{fmt(u.totalPrice)}</td>
+                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{u.sizeSqFt?.toLocaleString() ?? '—'}</td>
+                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(u.totalPrice)}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{u.facing ?? '—'}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[u.status] ?? 'bg-surface-muted text-content-muted'}`}>{u.status}</span>

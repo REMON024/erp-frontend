@@ -26,12 +26,12 @@ export function TrialBalancePage() {
 
       {/* Reconciliation banner (PRD-07 FR-ACC-10) */}
       {r && (
-        <div className={`rounded-xl border p-4 ${r.allBalanced ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-300'}`}>
+        <div className={`rounded-xl border p-4 ${r.allBalanced ? 'bg-success/10 border-success/20' : 'bg-warning/15 border-warning/20'}`}>
           <div className="flex items-center gap-2">
             {r.allBalanced
-              ? <CheckCircle2 className="w-5 h-5 text-green-600" />
-              : <AlertTriangle className="w-5 h-5 text-amber-600" />}
-            <h3 className={`font-semibold text-sm ${r.allBalanced ? 'text-green-800' : 'text-amber-800'}`}>
+              ? <CheckCircle2 className="w-5 h-5 text-success" />
+              : <AlertTriangle className="w-5 h-5 text-warning" />}
+            <h3 className={`font-semibold text-sm ${r.allBalanced ? 'text-success' : 'text-warning'}`}>
               {r.allBalanced ? 'Ledger reconciled — all checks balanced' : 'Reconciliation mismatch detected'}
             </h3>
           </div>
@@ -39,7 +39,7 @@ export function TrialBalancePage() {
             {r.checks.map((c) => (
               <div key={c.label} className="flex items-center justify-between rounded-lg bg-surface border border-border-default px-3 py-2 text-sm">
                 <span className="text-content">{c.label}</span>
-                <span className={c.isBalanced ? 'text-green-600 font-medium' : 'text-red-600 font-semibold'}>
+                <span className={c.isBalanced ? 'text-success font-medium' : 'text-danger font-semibold'}>
                   {c.isBalanced ? 'OK' : `Δ ${fmt(c.difference)}`}
                 </span>
               </div>
@@ -72,7 +72,7 @@ export function TrialBalancePage() {
               ))}
             </tbody>
             <tfoot>
-              <tr className={`border-t-2 font-semibold ${balanced ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
+              <tr className={`border-t-2 font-semibold ${balanced ? 'border-success/20 bg-success/10' : 'border-danger/20 bg-danger/10'}`}>
                 <td className="px-4 py-2" colSpan={3}>Total {balanced ? '(Dr = Cr)' : '(out of balance!)'}</td>
                 <td className="px-4 py-2 text-right">{fmt(data.totalDebit)}</td>
                 <td className="px-4 py-2 text-right">{fmt(data.totalCredit)}</td>

@@ -57,20 +57,20 @@ function BlockModal({ block, projects, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Block' : 'Add Block'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
-          <label className={lbl}>Project <span className="text-red-500">*</span></label>
+          <label className={lbl}>Project <span className="text-danger">*</span></label>
           <Select {...register('projectId')}>
             <option value="">Select project…</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
           </Select>
-          {errors.projectId && <p className="text-xs text-red-600 mt-1">{errors.projectId.message}</p>}
+          {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Block / Tower Name <span className="text-red-500">*</span></label>
+            <label className={lbl}>Block / Tower Name <span className="text-danger">*</span></label>
             <input {...register('name')} className={inp} placeholder="Tower A1" />
-            {errors.name && <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>}
+            {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className={lbl}>Total Floors</label>
@@ -139,7 +139,7 @@ export function BlocksPage() {
         </div>
         <div className="bg-surface rounded-xl border border-border-default p-4">
           <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Total Units</p>
-          <p className="text-3xl font-bold text-purple-600 mt-1">{totalUnits}</p>
+          <p className="text-3xl font-bold text-primary mt-1">{totalUnits}</p>
         </div>
       </div>
 
@@ -168,8 +168,8 @@ export function BlocksPage() {
                   <tr key={b.id} className="hover:bg-surface-muted">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                          <Layers className="w-4 h-4 text-indigo-500" />
+                        <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+                          <Layers className="w-4 h-4 text-info" />
                         </div>
                         <span className="font-semibold text-content">{b.name}</span>
                       </div>

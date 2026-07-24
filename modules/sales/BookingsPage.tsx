@@ -27,7 +27,7 @@ interface Booking {
 
 const STATUS_COLORS: Record<string, string> = {
   Active:    'bg-primary/10 text-primary',
-  Cancelled: 'bg-red-100 text-red-600',
+  Cancelled: 'bg-danger/10 text-danger',
 }
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
@@ -99,14 +99,14 @@ function BookingModal({ customers, units, onClose, onSaved }: {
     return (
       <Modal open onClose={() => { onSaved(); onClose() }} title="Booking Confirmed — Installment Schedule" size="lg">
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg px-4 py-2 text-sm">
+          <div className="flex items-center gap-2 text-success bg-success/10 border border-success/20 rounded-lg px-4 py-2 text-sm">
             <List className="w-4 h-4" /> Booking saved. Review the installment schedule below.
           </div>
           <div className="overflow-x-auto border border-border-default rounded-lg">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
-                <tr>{['#', 'Due Date', 'Amount', 'Status'].map(h => (
-                  <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                <tr>{[{ h: '#', align: 'center' as const }, { h: 'Due Date' }, { h: 'Amount', num: true }, { h: 'Status' }].map(({ h, num, align }) => (
+                  <th key={h} className={`px-4 py-2 text-xs font-semibold text-content-muted ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
                 ))}</tr>
               </thead>
               <tbody className="divide-y divide-border-default">
@@ -114,7 +114,7 @@ function BookingModal({ customers, units, onClose, onSaved }: {
                   <tr key={s.installmentNo}>
                     <td className="px-4 py-2 text-content-muted text-center">{s.installmentNo}</td>
                     <td className="px-4 py-2 text-content text-xs">{s.dueDate}</td>
-                    <td className="px-4 py-2 font-semibold text-content">{fmt(s.amount)}</td>
+                    <td className="px-4 py-2 font-semibold text-content text-right tabular-nums">{fmt(s.amount)}</td>
                     <td className="px-4 py-2"><span className="text-xs px-2 py-0.5 rounded-full bg-surface-muted text-content-muted">{s.status}</span></td>
                   </tr>
                 ))}
@@ -135,20 +135,20 @@ function BookingModal({ customers, units, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title="New Booking" size="lg">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Client <span className="text-red-500">*</span></label>
+            <label className={lbl}>Client <span className="text-danger">*</span></label>
             <Select {...register('customerId')}>
               <option value="">Select client</option>
               {customers.filter(c => c.status === 'Active').map(c => (
                 <option key={c.id} value={c.id}>{c.fullName}</option>
               ))}
             </Select>
-            {errors.customerId && <p className="text-xs text-red-600 mt-1">{errors.customerId.message}</p>}
+            {errors.customerId && <p className="text-xs text-danger mt-1">{errors.customerId.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Booking Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>Booking Date <span className="text-danger">*</span></label>
             <DateField {...register('bookingDate')} />
           </div>
         </div>
@@ -165,8 +165,8 @@ function BookingModal({ customers, units, onClose, onSaved }: {
               <option key={u.id} value={u.id}>{u.unitNo} — {u.blockName} | {fmt(u.totalPrice)}</option>
             ))}
           </Select>
-          {availableUnits.length === 0 && <p className="text-xs text-amber-600 mt-1">No available units</p>}
-          {errors.unitId && <p className="text-xs text-red-600 mt-1">{errors.unitId.message}</p>}
+          {availableUnits.length === 0 && <p className="text-xs text-warning mt-1">No available units</p>}
+          {errors.unitId && <p className="text-xs text-danger mt-1">{errors.unitId.message}</p>}
         </div>
         {selectedUnit && (
           <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
@@ -175,9 +175,9 @@ function BookingModal({ customers, units, onClose, onSaved }: {
         )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className={lbl}>Booking Amount (৳) <span className="text-red-500">*</span></label>
+            <label className={lbl}>Booking Amount (৳) <span className="text-danger">*</span></label>
             <input type="number" {...register('bookingAmount')} className={inp} placeholder="10% of price" />
-            {errors.bookingAmount && <p className="text-xs text-red-600 mt-1">{errors.bookingAmount.message}</p>}
+            {errors.bookingAmount && <p className="text-xs text-danger mt-1">{errors.bookingAmount.message}</p>}
           </div>
           <div>
             <label className={lbl}>Discount (৳)</label>
@@ -199,7 +199,7 @@ function BookingModal({ customers, units, onClose, onSaved }: {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-content-muted">Financed amount to schedule: <strong className="text-content">{fmt(financed)}</strong></span>
-                <span className={scheduleMatches ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                <span className={scheduleMatches ? 'text-success font-semibold' : 'text-danger font-semibold'}>
                   Total: {fmt(scheduleTotal)} {scheduleMatches ? '✓' : `(must equal ${fmt(financed)})`}
                 </span>
               </div>
@@ -212,7 +212,7 @@ function BookingModal({ customers, units, onClose, onSaved }: {
                     onChange={e => setLines(ls => ls.map((x, i) => i === idx ? { ...x, amount: Number(e.target.value) } : x))}
                     className="border border-border-default rounded px-2 py-1 text-xs w-32" />
                   <button type="button" onClick={() => setLines(ls => ls.length > 1 ? ls.filter((_, i) => i !== idx) : ls)}
-                    className="text-content-muted/50 hover:text-red-500"><XCircle className="w-4 h-4" /></button>
+                    className="text-content-muted/50 hover:text-danger"><XCircle className="w-4 h-4" /></button>
                 </div>
               ))}
               <button type="button" onClick={() => setLines(ls => [...ls, { dueDate: isoToday(), amount: 0 }])}
@@ -280,10 +280,10 @@ export function BookingsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Booking Value', value: fmt(totalValue),         color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Total Booking Value', value: fmt(totalValue),         color: 'text-info', bg: 'bg-info/10' },
           { label: 'Active Bookings',     value: activeBookings.length,    color: 'text-primary',   bg: 'bg-primary/10' },
           { label: 'Total Bookings',      value: bookings.length,          color: 'text-content',   bg: 'bg-surface' },
-          { label: 'Cancelled',           value: bookings.filter(b => b.status === 'Cancelled').length, color: 'text-red-500', bg: 'bg-red-50' },
+          { label: 'Cancelled',           value: bookings.filter(b => b.status === 'Cancelled').length, color: 'text-danger', bg: 'bg-danger/10' },
         ].map(s => (
           <div key={s.label} className={`rounded-xl border border-border-default p-5 ${s.bg}`}>
             <p className="text-sm text-content-muted">{s.label}</p>
@@ -308,8 +308,12 @@ export function BookingsPage() {
             <table className="w-full min-w-[860px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Booking No.', 'Client', 'Unit', 'Net Amount', 'Booking Amt', 'Installments', 'Date', 'Status', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Booking No.' }, { h: 'Client' }, { h: 'Unit' },
+                    { h: 'Net Amount', num: true }, { h: 'Booking Amt', num: true },
+                    { h: 'Installments', align: 'center' as const }, { h: 'Date' }, { h: 'Status' }, { h: '' },
+                  ].map(({ h, num, align }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -319,8 +323,8 @@ export function BookingsPage() {
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-primary">{b.bookingNo}</td>
                     <td className="px-4 py-3 font-medium text-content text-sm">{b.customerName}</td>
                     <td className="px-4 py-3 text-content-muted text-xs font-semibold">{b.unitNo}</td>
-                    <td className="px-4 py-3 font-semibold text-content">{fmt(b.netAmount)}</td>
-                    <td className="px-4 py-3 text-content-muted text-xs">{fmt(b.bookingAmount)}</td>
+                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(b.netAmount)}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs text-right tabular-nums">{fmt(b.bookingAmount)}</td>
                     <td className="px-4 py-3 text-content-muted text-center">{b.installmentCount}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">
                       <div className="flex items-center gap-1"><CalendarDays className="w-3 h-3" />{b.bookingDate}</div>
@@ -333,7 +337,7 @@ export function BookingsPage() {
                     <td className="px-4 py-3">
                       {b.status === 'Active' && (
                         <button onClick={() => { setTarget(b); setModal('cancel') }}
-                          className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Cancel Booking">
+                          className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors" title="Cancel Booking">
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -361,7 +365,7 @@ export function BookingsPage() {
               <button onClick={() => { setModal(null); setTarget(null) }}
                 className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Keep Booking</button>
               <button onClick={cancelBooking}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Cancel Booking</button>
+                className="px-4 py-2 text-sm bg-danger text-white rounded-lg hover:bg-danger font-medium">Cancel Booking</button>
             </div>
           </div>
         </Modal>

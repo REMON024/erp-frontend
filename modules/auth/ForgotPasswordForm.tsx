@@ -26,7 +26,7 @@ export function ForgotPasswordForm() {
       <div className="bg-surface rounded-2xl shadow-xl p-8">
         {sent ? (
           <div className="text-center">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <CheckCircle className="w-12 h-12 text-success mx-auto mb-4" />
             <h2 className="text-xl font-bold text-content">Check your email</h2>
             <p className="text-content-muted text-sm mt-2">We sent a password reset link to your email address.</p>
             <Link href="/login" className="inline-block mt-6 text-sm text-primary hover:underline">
@@ -54,7 +54,7 @@ export function ForgotPasswordForm() {
                     className="w-full pl-10 pr-4 py-2.5 border border-border-default rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
                   />
                 </div>
-                {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+                {errors.email && <p className="mt-1 text-xs text-danger">{errors.email.message}</p>}
               </div>
               <button
                 type="submit"

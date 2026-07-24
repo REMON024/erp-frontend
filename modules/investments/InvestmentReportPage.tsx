@@ -33,11 +33,11 @@ interface InvestorRoiDto { rows: InvestorRoiRow[]; totalInvested: number; totalD
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 
 const ROLE_COLOR: Record<string, string> = {
-  'Managing Director': 'bg-purple-100 text-purple-700',
+  'Managing Director': 'bg-primary/10 text-primary',
   'Chairman':          'bg-primary/10 text-primary',
-  'Director':          'bg-indigo-100 text-indigo-700',
-  'Partner':           'bg-teal-100 text-teal-700',
-  'Shareholder':       'bg-cyan-100 text-cyan-700',
+  'Director':          'bg-info/10 text-info',
+  'Partner':           'bg-success/10 text-success',
+  'Shareholder':       'bg-info/10 text-info',
 }
 const roleColor = (r: string) => ROLE_COLOR[r] ?? 'bg-surface-muted text-content-muted'
 
@@ -77,7 +77,7 @@ export function InvestmentReportPage() {
       {roi && roi.rows.length > 0 && (
         <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="px-5 py-3 border-b border-border-default flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-green-600" />
+            <TrendingUp className="w-4 h-4 text-success" />
             <h3 className="font-semibold text-content text-sm">Investor ROI</h3>
           </div>
           <table className="w-full text-sm">
@@ -95,7 +95,7 @@ export function InvestmentReportPage() {
                   <td className="px-4 py-2 text-content">{r.investorName}</td>
                   <td className="px-4 py-2 text-right">{fmt(r.invested)}</td>
                   <td className="px-4 py-2 text-right">{fmt(r.distributed)}</td>
-                  <td className={`px-4 py-2 text-right font-semibold ${r.roiPct >= 0 ? 'text-green-600' : 'text-red-600'}`}>{r.roiPct}%</td>
+                  <td className={`px-4 py-2 text-right font-semibold ${r.roiPct >= 0 ? 'text-success' : 'text-danger'}`}>{r.roiPct}%</td>
                 </tr>
               ))}
             </tbody>
@@ -141,15 +141,15 @@ export function InvestmentReportPage() {
         empty={!isLoading && data?.grandTotal === 0} emptyMessage="No investment data for the selected filters.">
         <>
           {/* Grand total banner */}
-          <div className="rounded-xl border border-blue-200 bg-primary/10 px-6 py-5 flex items-center justify-between">
+          <div className="rounded-xl border border-info/20 bg-primary/10 px-6 py-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <TrendingUp className="w-6 h-6 text-primary" />
               <div>
-                <p className="text-sm font-semibold text-blue-900">Total Capital Invested</p>
+                <p className="text-sm font-semibold text-info">Total Capital Invested</p>
                 <p className="text-xs text-primary">Across {data?.byProject.length ?? 0} project(s) · {data?.byInvestor.length ?? 0} investor(s)</p>
               </div>
             </div>
-            <p className="text-3xl font-bold text-blue-900">{fmt(data?.grandTotal ?? 0)}</p>
+            <p className="text-3xl font-bold text-info">{fmt(data?.grandTotal ?? 0)}</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -183,8 +183,8 @@ export function InvestmentReportPage() {
                 <table className="w-full text-xs">
                   <thead className="bg-surface-muted">
                     <tr>
-                      {['Project', 'Investors', 'Total Invested'].map(h => (
-                        <th key={h} className="px-4 py-2 text-left font-semibold text-content-muted">{h}</th>
+                      {[{ h: 'Project' }, { h: 'Investors', num: true }, { h: 'Total Invested', num: true }].map(({ h, num }) => (
+                        <th key={h} className={`px-4 py-2 font-semibold text-content-muted ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -194,15 +194,15 @@ export function InvestmentReportPage() {
                         <td className="px-4 py-2">
                           <span className="bg-primary/10 text-primary font-medium px-1.5 py-0.5 rounded text-[11px]">{row.projectCode}</span>
                         </td>
-                        <td className="px-4 py-2 text-content-muted">{row.investorCount}</td>
-                        <td className="px-4 py-2 font-bold text-primary">{fmt(row.totalInvested)}</td>
+                        <td className="px-4 py-2 text-content-muted text-right tabular-nums">{row.investorCount}</td>
+                        <td className="px-4 py-2 font-bold text-primary text-right tabular-nums">{fmt(row.totalInvested)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot className="border-t border-border-default bg-surface-muted font-bold">
                     <tr>
                       <td colSpan={2} className="px-4 py-2 text-content uppercase text-[11px]">Total</td>
-                      <td className="px-4 py-2 text-blue-800">{fmt(data?.grandTotal ?? 0)}</td>
+                      <td className="px-4 py-2 text-info text-right tabular-nums">{fmt(data?.grandTotal ?? 0)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -229,12 +229,12 @@ export function InvestmentReportPage() {
                           <p className="text-xs text-content-muted">{row.investorCode} · {row.projectCount} project{row.projectCount !== 1 ? 's' : ''}</p>
                         </div>
                         <div className="text-right ml-4 shrink-0">
-                          <p className="text-sm font-bold text-green-700">{fmt(row.totalInvested)}</p>
+                          <p className="text-sm font-bold text-success">{fmt(row.totalInvested)}</p>
                           <p className="text-xs text-content-muted">{row.sharePercent}% share</p>
                         </div>
                       </div>
                       <div className="h-2 bg-surface-muted rounded-full overflow-hidden">
-                        <div className="h-2 bg-green-500 rounded-full transition-all" style={{ width: `${barPct}%` }} />
+                        <div className="h-2 bg-success rounded-full transition-all" style={{ width: `${barPct}%` }} />
                       </div>
                     </div>
                   )
@@ -245,8 +245,8 @@ export function InvestmentReportPage() {
                 <table className="w-full text-xs">
                   <thead className="bg-surface-muted">
                     <tr>
-                      {['Investor', 'Role', 'Projects', 'Total', 'Share %'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left font-semibold text-content-muted">{h}</th>
+                      {[{ h: 'Investor' }, { h: 'Role' }, { h: 'Projects', num: true }, { h: 'Total', num: true }, { h: 'Share %' }].map(({ h, num }) => (
+                        <th key={h} className={`px-3 py-2 font-semibold text-content-muted ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -257,12 +257,12 @@ export function InvestmentReportPage() {
                         <td className="px-3 py-2">
                           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${roleColor(row.investorRole)}`}>{row.investorRole}</span>
                         </td>
-                        <td className="px-3 py-2 text-content-muted">{row.projectCount}</td>
-                        <td className="px-3 py-2 font-bold text-green-700">{fmt(row.totalInvested)}</td>
+                        <td className="px-3 py-2 text-content-muted text-right tabular-nums">{row.projectCount}</td>
+                        <td className="px-3 py-2 font-bold text-success text-right tabular-nums">{fmt(row.totalInvested)}</td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1.5">
                             <div className="w-12 h-1.5 bg-surface-muted rounded-full overflow-hidden">
-                              <div className="h-1.5 bg-green-400 rounded-full" style={{ width: `${row.sharePercent}%` }} />
+                              <div className="h-1.5 bg-success rounded-full" style={{ width: `${row.sharePercent}%` }} />
                             </div>
                             <span className="text-content-muted font-semibold">{row.sharePercent}%</span>
                           </div>
@@ -273,7 +273,7 @@ export function InvestmentReportPage() {
                   <tfoot className="border-t border-border-default bg-surface-muted font-bold">
                     <tr>
                       <td colSpan={3} className="px-3 py-2 text-content uppercase text-[11px]">Total</td>
-                      <td className="px-3 py-2 text-green-800">{fmt(data?.grandTotal ?? 0)}</td>
+                      <td className="px-3 py-2 text-success text-right tabular-nums">{fmt(data?.grandTotal ?? 0)}</td>
                       <td className="px-3 py-2 text-content-muted">100%</td>
                     </tr>
                   </tfoot>

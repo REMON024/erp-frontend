@@ -36,9 +36,9 @@ function WarehouseModal({ wh, onClose, onSaved }: { wh?: Warehouse; onClose: () 
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Warehouse' : 'New Warehouse'} size="sm">
       <div className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
-          <label className={lbl}>Name <span className="text-red-500">*</span></label>
+          <label className={lbl}>Name <span className="text-danger">*</span></label>
           <input value={name} onChange={e => setName(e.target.value)} className={inp} placeholder="Main Store" />
         </div>
         <div>
@@ -81,11 +81,11 @@ export function WarehousesPage() {
           {warehouses.map(w => (
             <div key={w.id} className="bg-surface rounded-xl border border-border-default p-4 flex items-start justify-between">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-teal-100 text-teal-700 flex items-center justify-center"><WarehouseIcon className="w-5 h-5" /></div>
+                <div className="w-10 h-10 rounded-lg bg-success/10 text-success flex items-center justify-center"><WarehouseIcon className="w-5 h-5" /></div>
                 <div>
                   <p className="font-semibold text-content">{w.name}</p>
                   <p className="text-xs text-content-muted">{w.location || '—'}</p>
-                  <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${w.isActive ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted'}`}>{w.isActive ? 'Active' : 'Inactive'}</span>
+                  <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${w.isActive ? 'bg-success/10 text-success' : 'bg-surface-muted text-content-muted'}`}>{w.isActive ? 'Active' : 'Inactive'}</span>
                 </div>
               </div>
               <button onClick={() => setModal({ wh: w })} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Edit2 className="w-4 h-4" /></button>

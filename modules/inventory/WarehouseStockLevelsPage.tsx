@@ -43,8 +43,11 @@ export function WarehouseStockLevelsPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
-                <tr>{['Material', 'Per-warehouse', 'Company Total', 'Reorder', 'Status'].map(h =>
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>)}</tr>
+                <tr>{[
+                  { h: 'Material' }, { h: 'Per-warehouse' }, { h: 'Company Total', num: true },
+                  { h: 'Reorder', num: true }, { h: 'Status' },
+                ].map(({ h, num }) =>
+                  <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-border-default">
                 {rollups.map(r => (
@@ -54,18 +57,18 @@ export function WarehouseStockLevelsPage() {
                       <div className="flex flex-wrap gap-1">
                         {r.warehouses.length === 0 && <span className="text-xs text-content-muted">—</span>}
                         {r.warehouses.map((w, i) => (
-                          <span key={i} className={`text-xs px-2 py-0.5 rounded-full ${w.lowStock ? 'bg-amber-100 text-amber-700' : 'bg-surface-muted text-content-muted'}`}>
+                          <span key={i} className={`text-xs px-2 py-0.5 rounded-full ${w.lowStock ? 'bg-warning/15 text-warning' : 'bg-surface-muted text-content-muted'}`}>
                             {w.warehouseName}: {w.balance.toLocaleString()}
                           </span>
                         ))}
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-content">{r.companyTotal.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-content-muted">{r.reorder.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{r.companyTotal.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{r.reorder.toLocaleString()}</td>
                     <td className="px-4 py-3">
                       {r.lowStock
-                        ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700"><AlertTriangle className="w-3 h-3" /> Low</span>
-                        : <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">OK</span>}
+                        ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-danger/10 text-danger"><AlertTriangle className="w-3 h-3" /> Low</span>
+                        : <span className="text-xs px-2 py-0.5 rounded-full bg-success/10 text-success">OK</span>}
                     </td>
                   </tr>
                 ))}

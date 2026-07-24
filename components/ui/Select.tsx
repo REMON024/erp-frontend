@@ -117,7 +117,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       'text-sm text-left cursor-pointer transition-colors flex items-center ' +
       'focus:ring-2 focus:ring-primary/40 focus:border-primary focus:outline-none ' +
       'disabled:opacity-60 disabled:cursor-not-allowed hover:border-content-muted/50 ' +
-      (invalid ? 'border-red-400 ' : 'border-border-default ') + className
+      (invalid ? 'border-danger ' : 'border-border-default ') + className
 
     return (
       <div className="relative" ref={wrapRef}>

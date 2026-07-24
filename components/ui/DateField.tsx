@@ -27,7 +27,7 @@ export const DateField = forwardRef<HTMLInputElement, DateFieldProps>(
           '[&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:top-0 ' +
           '[&::-webkit-calendar-picker-indicator]:w-9 [&::-webkit-calendar-picker-indicator]:h-full ' +
           '[&::-webkit-calendar-picker-indicator]:cursor-pointer ' +
-          (invalid ? 'border-red-400 ' : 'border-border-default ') +
+          (invalid ? 'border-danger ' : 'border-border-default ') +
           className
         }
       />

@@ -68,7 +68,7 @@ export function SystemSettingsPage() {
                       className={`px-4 py-2 rounded-lg text-sm border transition ${
                         active
                           ? 'bg-primary text-white border-primary'
-                          : 'bg-surface text-content border-border-default hover:border-blue-400'
+                          : 'bg-surface text-content border-border-default hover:border-info/20'
                       } ${saving === key ? 'opacity-60' : ''}`}
                     >
                       {c.label}

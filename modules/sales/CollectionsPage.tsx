@@ -25,10 +25,10 @@ interface Payment {
 }
 
 const METHOD_COLORS: Record<string, string> = {
-  Cash:   'bg-green-100 text-green-700',
+  Cash:   'bg-success/10 text-success',
   Bank:   'bg-primary/10 text-primary',
-  Cheque: 'bg-amber-100 text-amber-700',
-  Online: 'bg-purple-100 text-purple-700',
+  Cheque: 'bg-warning/15 text-warning',
+  Online: 'bg-primary/10 text-primary',
 }
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday() { return new Date().toISOString().split('T')[0] }
@@ -119,22 +119,22 @@ function PaymentModal({ customers, invoices, onClose, onSaved, initialCustomerId
   return (
     <Modal open onClose={onClose} title="Record Payment" size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
 
         <div>
-          <label className={lbl}>Client <span className="text-red-500">*</span></label>
+          <label className={lbl}>Client <span className="text-danger">*</span></label>
           <Select {...register('customerId')}
             onChange={e => { setValue('customerId', Number(e.target.value)); setValue('invoiceId', undefined); setWarnUnlinked(false) }}>
             <option value="">Select client</option>
             {customers.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
           </Select>
-          {errors.customerId && <p className="text-xs text-red-600 mt-1">{errors.customerId.message}</p>}
+          {errors.customerId && <p className="text-xs text-danger mt-1">{errors.customerId.message}</p>}
         </div>
 
         {selectedCustomerId > 0 && (
           <div>
             <label className={lbl}>
-              Against Invoice <span className="text-red-500">*</span>
+              Against Invoice <span className="text-danger">*</span>
               {customerInvoices.length === 0 && <span className="text-content-muted font-normal ml-1">(no outstanding invoices)</span>}
             </label>
             <Select
@@ -148,8 +148,8 @@ function PaymentModal({ customers, invoices, onClose, onSaved, initialCustomerId
               ))}
             </Select>
             {warnUnlinked && (
-              <div className="mt-1 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <p className="text-xs text-amber-700 flex-1">
+              <div className="mt-1 flex items-start gap-2 bg-warning/15 border border-warning/20 rounded-lg px-3 py-2">
+                <p className="text-xs text-warning flex-1">
                   This client has {customerInvoices.length} outstanding invoice(s). Select one to keep records accurate, or confirm to record an unlinked payment.
                 </p>
                 <button type="button" onClick={() => { setWarnUnlinked(false); setSaving(true); handleSubmit(async (d) => {
@@ -160,7 +160,7 @@ function PaymentModal({ customers, invoices, onClose, onSaved, initialCustomerId
                   } catch (e: any) { setErr(e.response?.data?.errors?.[0] ?? 'Save failed') }
                   finally { setSaving(false) }
                 })() }}
-                  className="text-xs text-amber-700 underline whitespace-nowrap font-medium">Record anyway</button>
+                  className="text-xs text-warning underline whitespace-nowrap font-medium">Record anyway</button>
               </div>
             )}
           </div>
@@ -168,18 +168,18 @@ function PaymentModal({ customers, invoices, onClose, onSaved, initialCustomerId
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Payment Date <span className="text-red-500">*</span></label>
+            <label className={lbl}>Payment Date <span className="text-danger">*</span></label>
             <DateField {...register('paymentDate')} />
           </div>
           <div>
-            <label className={lbl}>Amount (৳) <span className="text-red-500">*</span></label>
+            <label className={lbl}>Amount (৳) <span className="text-danger">*</span></label>
             <input type="number" {...register('amount')} className={inp} placeholder="0" />
-            {errors.amount && <p className="text-xs text-red-600 mt-1">{errors.amount.message}</p>}
+            {errors.amount && <p className="text-xs text-danger mt-1">{errors.amount.message}</p>}
           </div>
         </div>
 
         <div>
-          <label className={lbl}>Method <span className="text-red-500">*</span></label>
+          <label className={lbl}>Method <span className="text-danger">*</span></label>
           <div className="grid grid-cols-4 gap-2">
             {['Cash', 'Bank', 'Cheque', 'Online'].map(m => (
               <label key={m} className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${selectedMethod === m ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border-default text-content-muted hover:bg-surface-muted'}`}>
@@ -192,9 +192,9 @@ function PaymentModal({ customers, invoices, onClose, onSaved, initialCustomerId
         {selectedMethod === 'Cheque' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={lbl}>Cheque No. <span className="text-red-500">*</span></label>
+              <label className={lbl}>Cheque No. <span className="text-danger">*</span></label>
               <input {...register('chequeNo')} className={inp} placeholder="e.g. 001234" />
-              {errors.chequeNo && <p className="text-xs text-red-600 mt-1">{errors.chequeNo.message}</p>}
+              {errors.chequeNo && <p className="text-xs text-danger mt-1">{errors.chequeNo.message}</p>}
             </div>
             <div>
               <label className={lbl}>Bank Name</label>
@@ -305,7 +305,7 @@ export function CollectionsPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Collected', value: fmt(totalCollected), color: 'text-green-600' },
+          { label: 'Total Collected', value: fmt(totalCollected), color: 'text-success' },
           { label: 'This Month',      value: fmt(thisMonth),      color: 'text-primary' },
           { label: 'Payments',        value: payments.length,     color: 'text-content' },
         ].map(s => (
@@ -338,11 +338,11 @@ export function CollectionsPage() {
               ? <p className="text-sm text-content-muted text-center py-8">No payment data yet.</p>
               : <ResponsiveContainer width="100%" height={240}>
                   <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
                     <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
                     <Tooltip formatter={(v: any) => [`৳${Number(v ?? 0).toLocaleString('en-BD')}`, 'Collected']} />
-                    <Bar dataKey="amount" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="amount" fill="rgb(var(--info))" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>}
           </div>
@@ -356,8 +356,11 @@ export function CollectionsPage() {
             <table className="w-full text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Client', 'Payments', 'Total Collected', 'Share', ''].map(h => (
-                    <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                  {[
+                    { h: 'Client' }, { h: 'Payments', num: true }, { h: 'Total Collected', num: true },
+                    { h: 'Share' }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-2 text-xs font-semibold text-content-muted ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -367,8 +370,8 @@ export function CollectionsPage() {
                   return (
                     <tr key={c.name} className="hover:bg-surface-muted">
                       <td className="px-4 py-2.5 font-medium text-content">{c.name}</td>
-                      <td className="px-4 py-2.5 text-content-muted">{c.count}</td>
-                      <td className="px-4 py-2.5 font-semibold text-green-700">৳{c.total.toLocaleString('en-BD')}</td>
+                      <td className="px-4 py-2.5 text-content-muted text-right tabular-nums">{c.count}</td>
+                      <td className="px-4 py-2.5 font-semibold text-success text-right tabular-nums">৳{c.total.toLocaleString('en-BD')}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-1.5 bg-surface-muted rounded-full overflow-hidden">
@@ -393,7 +396,7 @@ export function CollectionsPage() {
       {activeTab === 'list' && (
         <>
           {clientFilter && (
-            <div className="flex items-center gap-2 bg-primary/10 border border-blue-200 rounded-lg px-3 py-2 text-xs text-primary">
+            <div className="flex items-center gap-2 bg-primary/10 border border-info/20 rounded-lg px-3 py-2 text-xs text-primary">
               Showing payments for: <strong>{clientData.find(c => String(payments.find(p => p.customerName === c.name)?.customerId) === clientFilter)?.name}</strong>
               <button onClick={() => setClientFilter('')} className="ml-auto text-primary hover:text-primary font-medium">Clear ×</button>
             </div>
@@ -407,8 +410,11 @@ export function CollectionsPage() {
             <table className="w-full min-w-[780px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Payment No.', 'Client', 'Invoice', 'Date', 'Amount', 'Method', 'Reference', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Payment No.' }, { h: 'Client' }, { h: 'Invoice' }, { h: 'Date' },
+                    { h: 'Amount', num: true }, { h: 'Method' }, { h: 'Reference' }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -421,7 +427,7 @@ export function CollectionsPage() {
                     <td className="px-4 py-3 text-content text-sm">{p.customerName}</td>
                     <td className="px-4 py-3 text-content-muted text-xs font-mono">{p.invoiceNo ?? '—'}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{p.paymentDate}</td>
-                    <td className="px-4 py-3 font-semibold text-green-700">{fmt(p.amount)}</td>
+                    <td className="px-4 py-3 font-semibold text-success text-right tabular-nums">{fmt(p.amount)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${METHOD_COLORS[p.method] ?? 'bg-surface-muted text-content-muted'}`}>{p.method}</span>
                     </td>
@@ -430,7 +436,7 @@ export function CollectionsPage() {
                       <button
                         onClick={() => printReceipt({ paymentNo: p.paymentNo, customerName: p.customerName, paymentDate: p.paymentDate, amount: p.amount, method: p.method, referenceNo: p.referenceNo, invoiceNo: p.invoiceNo, notes: p.notes })}
                         title="Print Receipt"
-                        className="p-1.5 text-content-muted hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                        className="p-1.5 text-content-muted hover:text-success hover:bg-success/10 rounded-lg transition-colors">
                         <Printer className="w-3.5 h-3.5" />
                       </button>
                     </td>

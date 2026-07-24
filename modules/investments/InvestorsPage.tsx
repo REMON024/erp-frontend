@@ -65,21 +65,21 @@ function InvestorModal({ investor, onClose, onSaved }: {
   return (
     <Modal open onClose={onClose} title={isEdit ? 'Edit Investor' : 'Add Investor'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={lbl}>Full Name <span className="text-red-500">*</span></label>
+            <label className={lbl}>Full Name <span className="text-danger">*</span></label>
             <input {...register('fullName')} className={inp} placeholder="Investor full name" />
-            {errors.fullName && <p className="text-xs text-red-600 mt-1">{errors.fullName.message}</p>}
+            {errors.fullName && <p className="text-xs text-danger mt-1">{errors.fullName.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Role <span className="text-red-500">*</span></label>
+            <label className={lbl}>Role <span className="text-danger">*</span></label>
             <input {...register('role')} list="investor-roles" className={inp} placeholder="e.g. Managing Director" />
             <datalist id="investor-roles">
               {ROLES.map(r => <option key={r} value={r} />)}
             </datalist>
-            {errors.role && <p className="text-xs text-red-600 mt-1">{errors.role.message}</p>}
+            {errors.role && <p className="text-xs text-danger mt-1">{errors.role.message}</p>}
           </div>
         </div>
 
@@ -91,7 +91,7 @@ function InvestorModal({ investor, onClose, onSaved }: {
           <div>
             <label className={lbl}>Email</label>
             <input type="email" {...register('email')} className={inp} placeholder="investor@email.com" />
-            {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-danger mt-1">{errors.email.message}</p>}
           </div>
         </div>
 
@@ -163,7 +163,7 @@ export function InvestorsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="rounded-xl border border-border-default bg-primary/10 p-4">
           <p className="text-xs text-primary uppercase font-semibold tracking-wide">Total Invested</p>
-          <p className="text-2xl font-bold text-blue-900 mt-1">{fmt(totalInvested)}</p>
+          <p className="text-2xl font-bold text-info mt-1">{fmt(totalInvested)}</p>
         </div>
         <div className="rounded-xl border border-border-default bg-surface p-4">
           <p className="text-xs text-content-muted uppercase font-semibold tracking-wide">Active Investors</p>
@@ -189,7 +189,7 @@ export function InvestorsPage() {
                   <p className="text-xs text-content-muted">{inv.investorCode}</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${inv.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${inv.status === 'Active' ? 'bg-success/10 text-success' : 'bg-surface-muted text-content-muted'}`}>
                     {inv.status}
                   </span>
                   <button onClick={() => { setEditing(inv); setModal(true) }}

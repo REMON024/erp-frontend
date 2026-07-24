@@ -21,7 +21,7 @@ function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFracti
 
 const STATUS_COLOR: Record<string, string> = {
   Draft: 'bg-surface-muted text-content-muted', Active: 'bg-primary/10 text-primary',
-  Completed: 'bg-green-100 text-green-700', Cancelled: 'bg-red-100 text-red-600',
+  Completed: 'bg-success/10 text-success', Cancelled: 'bg-danger/10 text-danger',
 }
 
 export function WorkOrderProgressPage() {
@@ -52,15 +52,15 @@ export function WorkOrderProgressPage() {
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="rounded-xl border border-border-default bg-primary/10 p-4">
               <p className="text-xs text-primary uppercase font-semibold">Total Contract Value</p>
-              <p className="text-2xl font-bold text-blue-900 mt-1">{fmt(data?.totalContract ?? 0)}</p>
+              <p className="text-2xl font-bold text-info mt-1">{fmt(data?.totalContract ?? 0)}</p>
             </div>
-            <div className="rounded-xl border border-border-default bg-orange-50 p-4">
-              <p className="text-xs text-orange-600 uppercase font-semibold">Total Billed</p>
-              <p className="text-2xl font-bold text-orange-900 mt-1">{fmt(data?.totalBilled ?? 0)}</p>
+            <div className="rounded-xl border border-border-default bg-warning/15 p-4">
+              <p className="text-xs text-warning uppercase font-semibold">Total Billed</p>
+              <p className="text-2xl font-bold text-warning mt-1">{fmt(data?.totalBilled ?? 0)}</p>
             </div>
-            <div className="rounded-xl border border-border-default bg-yellow-50 p-4">
-              <p className="text-xs text-yellow-600 uppercase font-semibold">Retention Held</p>
-              <p className="text-2xl font-bold text-yellow-900 mt-1">{fmt(data?.totalRetention ?? 0)}</p>
+            <div className="rounded-xl border border-border-default bg-warning/15 p-4">
+              <p className="text-xs text-warning uppercase font-semibold">Retention Held</p>
+              <p className="text-2xl font-bold text-warning mt-1">{fmt(data?.totalRetention ?? 0)}</p>
             </div>
           </div>
 
@@ -70,7 +70,7 @@ export function WorkOrderProgressPage() {
                 <thead className="bg-surface-muted border-b border-border-default">
                   <tr>
                     {['WO No', 'Project', 'Vendor', 'Contract', 'Billed', '% Billed', 'Paid', 'Retention', 'Advance', 'Recovered', 'Status'].map(h => (
-                      <th key={h} className="px-3 py-2 text-left text-xs font-semibold text-content-muted">{h}</th>
+                      <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Contract','Billed','Paid','Retention','Advance','Recovered'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -81,7 +81,7 @@ export function WorkOrderProgressPage() {
                       <td className="px-3 py-2 text-xs text-content-muted">{r.projectName}</td>
                       <td className="px-3 py-2 text-content">{r.vendorName}</td>
                       <td className="px-3 py-2 text-right font-semibold">{fmt(r.contractAmount)}</td>
-                      <td className="px-3 py-2 text-right text-orange-700">{fmt(r.totalBilled)}</td>
+                      <td className="px-3 py-2 text-right text-warning">{fmt(r.totalBilled)}</td>
                       <td className="px-3 py-2 w-28">
                         <div className="flex items-center gap-1.5">
                           <div className="flex-1 h-1.5 bg-surface-muted rounded-full overflow-hidden">
@@ -90,8 +90,8 @@ export function WorkOrderProgressPage() {
                           <span className="text-xs text-content-muted w-8 text-right">{r.percentBilled}%</span>
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-right text-green-700">{fmt(r.totalPaid)}</td>
-                      <td className="px-3 py-2 text-right text-yellow-700">{fmt(r.retentionHeld)}</td>
+                      <td className="px-3 py-2 text-right text-success">{fmt(r.totalPaid)}</td>
+                      <td className="px-3 py-2 text-right text-warning">{fmt(r.retentionHeld)}</td>
                       <td className="px-3 py-2 text-right text-content-muted">{fmt(r.advanceGiven)}</td>
                       <td className="px-3 py-2 text-right text-content-muted">{fmt(r.advanceRecovered)}</td>
                       <td className="px-3 py-2">

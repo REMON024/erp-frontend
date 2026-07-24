@@ -2,6 +2,8 @@
 import dynamic from 'next/dynamic'
 import { FolderKanban, TrendingUp, ShoppingCart, Package, Receipt, PieChart as PieIcon, RefreshCw } from 'lucide-react'
 import { useApiData } from '@/hooks/useApiData'
+import { Card, StatCard } from '@/components/ui/Card'
+import { Badge, statusTone } from '@/components/ui/Badge'
 
 const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading: () => (
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -20,26 +22,6 @@ interface Invoice   { id: number; totalAmount: number; paidAmount: number; dueAm
 interface Payment   { id: number; paymentNo: string; customerName: string; amount: number; paymentDate: string; method: string }
 interface Material  { id: number; materialName: string; currentStock: number; minimumStock: number; isLowStock: boolean }
 interface Booking   { id: number; bookingNo: string; customerName: string; netAmount: number; bookingDate: string; unitNo: string }
-
-function KpiCard({ label, value, sub, icon: Icon, iconBg, iconColor, loading }: {
-  label: string; value: string; sub: string
-  icon: React.ElementType; iconBg: string; iconColor: string; loading?: boolean
-}) {
-  return (
-    <div className="bg-surface rounded-xl border border-border-default p-5 flex justify-between items-start">
-      <div>
-        <p className="text-sm text-content-muted font-medium">{label}</p>
-        {loading
-          ? <div className="h-7 w-24 bg-surface-muted rounded animate-pulse mt-1" />
-          : <p className="text-2xl font-bold text-content mt-1">{value}</p>}
-        <p className="text-xs text-content-muted mt-1">{sub}</p>
-      </div>
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${iconBg}`}>
-        <Icon className={`w-5 h-5 ${iconColor}`} />
-      </div>
-    </div>
-  )
-}
 
 export function DashboardPage() {
   const { data: projects = [],  isLoading: loadP  } = useApiData<Project[]>  ({ url: '/projects',  queryKey: ['dash-projects']  })
@@ -92,7 +74,7 @@ export function DashboardPage() {
 
   const ACTIVITY_COLORS: Record<string, string> = {
     investment: 'bg-primary/10 text-primary',
-    sales:      'bg-green-100 text-green-600',
+    sales:      'bg-success/10 text-success',
   }
 
   return (
@@ -106,26 +88,25 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-        <KpiCard label="Active Projects"     value={String(activeProjects)}    sub={`${projects.length} total`}        icon={FolderKanban} iconBg="bg-primary/10"   iconColor="text-primary"   loading={loadP} />
-        <KpiCard label="Total Revenue Billed"value={fmt(totalRevenue)}          sub="From all invoices"                 icon={Receipt}      iconBg="bg-green-50"  iconColor="text-green-600"  loading={loadI} />
-        <KpiCard label="Collected"           value={fmt(totalCollected)}        sub={`${totalRevenue > 0 ? Math.round(totalCollected / totalRevenue * 100) : 0}% collection rate`} icon={TrendingUp} iconBg="bg-teal-50" iconColor="text-teal-600" loading={loadI} />
-        <KpiCard label="Budget Utilization"
+        <StatCard label="Active Projects"      value={String(activeProjects)}    sub={`${projects.length} total`}        icon={FolderKanban} tone="primary" loading={loadP} />
+        <StatCard label="Total Revenue Billed" value={fmt(totalRevenue)}          sub="From all invoices"                 icon={Receipt}      tone="success" loading={loadI} />
+        <StatCard label="Collected"            value={fmt(totalCollected)}        sub={`${totalRevenue > 0 ? Math.round(totalCollected / totalRevenue * 100) : 0}% collection rate`} icon={TrendingUp} tone="info" loading={loadI} />
+        <StatCard label="Budget Utilization"
           value={totalBudget > 0 ? `${budgetUtilPct}%` : '—'}
           sub={overBudgetCount > 0 ? `⚠ ${overBudgetCount} estimate(s) over budget` : `${fmt(totalBudget)} total budgeted`}
-          icon={ShoppingCart} iconBg={overBudgetCount > 0 ? 'bg-red-50' : 'bg-orange-50'}
-          iconColor={overBudgetCount > 0 ? 'text-red-600' : 'text-orange-600'} loading={loadE} />
-        <KpiCard label="Outstanding Balance" value={fmt(totalRevenue - totalCollected)} sub="Unpaid invoices"
-          icon={PieIcon} iconBg="bg-yellow-50" iconColor="text-yellow-600" loading={loadI} />
-        <KpiCard label="Low Stock Alerts"    value={String(lowStockCount)}
+          icon={ShoppingCart} tone={overBudgetCount > 0 ? 'danger' : 'warning'} loading={loadE} />
+        <StatCard label="Outstanding Balance" value={fmt(totalRevenue - totalCollected)} sub="Unpaid invoices"
+          icon={PieIcon} tone="warning" loading={loadI} />
+        <StatCard label="Low Stock Alerts"    value={String(lowStockCount)}
           sub={`${materials.length} materials tracked`}
-          icon={Package} iconBg="bg-red-50" iconColor="text-red-600" loading={loadM} />
+          icon={Package} tone="danger" loading={loadM} />
       </div>
 
       {chartData.length > 0 && <Charts data={chartData} collectionStats={collectionStats} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Project financial summary */}
-        <div className="bg-surface rounded-xl border border-border-default">
+        <Card>
           <div className="px-5 py-4 border-b border-border-default">
             <h3 className="font-semibold text-content">Project Overview</h3>
           </div>
@@ -141,11 +122,7 @@ export function DashboardPage() {
                 <div key={p.id} className="px-5 py-3">
                   <div className="flex items-center justify-between mb-0.5">
                     <p className="font-medium text-content text-sm">{p.projectName}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                      p.status === 'Active' ? 'bg-green-100 text-green-700' :
-                      p.status === 'Completed' ? 'bg-primary/10 text-primary' :
-                      'bg-surface-muted text-content-muted'
-                    }`}>{p.status}</span>
+                    <Badge tone={p.status === 'Completed' ? 'primary' : statusTone(p.status)}>{p.status}</Badge>
                   </div>
                   <div className="flex gap-4 text-xs text-content-muted">
                     <span className="font-mono text-content-muted">{p.projectCode}</span>
@@ -156,10 +133,10 @@ export function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Recent activity */}
-        <div className="bg-surface rounded-xl border border-border-default">
+        <Card>
           <div className="px-5 py-4 border-b border-border-default">
             <h3 className="font-semibold text-content">Recent Activity</h3>
           </div>
@@ -185,7 +162,7 @@ export function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

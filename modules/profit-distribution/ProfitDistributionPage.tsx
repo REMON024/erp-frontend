@@ -90,7 +90,7 @@ export function ProfitDistributionPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <PieChart className="w-6 h-6 text-teal-600" />
+        <PieChart className="w-6 h-6 text-success" />
         <div>
           <h1 className="text-2xl font-bold text-content">Profit Distribution</h1>
           <p className="text-sm text-content-muted mt-0.5">Distribute project net profit to investors by contribution share</p>
@@ -131,7 +131,7 @@ export function ProfitDistributionPage() {
       </div>
 
       {err && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 text-red-700 text-sm rounded-lg">
+        <div className="flex items-center gap-2 px-4 py-3 bg-danger/10 border border-danger/20 text-danger text-sm rounded-lg">
           <AlertCircle className="w-4 h-4 shrink-0" />{err}
         </div>
       )}
@@ -155,27 +155,27 @@ export function ProfitDistributionPage() {
             <label className="flex items-center gap-2 text-sm text-content">
               <input type="checkbox" checked={useOverride} onChange={e => setUseOverride(e.target.checked)} className="w-4 h-4" />
               Override distribution ratio (Super Admin) — must total 100%
-              {useOverride && <span className={`ml-2 font-semibold ${Math.round(overrideTotal) === 100 ? 'text-green-600' : 'text-red-600'}`}>{overrideTotal.toFixed(2)}%</span>}
+              {useOverride && <span className={`ml-2 font-semibold ${Math.round(overrideTotal) === 100 ? 'text-success' : 'text-danger'}`}>{overrideTotal.toFixed(2)}%</span>}
             </label>
           )}
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted border-y border-border-default">
-                <tr>{['Investor', 'Share %', 'Amount'].map(h => <th key={h} className="px-4 py-2 text-left text-xs font-semibold text-content-muted uppercase">{h}</th>)}</tr>
+                <tr>{[{ h: 'Investor' }, { h: 'Share %', num: true }, { h: 'Amount', num: true }].map(({ h, num }) => <th key={h} className={`px-4 py-2 text-xs font-semibold text-content-muted uppercase ${num ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-border-default">
                 {preview.lines.map(l => (
                   <tr key={l.investorId}>
                     <td className="px-4 py-2 text-content">{l.investorName}</td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 text-right tabular-nums">
                       {isSuperAdmin && useOverride ? (
                         <input type="number" step="0.01" value={overrides[l.investorId] ?? 0}
                           onChange={e => setOverrides(o => ({ ...o, [l.investorId]: Number(e.target.value) }))}
-                          className="w-24 border border-border-default rounded px-2 py-1 text-sm" />
+                          className="w-24 border border-border-default rounded px-2 py-1 text-sm text-right" />
                       ) : `${l.share}%`}
                     </td>
-                    <td className="px-4 py-2 font-medium">{fmt(l.amount)}</td>
+                    <td className="px-4 py-2 font-medium text-right tabular-nums">{fmt(l.amount)}</td>
                   </tr>
                 ))}
                 {preview.lines.length === 0 && <tr><td colSpan={3} className="px-4 py-6 text-center text-content-muted">No investor contributions for this project.</td></tr>}
@@ -185,7 +185,7 @@ export function ProfitDistributionPage() {
 
           <div className="flex justify-end">
             <button onClick={declare} disabled={busy || preview.lines.length === 0 || (useOverride && Math.round(overrideTotal) !== 100)}
-              className="px-4 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium disabled:opacity-50 flex items-center gap-2">
+              className="px-4 py-2 text-sm bg-success text-white rounded-lg hover:bg-success font-medium disabled:opacity-50 flex items-center gap-2">
               <CheckCircle className="w-4 h-4" /> Declare Distribution
             </button>
           </div>
@@ -201,17 +201,17 @@ export function ProfitDistributionPage() {
                 <p className="font-semibold text-content">{d.distributionNo} · {d.projectName}</p>
                 <p className="text-xs text-content-muted">Declared {d.declaredOn} · {d.basis} · profit {fmt(d.profit)}</p>
               </div>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${d.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{d.status}</span>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${d.status === 'Paid' ? 'bg-success/10 text-success' : 'bg-warning/15 text-warning'}`}>{d.status}</span>
             </div>
             <table className="w-full text-sm">
               <tbody className="divide-y divide-border-default">
                 {d.lines.map((l, i) => (
                   <tr key={l.id ?? i}>
                     <td className="px-4 py-2 text-content">{l.investorName}</td>
-                    <td className="px-4 py-2 text-content-muted">{l.share}%</td>
-                    <td className="px-4 py-2 font-medium">{fmt(l.amount)}</td>
+                    <td className="px-4 py-2 text-content-muted text-right tabular-nums">{l.share}%</td>
+                    <td className="px-4 py-2 font-medium text-right tabular-nums">{fmt(l.amount)}</td>
                     <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-surface-muted text-content-muted'}`}>{l.status}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === 'paid' ? 'bg-success/10 text-success' : 'bg-surface-muted text-content-muted'}`}>{l.status}</span>
                       {l.voucher && <span className="ml-2 text-xs text-content-muted">{l.voucher}</span>}
                     </td>
                     <td className="px-4 py-2 text-right">

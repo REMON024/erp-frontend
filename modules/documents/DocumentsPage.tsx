@@ -60,10 +60,10 @@ function UploadModal({ onClose, onSaved }: { onClose: () => void; onSaved: () =>
   return (
     <Modal open onClose={onClose} title="Upload Document" size="sm">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
-        {err && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
-          <label className={lbl}>File <span className="text-red-500">*</span></label>
-          <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border-default rounded-lg cursor-pointer hover:border-blue-400 hover:bg-primary/10 transition-colors">
+          <label className={lbl}>File <span className="text-danger">*</span></label>
+          <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border-default rounded-lg cursor-pointer hover:border-info/20 hover:bg-primary/10 transition-colors">
             <Upload className="w-6 h-6 text-content-muted mb-1" />
             <span className="text-sm text-content-muted">{file ? file.name : 'Click to choose file'}</span>
             {file && <span className="text-xs text-content-muted mt-0.5">{fmtSize(file.size)}</span>}
@@ -166,7 +166,7 @@ export function DocumentsPage() {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-sm">
           <AlertCircle className="w-4 h-4 shrink-0" />{error}
         </div>
       )}
@@ -208,7 +208,7 @@ export function DocumentsPage() {
                     </a>
                   )}
                   <button onClick={() => remove(doc.id)}
-                    className="p-1.5 text-content-muted hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>

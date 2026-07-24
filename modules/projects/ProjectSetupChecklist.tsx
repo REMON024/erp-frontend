@@ -23,10 +23,10 @@ interface Checklist {
 
 const STAGE_COLORS: Record<string, string> = {
   'Stage 1 — Project Setup':   'bg-primary/10 text-primary',
-  'Stage 2 — Budget Planning': 'bg-purple-100 text-purple-700',
-  'Stage 3 — Procurement':     'bg-amber-100 text-amber-700',
-  'Stage 4 — Site Execution':  'bg-orange-100 text-orange-700',
-  'Stage 5 — Sales':           'bg-green-100 text-green-700',
+  'Stage 2 — Budget Planning': 'bg-primary/10 text-primary',
+  'Stage 3 — Procurement':     'bg-warning/15 text-warning',
+  'Stage 4 — Site Execution':  'bg-warning/15 text-warning',
+  'Stage 5 — Sales':           'bg-success/10 text-success',
 }
 
 export function ProjectSetupChecklist({ projectId, onClose }: { projectId: number; onClose: () => void }) {
@@ -73,7 +73,7 @@ export function ProjectSetupChecklist({ projectId, onClose }: { projectId: numbe
         </div>
         <div className="h-2 bg-surface-muted rounded-full overflow-hidden">
           <div
-            className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : pct >= 60 ? 'bg-primary' : 'bg-amber-500'}`}
+            className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-success' : pct >= 60 ? 'bg-primary' : 'bg-warning'}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -92,31 +92,31 @@ export function ProjectSetupChecklist({ projectId, onClose }: { projectId: numbe
           <div key={stage} className="space-y-1">
             <div className="flex items-center gap-2 mb-2">
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${stageColor}`}>{stage}</span>
-              {stageComplete && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+              {stageComplete && <CheckCircle2 className="w-3.5 h-3.5 text-success" />}
             </div>
             {items.map(item => (
               <div
                 key={item.key}
                 className={`flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors
                   ${item.complete
-                    ? 'border-green-100 bg-green-50/50'
-                    : 'border-border-default bg-surface hover:border-blue-200 hover:bg-primary/10/30'}`}
+                    ? 'border-success/20 bg-success/10'
+                    : 'border-border-default bg-surface hover:border-info/20 hover:bg-primary/10/30'}`}
               >
                 {/* Icon */}
                 <div className="mt-0.5 shrink-0">
                   {item.complete
-                    ? <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    ? <CheckCircle2 className="w-5 h-5 text-success" />
                     : <Circle className="w-5 h-5 text-content-muted/50" />}
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className={`text-sm font-semibold ${item.complete ? 'text-green-800' : 'text-content'}`}>
+                    <p className={`text-sm font-semibold ${item.complete ? 'text-success' : 'text-content'}`}>
                       {item.label}
                     </p>
                     {item.complete && item.count > 0 && (
-                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium">
+                      <span className="text-xs bg-success/10 text-success px-1.5 py-0.5 rounded-full font-medium">
                         {item.count}
                       </span>
                     )}
