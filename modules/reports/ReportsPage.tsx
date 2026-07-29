@@ -365,11 +365,11 @@ function SalesCollectionsReport() {
 }
 
 // ─── Tab: Stock Movement Report ───────────────────────────────────────────────
-interface StockMaterial { id: number; materialName: string; unit: string; currentStock: number; minimumStock: number; isLowStock: boolean; averageCost: number }
-interface StockTx { id: number; materialId: number; materialName: string; transactionType: string; qty: number; unitCost: number; totalCost: number; transactionDate: string; projectName?: string }
+interface StockMaterial { id: number; resourceName: string; unit: string; currentStock: number; minimumStock: number; isLowStock: boolean; averageCost: number }
+interface StockTx { id: number; resourceId: number; resourceName: string; transactionType: string; qty: number; unitCost: number; totalCost: number; transactionDate: string; projectName?: string }
 
 function StockMovementReport() {
-  const { data: materials = [], isLoading: lM } = useApiData<StockMaterial[]>({ url: '/materials',          queryKey: ['rep-mats'] })
+  const { data: materials = [], isLoading: lM } = useApiData<StockMaterial[]>({ url: '/resources', params: { types: 'Material' },          queryKey: ['rep-mats'] })
   const { data: txIn      = [], isLoading: lI } = useApiData<StockTx[]>      ({ url: '/stock-transactions', params: { type: 'In' },  queryKey: ['rep-tx-in'] })
   const { data: txOut     = [], isLoading: lO } = useApiData<StockTx[]>      ({ url: '/stock-transactions', params: { type: 'Out' }, queryKey: ['rep-tx-out'] })
 
@@ -379,8 +379,8 @@ function StockMovementReport() {
 
   // Build movement rows
   const rows = materials.map(m => {
-    const totalIn  = txIn.filter(t => t.materialId === m.id).reduce((s, t) => s + t.qty, 0)
-    const totalOut = txOut.filter(t => t.materialId === m.id).reduce((s, t) => s + t.qty, 0)
+    const totalIn  = txIn.filter(t => t.resourceId === m.id).reduce((s, t) => s + t.qty, 0)
+    const totalOut = txOut.filter(t => t.resourceId === m.id).reduce((s, t) => s + t.qty, 0)
     return { ...m, totalIn, totalOut }
   })
 
@@ -423,7 +423,7 @@ function StockMovementReport() {
               <tbody className="divide-y divide-border-default">
                 {rows.map(r => (
                   <tr key={r.id} className={`hover:bg-surface-muted ${r.isLowStock ? 'bg-danger/10' : ''}`}>
-                    <td className="px-4 py-2.5 font-medium text-content text-xs">{r.materialName}</td>
+                    <td className="px-4 py-2.5 font-medium text-content text-xs">{r.resourceName}</td>
                     <td className="px-4 py-2.5 text-content-muted text-xs">{r.unit}</td>
                     <td className="px-4 py-2.5 text-right text-success font-medium text-xs">+{r.totalIn.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-right text-warning font-medium text-xs">−{r.totalOut.toLocaleString()}</td>

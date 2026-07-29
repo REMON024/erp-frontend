@@ -13,14 +13,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Edit2, ClipboardList, Receipt, BookOpen, CreditCard, Trash2 } from 'lucide-react'
 import api from '@/lib/api'
+import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
+import type { Resource, ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 interface Account { id: number; accountCode: string; accountName: string; accountType: string }
 
 interface Project { id: number; projectName: string; projectCode: string }
 interface Vendor  { id: number; vendorName: string; vendorType: string }
-interface Material { id: number; materialName: string; unit: string }
+interface Material { id: number; resourceName: string; unit: string }
 interface WorkOrderMaterial {
-  id: number; materialId?: number | null; materialName?: string | null
+  id: number; resourceId?: number | null; resourceName?: string | null; resourceType?: ResourceType
   description: string; unit: string; quantity: number; unitRate: number
   budgetAmount: number; receivedQty: number
 }
@@ -29,7 +31,7 @@ interface WorkOrder {
   vendorId: number; vendorName: string; scope: string
   startDate?: string; endDate?: string
   contractAmount: number; advanceAmount: number; retentionPercent: number; status: string
-  materials?: WorkOrderMaterial[]
+  resources?: WorkOrderMaterial[]
 }
 interface WorkOrderBill {
   id: number; workOrderId: number; workOrderNo: string; vendorName: string
@@ -58,30 +60,52 @@ const tinp = 'border border-border-default rounded px-2 py-1 text-xs focus:ring-
 
 // ── Budget material line-item editor ────────────────────────────────────────────
 interface DraftMaterial {
-  key: string; materialId?: number; description: string; unit: string; quantity: number; unitRate: number
+  key: string; resourceId?: number; resourceType: ResourceType; description: string; unit: string; quantity: number; unitRate: number
 }
 function newMaterialLine(): DraftMaterial {
-  return { key: Math.random().toString(36).slice(2), materialId: undefined, description: '', unit: '', quantity: 1, unitRate: 0 }
+  return { key: Math.random().toString(36).slice(2), resourceId: undefined, resourceType: 'Material', description: '', unit: '', quantity: 1, unitRate: 0 }
 }
 
-function WOMaterialEditor({ items, materials, onChange }: {
-  items: DraftMaterial[]; materials: Material[]; onChange: (items: DraftMaterial[]) => void
+function WOResourceEditor({ items, vendorId, asOf, onChange }: {
+  items: DraftMaterial[]
+  vendorId?: number | null
+  asOf?: string
+  onChange: (items: DraftMaterial[]) => void
 }) {
+  const [rateInfo, setRateInfo] = useState<Record<string, ResolvedRate>>({})
+
   const update = (key: string, patch: Partial<DraftMaterial>) =>
     onChange(items.map(i => i.key === key ? { ...i, ...patch } : i))
   const remove = (key: string) => onChange(items.filter(i => i.key !== key))
   const total  = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitRate) || 0), 0)
 
-  const handleMaterialChange = (key: string, materialId: string) => {
-    const mat = materials.find(m => m.id === Number(materialId))
-    if (mat) update(key, { materialId: mat.id, description: mat.materialName, unit: mat.unit })
-    else     update(key, { materialId: undefined })
+  const clearRate = (key: string) =>
+    setRateInfo(prev => { const next = { ...prev }; delete next[key]; return next })
+
+  const handleResourceChange = (key: string, id: number | '', resource?: Resource) => {
+    if (resource) update(key, { resourceId: resource.id, description: resource.resourceName, unit: resource.unit })
+    else {
+      update(key, { resourceId: undefined })
+      clearRate(key)
+    }
+  }
+
+  // Changing the type invalidates the picked resource, its unit and its suggested rate.
+  const handleTypeChange = (key: string, resourceType: ResourceType) => {
+    update(key, { resourceType, resourceId: undefined, description: '', unit: '', unitRate: 0 })
+    clearRate(key)
+  }
+
+  const handleResolved = (key: string, resolved: ResolvedRate) => {
+    setRateInfo(prev => ({ ...prev, [key]: resolved }))
+    const line = items.find(i => i.key === key)
+    if (line && !Number(line.unitRate) && resolved.rate > 0) update(key, { unitRate: resolved.rate })
   }
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-medium text-content">Budget Materials <span className="text-xs text-content-muted font-normal">— optional planned material list</span></span>
+        <span className="text-sm font-medium text-content">Budget Resources <span className="text-xs text-content-muted font-normal">— optional planned material, equipment, service or labour list</span></span>
         <button type="button" onClick={() => onChange([...items, newMaterialLine()])}
           className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1 shrink-0">
           <Plus className="w-3.5 h-3.5" /> Add Line
@@ -89,10 +113,11 @@ function WOMaterialEditor({ items, materials, onChange }: {
       </div>
       {items.length > 0 && (
         <div className="border border-border-default rounded-lg overflow-x-auto">
-          <table className="w-full min-w-[720px] text-xs">
+          <table className="w-full min-w-[840px] text-xs">
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
-                <th className="px-2 py-2 text-left font-semibold text-content-muted w-48">Material</th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-28">Type <span className="text-primary">*</span></th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-56">Resource <span className="text-primary">*</span></th>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted w-16">Unit</th>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted w-20">Qty</th>
@@ -107,17 +132,32 @@ function WOMaterialEditor({ items, materials, onChange }: {
                 return (
                   <tr key={item.key} className="hover:bg-surface-muted">
                     <td className="px-2 py-1.5">
-                      <Select value={item.materialId ?? ''} onChange={e => handleMaterialChange(item.key, e.target.value)} className="text-xs py-1">
-                        <option value="">— free text —</option>
-                        {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
+                      <Select value={item.resourceType}
+                        onChange={e => handleTypeChange(item.key, e.target.value as ResourceType)}
+                        className="text-xs py-1">
+                        {(['Material', 'Equipment', 'Service', 'Labour'] as ResourceType[]).map(t =>
+                          <option key={t} value={t}>{t}</option>)}
                       </Select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <ResourcePicker
+                        value={item.resourceId ?? ''}
+                        types={[item.resourceType]}
+                        vendorId={vendorId}
+                        asOf={asOf}
+                        onChange={(id, resource) => handleResourceChange(item.key, id, resource)}
+                        onResolved={resolved => handleResolved(item.key, resolved)}
+                        placeholder={`Select ${item.resourceType.toLowerCase()}…`}
+                        invalid={!item.resourceId}
+                        className="text-xs py-1"
+                      />
                     </td>
                     <td className="px-2 py-1.5">
                       <input value={item.description} onChange={e => update(item.key, { description: e.target.value })}
                         className={tinp} placeholder="Material / work description…" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input value={item.unit} onChange={e => update(item.key, { unit: e.target.value })} className={tinp} placeholder="Bag" />
+                      <input value={item.unit} readOnly disabled title="Unit comes from the selected resource" className={tinp} placeholder="Bag" />
                     </td>
                     <td className="px-2 py-1.5">
                       <input type="number" min={0} step="any" value={item.quantity}
@@ -126,6 +166,10 @@ function WOMaterialEditor({ items, materials, onChange }: {
                     <td className="px-2 py-1.5">
                       <input type="number" min={0} step="any" value={item.unitRate}
                         onChange={e => update(item.key, { unitRate: Number(e.target.value) })} className={tinp} />
+                      <div className="mt-0.5">
+                        <RateSourceChip resolved={rateInfo[item.key]} currentValue={Number(item.unitRate)}
+                          onApply={rate => update(item.key, { unitRate: rate })} />
+                      </div>
                     </td>
                     <td className="px-2 py-1.5 font-semibold text-content text-right pr-3">{fmtFull(amount)}</td>
                     <td className="px-2 py-1.5 text-center">
@@ -138,7 +182,7 @@ function WOMaterialEditor({ items, materials, onChange }: {
             </tbody>
             <tfoot className="bg-surface-muted border-t border-border-default">
               <tr>
-                <td colSpan={5} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Budget</td>
+                <td colSpan={6} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Budget</td>
                 <td className="px-2 py-2 text-right font-bold text-content pr-3">{fmtFull(total)}</td>
                 <td />
               </tr>
@@ -170,15 +214,15 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
   const [materialItems, setMaterialItems] = useState<DraftMaterial[]>(
-    wo?.materials?.length
-      ? wo.materials.map(m => ({
-          key: String(m.id ?? Math.random()), materialId: m.materialId ?? undefined,
+    wo?.resources?.length
+      ? wo.resources!.map(m => ({
+          key: String(m.id ?? Math.random()), resourceId: m.resourceId ?? undefined,
+          resourceType: (m.resourceType ?? "Material") as ResourceType,
           description: m.description, unit: m.unit, quantity: m.quantity, unitRate: m.unitRate,
         }))
       : []
   )
-  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
-  const { register, handleSubmit, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: wo
       ? { projectId: wo.projectId, vendorId: wo.vendorId, scope: wo.scope, startDate: wo.startDate, endDate: wo.endDate,
@@ -190,15 +234,15 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
     setSaving(true); setErr('')
     try {
       const materialsPayload = materialItems
-        .filter(i => i.description.trim() && Number(i.quantity) > 0)
+        .filter(i => i.resourceId && i.description.trim() && Number(i.quantity) > 0)
         .map(i => ({
-          materialId: i.materialId ?? null,
+          resourceId: i.resourceId,
           description: i.description.trim(),
           unit: i.unit,
           quantity: Number(i.quantity),
           unitRate: Number(i.unitRate),
         }))
-      const payload = { ...d, materials: materialsPayload }
+      const payload = { ...d, resources: materialsPayload }
       if (isEdit) await api.put(`/work-orders/${wo!.id}`, payload)
       else        await api.post('/work-orders', payload)
       onSaved(); onClose()
@@ -261,7 +305,14 @@ function WOModal({ wo, projects, vendors, onClose, onSaved }: {
             <input type="number" step="any" {...register('retentionPercent')} className={inp} placeholder="5" min={0} max={100} />
           </div>
         </div>
-        <WOMaterialEditor items={materialItems} materials={materials} onChange={setMaterialItems} />
+        {/* Vendor and start date give the rate lookup its context, so a back-dated work order
+            picks up the rate that was in force then, and this contractor's own rate if it has one. */}
+        <WOResourceEditor
+          items={materialItems}
+          vendorId={Number(watch('vendorId')) || null}
+          asOf={watch('startDate') || undefined}
+          onChange={setMaterialItems}
+        />
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
           <button type="submit" disabled={saving} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium disabled:opacity-60">

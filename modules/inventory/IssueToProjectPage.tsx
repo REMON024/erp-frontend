@@ -14,11 +14,11 @@ import { Plus, PackageCheck, AlertTriangle } from 'lucide-react'
 import api from '@/lib/api'
 
 interface Project  { id: number; projectName: string; projectCode: string }
-interface BudgetLine { materialId: number; budgetedQty: number; issuedQty: number; unit: string }
+interface BudgetLine { resourceId: number; budgetedQty: number; issuedQty: number; unit: string }
 interface StockBalanceRow { warehouseId: number | null; balance: number }
-interface MaterialRollup { materialId: number; materialName: string; unit: string; warehouses: StockBalanceRow[] }
+interface MaterialRollup { resourceId: number; resourceName: string; unit: string; warehouses: StockBalanceRow[] }
 interface StockTxn {
-  id: number; materialName: string; unit: string; projectName?: string
+  id: number; resourceName: string; unit: string; projectName?: string
   qty: number; totalCost: number; referenceNo?: string; transactionDate: string
 }
 
@@ -30,7 +30,7 @@ const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   warehouseId:     z.coerce.number().min(1, 'Required'),
-  materialId:      z.coerce.number().min(1, 'Required'),
+  resourceId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
   qty:             z.coerce.number().min(0.01, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
@@ -50,7 +50,7 @@ function IssueModal({ projects, warehouses, onClose, onSaved }: {
   })
 
   const watchedWh    = Number(watch('warehouseId'))
-  const watchedMat   = Number(watch('materialId'))
+  const watchedMat   = Number(watch('resourceId'))
   const watchedProj  = Number(watch('projectId'))
   const watchedQty   = Number(watch('qty')) || 0
 
@@ -63,7 +63,7 @@ function IssueModal({ projects, warehouses, onClose, onSaved }: {
   })
   // Only materials that have a positive balance in the chosen warehouse.
   const availableMaterials = rollups
-    .map(r => ({ id: r.materialId, name: r.materialName, unit: r.unit, balance: r.warehouses.find(w => w.warehouseId === watchedWh)?.balance ?? 0 }))
+    .map(r => ({ id: r.resourceId, name: r.resourceName, unit: r.unit, balance: r.warehouses.find(w => w.warehouseId === watchedWh)?.balance ?? 0 }))
     .filter(m => m.balance > 0)
   const selectedMat = availableMaterials.find(m => m.id === watchedMat)
 
@@ -72,7 +72,7 @@ function IssueModal({ projects, warehouses, onClose, onSaved }: {
     queryKey: ['material-budget-v2', String(watchedProj)],
     enabled: !!watchedProj,
   })
-  const budgetLine   = budgetLines.find(l => l.materialId === watchedMat)
+  const budgetLine   = budgetLines.find(l => l.resourceId === watchedMat)
   const remaining    = budgetLine ? budgetLine.budgetedQty - budgetLine.issuedQty : null
   const wouldExceed  = budgetLine && budgetLine.budgetedQty > 0 && (budgetLine.issuedQty + watchedQty) > budgetLine.budgetedQty
 
@@ -92,7 +92,7 @@ function IssueModal({ projects, warehouses, onClose, onSaved }: {
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
           <label className={lbl}>Warehouse <span className="text-danger">*</span></label>
-          <Select {...register('warehouseId', { onChange: () => resetField('materialId') })}>
+          <Select {...register('warehouseId', { onChange: () => resetField('resourceId') })}>
             <option value="">Select warehouse</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
@@ -100,13 +100,13 @@ function IssueModal({ projects, warehouses, onClose, onSaved }: {
         </div>
         <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
-          <Select {...register('materialId')} disabled={!watchedWh}>
+          <Select {...register('resourceId')} disabled={!watchedWh}>
             <option value="">{watchedWh ? 'Select material' : 'Select a warehouse first'}</option>
             {availableMaterials.map(m => <option key={m.id} value={m.id}>{m.name} — {m.balance.toLocaleString()} {m.unit} available</option>)}
           </Select>
           {watchedWh && availableMaterials.length === 0 &&
             <p className="text-xs text-content-muted mt-1">No materials in stock in this warehouse.</p>}
-          {errors.materialId && <p className="text-xs text-danger mt-1">{errors.materialId.message}</p>}
+          {errors.resourceId && <p className="text-xs text-danger mt-1">{errors.resourceId.message}</p>}
         </div>
         {selectedMat && (
           <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
@@ -217,7 +217,7 @@ export function IssueToProjectPage() {
                 {txns.map(t => (
                   <tr key={t.id} className="hover:bg-surface-muted">
                     <td className="px-4 py-3 font-medium text-content">
-                      <div className="flex items-center gap-2"><PackageCheck className="w-4 h-4 text-warning" />{t.materialName}</div>
+                      <div className="flex items-center gap-2"><PackageCheck className="w-4 h-4 text-warning" />{t.resourceName}</div>
                     </td>
                     <td className="px-4 py-3 text-content-muted text-xs">{t.projectName ?? '—'}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{t.transactionDate}</td>

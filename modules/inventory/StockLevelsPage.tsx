@@ -7,7 +7,7 @@ import { useApiData } from '@/hooks/useApiData'
 import { AlertTriangle, Package } from 'lucide-react'
 
 interface Material {
-  id: number; materialCode: string; materialName: string; category?: string
+  id: number; resourceCode: string; resourceName: string; category?: string
   unit: string; minimumStock: number; averageCost: number
   currentStock: number; status: string; isLowStock: boolean
 }
@@ -19,12 +19,12 @@ export function StockLevelsPage() {
   const [filter, setFilter] = useState<'all' | 'low'>('all')
 
   const { data: materials = [], isLoading, error, refetch } = useApiData<Material[]>({
-    url: '/materials',
-    params: { lowStock: filter === 'low' ? true : undefined },
+    url: '/resources',
+    params: { types: 'Material', lowStock: filter === 'low' ? true : undefined },
     queryKey: ['materials', 'levels', filter],
   })
 
-  const displayed = materials.filter(m => m.materialName.toLowerCase().includes(search.toLowerCase()))
+  const displayed = materials.filter(m => m.resourceName.toLowerCase().includes(search.toLowerCase()))
   const lowStock   = materials.filter(m => m.isLowStock).length
   const stockValue = materials.reduce((s, m) => s + m.currentStock * m.averageCost, 0)
 
@@ -74,8 +74,8 @@ export function StockLevelsPage() {
               <tbody className="divide-y divide-border-default">
                 {displayed.map(m => (
                   <tr key={m.id} className={`hover:bg-surface-muted ${m.isLowStock ? 'bg-danger/10' : ''}`}>
-                    <td className="px-4 py-3 font-medium text-content">{m.materialName}</td>
-                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{m.materialCode}</td>
+                    <td className="px-4 py-3 font-medium text-content">{m.resourceName}</td>
+                    <td className="px-4 py-3 text-content-muted text-xs font-mono">{m.resourceCode}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{m.unit}</td>
                     <td className={`px-4 py-3 font-bold text-right tabular-nums ${m.isLowStock ? 'text-danger' : 'text-content'}`}>{m.currentStock.toLocaleString()}</td>
                     <td className="px-4 py-3 text-content-muted text-xs text-right tabular-nums">{m.minimumStock.toLocaleString()}</td>

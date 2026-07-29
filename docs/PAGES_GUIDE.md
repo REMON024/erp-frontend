@@ -124,9 +124,21 @@ enter received qty and unit cost per line. Receiving updates stock and the PO st
 
 ## Inventory
 
-### Materials (Material Master) — `/inventory/materials`
-Material catalogue: code, name, category, unit, minimum (reorder) stock, average
-cost, current stock, low-stock flag. Create/edit materials.
+### Resource Master — `/inventory/resources`
+The single catalogue for everything a project consumes, filtered by **resource type**:
+**Material** (stockable), **Equipment** (plant, owned or hired), **Service** (bought-in work)
+and **Labour** (trades). Code, name, category, unit, rate basis and standard rate apply to all
+types; reorder level, average cost and current stock apply to Materials only and show `—`
+for the rest.
+
+Replaces the old Material Master page (`/inventory/materials`), which was removed — it was a
+strict subset of this screen. Material Substitutions were removed with it.
+
+### Resource Rates — `/inventory/resource-rates`
+Effective-dated rates per resource, optionally scoped to a vendor. Adding a rate automatically
+closes the previous open rate for the same resource+vendor, so rates never overlap and the old
+price is kept as history. Resolution order when a document asks for a rate:
+**vendor rate → standard rate → resource standard rate → average cost**.
 
 ### Stock In — `/inventory/stock-in`
 Manually record stock receipts into a warehouse (material, qty, unit cost, date,

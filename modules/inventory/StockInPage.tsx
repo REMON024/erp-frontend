@@ -14,12 +14,12 @@ import { z } from 'zod'
 import { Plus, PackagePlus } from 'lucide-react'
 import api from '@/lib/api'
 
-interface Material { id: number; materialName: string; unit: string; averageCost: number }
+interface Material { id: number; resourceName: string; unit: string; averageCost: number }
 interface Warehouse { id: number; name: string }
-interface WorkOrderMaterialLine { materialId: number | null; materialName: string | null; unit: string; quantity: number; receivedQty: number }
+interface WorkOrderMaterialLine { resourceId: number | null; resourceName: string | null; unit: string; quantity: number; receivedQty: number }
 interface WorkOrder { id: number; workOrderNo: string; projectName: string; materials: WorkOrderMaterialLine[] }
 interface StockTxn {
-  id: number; materialName: string; unit: string; transactionType: string
+  id: number; resourceName: string; unit: string; transactionType: string
   qty: number; unitCost: number; totalCost: number
   referenceNo?: string; transactionDate: string; notes?: string
 }
@@ -31,7 +31,7 @@ const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm fo
 const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
-  materialId:      z.coerce.number().min(1, 'Required'),
+  resourceId:      z.coerce.number().min(1, 'Required'),
   warehouseId:     z.coerce.number().optional(),
   workOrderId:     z.coerce.number().min(1, 'Required'),
   qty:             z.coerce.number().min(0.01, 'Required'),
@@ -53,7 +53,7 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
   })
 
   // A budget line is receivable when it links a material master and isn't fully received yet.
-  const isReceivable = (m: WorkOrderMaterialLine) => m.materialId != null && m.receivedQty < m.quantity
+  const isReceivable = (m: WorkOrderMaterialLine) => m.resourceId != null && m.receivedQty < m.quantity
   // Only show work orders that still have at least one receivable material line.
   const selectableWorkOrders = workOrders.filter(w => w.materials.some(isReceivable))
 
@@ -61,7 +61,7 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
   const woMaterialIds = new Set(
     (selectedWorkOrder?.materials ?? [])
       .filter(isReceivable)
-      .map(m => m.materialId as number))
+      .map(m => m.resourceId as number))
   const availableMaterials = materials.filter(m => woMaterialIds.has(m.id))
 
   const onSubmit = async (d: Form) => {
@@ -88,7 +88,7 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
           <Select {...register('workOrderId', {
             onChange: () => {
               // Reset the material when the work order changes so a stale selection can't survive.
-              resetField('materialId')
+              resetField('resourceId')
             },
           })}>
             <option value="">Select work order</option>
@@ -98,18 +98,18 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
         </div>
         <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
-          <Select {...register('materialId', {
+          <Select {...register('resourceId', {
             onChange: e => {
               const m = materials.find(x => x.id === Number(e.target.value))
               if (m) setValue('unitCost', m.averageCost)
             },
           })} disabled={!selectedWorkOrder}>
             <option value="">{selectedWorkOrder ? 'Select material' : 'Select a work order first'}</option>
-            {availableMaterials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
+            {availableMaterials.map(m => <option key={m.id} value={m.id}>{m.resourceName} ({m.unit})</option>)}
           </Select>
           {selectedWorkOrder && availableMaterials.length === 0 &&
             <p className="text-xs text-content-muted mt-1">This work order has no budgeted materials linked to the material master.</p>}
-          {errors.materialId && <p className="text-xs text-danger mt-1">{errors.materialId.message}</p>}
+          {errors.resourceId && <p className="text-xs text-danger mt-1">{errors.resourceId.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -161,7 +161,7 @@ export function StockInPage() {
   const qc = useQueryClient()
   const [showNew, setShowNew] = useState(false)
 
-  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
+  const { data: materials = [] } = useApiData<Material[]>({ url: '/resources', params: { types: 'Material' }, queryKey: ['materials-list'] })
   const { data: warehouses = [] } = useApiData<Warehouse[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
   const { data: workOrders = [] } = useApiData<WorkOrder[]>({ url: '/work-orders', queryKey: ['work-orders-list'] })
   const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
@@ -208,7 +208,7 @@ export function StockInPage() {
                 {txns.map(t => (
                   <tr key={t.id} className="hover:bg-surface-muted">
                     <td className="px-4 py-3 font-medium text-content">
-                      <div className="flex items-center gap-2"><PackagePlus className="w-4 h-4 text-success" />{t.materialName}</div>
+                      <div className="flex items-center gap-2"><PackagePlus className="w-4 h-4 text-success" />{t.resourceName}</div>
                     </td>
                     <td className="px-4 py-3 text-content-muted text-xs">{t.transactionDate}</td>
                     <td className="px-4 py-3 text-success font-semibold text-right tabular-nums">+{t.qty.toLocaleString()} {t.unit}</td>

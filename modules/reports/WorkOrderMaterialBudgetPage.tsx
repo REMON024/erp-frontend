@@ -9,7 +9,7 @@ interface Project { id: number; projectCode: string; projectName: string }
 interface WorkOrder { id: number; workOrderNo: string; projectName: string }
 interface WorkOrderMaterialBudgetRow {
   workOrderId: number; workOrderNo: string; projectName: string
-  materialName: string; unit: string
+  resourceName: string; unit: string
   budgetQty: number; receivedQty: number; remainingQty: number
   unitRate: number; budgetAmount: number; receivedValue: number; receivedPct: number
 }
@@ -93,7 +93,7 @@ export function WorkOrderMaterialBudgetPage() {
                     <tr key={`${r.workOrderId}-${i}`} className="hover:bg-surface-muted">
                       <td className="px-3 py-2 text-xs font-medium text-content">{r.workOrderNo}</td>
                       <td className="px-3 py-2 text-xs text-content-muted">{r.projectName}</td>
-                      <td className="px-3 py-2 font-medium text-content">{r.materialName}</td>
+                      <td className="px-3 py-2 font-medium text-content">{r.resourceName}</td>
                       <td className="px-3 py-2 text-content-muted">{r.unit}</td>
                       <td className="px-3 py-2 text-right text-content">{fmtQ(r.budgetQty)}</td>
                       <td className="px-3 py-2 text-right text-success">{fmtQ(r.receivedQty)}</td>

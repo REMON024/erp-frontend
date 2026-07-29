@@ -9,16 +9,22 @@ import {
   Package, Receipt, BookOpen, PieChart, Users, Settings,
   ChevronDown, LogOut, BarChart2, Shield, Menu, ClipboardList,
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
-  DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers, type LucideProps,
+  DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
+  Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
+  Calculator, BarChart3, ShoppingBag, type LucideProps,
 } from 'lucide-react'
 
-// Map icon name strings (stored in DB) → Lucide components
+// Map icon name strings (stored in DB) → Lucide components.
+// Anything the seeder references but this map omits silently renders the generic
+// fallback below, so keep it in sync with DbSeeder.MenuDefs.
 const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
   Package, Receipt, BookOpen, PieChart, Users, Settings,
   BarChart2, Shield, Menu, ClipboardList,
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
+  Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
+  Calculator, BarChart3, ShoppingBag,
 }
 // Settings stays in ICON_MAP so the DB icon string "Settings" resolves correctly
 const getIcon = (name: string | null): React.FC<LucideProps> =>

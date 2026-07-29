@@ -8,7 +8,7 @@ import { useApiData } from '@/hooks/useApiData'
 
 interface Project { id: number; projectCode: string; projectName: string }
 interface MaterialConsumptionRow {
-  materialId: number; materialCode: string; materialName: string
+  resourceId: number; resourceCode: string; resourceName: string
   category: string; unit: string
   receivedQty: number; issuedQty: number; balanceQty: number
   avgCost: number; issuedValue: number
@@ -91,9 +91,9 @@ export function MaterialConsumptionPage() {
                 </thead>
                 <tbody className="divide-y divide-border-default">
                   {data?.rows.map(r => (
-                    <tr key={r.materialId} className={r.balanceQty < 0 ? 'bg-danger/10' : 'hover:bg-surface-muted'}>
-                      <td className="px-3 py-2 text-xs text-content-muted">{r.materialCode}</td>
-                      <td className="px-3 py-2 font-medium text-content">{r.materialName}</td>
+                    <tr key={r.resourceId} className={r.balanceQty < 0 ? 'bg-danger/10' : 'hover:bg-surface-muted'}>
+                      <td className="px-3 py-2 text-xs text-content-muted">{r.resourceCode}</td>
+                      <td className="px-3 py-2 font-medium text-content">{r.resourceName}</td>
                       <td className="px-3 py-2 text-xs text-content-muted">{r.category}</td>
                       <td className="px-3 py-2 text-content-muted">{r.unit}</td>
                       <td className="px-3 py-2 text-right text-success">{fmtQ(r.receivedQty)}</td>

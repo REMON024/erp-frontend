@@ -20,14 +20,14 @@ interface Project   { id: number; projectCode: string; projectName: string; stat
 interface Estimate  { id: number; totalEstimated: number; totalActual: number; status: string }
 interface Invoice   { id: number; totalAmount: number; paidAmount: number; dueAmount: number; status: string; invoiceDate: string; customerName: string; invoiceNo: string }
 interface Payment   { id: number; paymentNo: string; customerName: string; amount: number; paymentDate: string; method: string }
-interface Material  { id: number; materialName: string; currentStock: number; minimumStock: number; isLowStock: boolean }
+interface Material  { id: number; resourceName: string; currentStock: number; minimumStock: number; isLowStock: boolean }
 interface Booking   { id: number; bookingNo: string; customerName: string; netAmount: number; bookingDate: string; unitNo: string }
 
 export function DashboardPage() {
   const { data: projects = [],  isLoading: loadP  } = useApiData<Project[]>  ({ url: '/projects',  queryKey: ['dash-projects']  })
   const { data: invoices = [],  isLoading: loadI  } = useApiData<Invoice[]>  ({ url: '/invoices',  queryKey: ['dash-invoices']  })
   const { data: payments = [],  isLoading: loadPy } = useApiData<Payment[]>  ({ url: '/payments',  queryKey: ['dash-payments']  })
-  const { data: materials = [], isLoading: loadM  } = useApiData<Material[]> ({ url: '/materials', queryKey: ['dash-materials'] })
+  const { data: materials = [], isLoading: loadM  } = useApiData<Material[]> ({ url: '/resources', params: { types: 'Material' }, queryKey: ['dash-materials'] })
   const { data: bookings = [],   isLoading: loadB  } = useApiData<Booking[]>  ({ url: '/bookings',       queryKey: ['dash-bookings']  })
   const { data: estimates = [],  isLoading: loadE  } = useApiData<Estimate[]> ({ url: '/cost-estimates', params: { status: 'Approved' }, queryKey: ['dash-estimates'] })
 

@@ -8,7 +8,7 @@ import { useApiData } from '@/hooks/useApiData'
 import { ArrowLeftRight, CheckCircle, AlertCircle } from 'lucide-react'
 import api from '@/lib/api'
 
-interface Material { id: number; materialName: string; unit: string }
+interface Material { id: number; resourceName: string; unit: string }
 interface Warehouse { id: number; name: string }
 
 const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
@@ -17,10 +17,10 @@ function isoToday() { return new Date().toISOString().split('T')[0] }
 
 export function StockTransferPage() {
   const qc = useQueryClient()
-  const { data: materials = [] }  = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
+  const { data: materials = [] }  = useApiData<Material[]>({ url: '/resources', params: { types: 'Material' }, queryKey: ['materials-list'] })
   const { data: warehouses = [] } = useApiData<Warehouse[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
 
-  const [materialId, setMaterialId] = useState('')
+  const [resourceId, setMaterialId] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [qty, setQty] = useState('')
@@ -34,7 +34,7 @@ export function StockTransferPage() {
     setBusy(true); setMsg(null)
     try {
       await api.post('/stock-transactions/transfer', {
-        materialId: Number(materialId), fromWarehouseId: Number(from), toWarehouseId: Number(to),
+        resourceId: Number(resourceId), fromWarehouseId: Number(from), toWarehouseId: Number(to),
         qty: Number(qty), transactionDate: date, referenceNo, notes,
       })
       setMsg({ ok: true, text: 'Transfer recorded.' })
@@ -45,7 +45,7 @@ export function StockTransferPage() {
     } finally { setBusy(false) }
   }
 
-  const valid = materialId && from && to && from !== to && Number(qty) > 0
+  const valid = resourceId && from && to && from !== to && Number(qty) > 0
 
   return (
     <div className="space-y-6">
@@ -59,9 +59,9 @@ export function StockTransferPage() {
         )}
         <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
-          <Select value={materialId} onChange={e => setMaterialId(e.target.value)}>
+          <Select value={resourceId} onChange={e => setMaterialId(e.target.value)}>
             <option value="">Select material</option>
-            {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
+            {materials.map(m => <option key={m.id} value={m.id}>{m.resourceName} ({m.unit})</option>)}
           </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">

@@ -8,7 +8,7 @@ import { AlertTriangle } from 'lucide-react'
 
 interface BalanceRow { warehouseId: number | null; warehouseName: string; balance: number; lowStock: boolean }
 interface Rollup {
-  materialId: number; materialName: string; unit: string; reorder: number
+  resourceId: number; resourceName: string; unit: string; reorder: number
   companyTotal: number; lowStock: boolean; warehouses: BalanceRow[]
 }
 interface Warehouse { id: number; name: string }
@@ -51,8 +51,8 @@ export function WarehouseStockLevelsPage() {
               </thead>
               <tbody className="divide-y divide-border-default">
                 {rollups.map(r => (
-                  <tr key={r.materialId} className="hover:bg-surface-muted">
-                    <td className="px-4 py-3 font-medium text-content">{r.materialName}<span className="text-xs text-content-muted ml-1">({r.unit})</span></td>
+                  <tr key={r.resourceId} className="hover:bg-surface-muted">
+                    <td className="px-4 py-3 font-medium text-content">{r.resourceName}<span className="text-xs text-content-muted ml-1">({r.unit})</span></td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {r.warehouses.length === 0 && <span className="text-xs text-content-muted">—</span>}

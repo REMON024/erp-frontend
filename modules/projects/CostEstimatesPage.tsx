@@ -9,15 +9,17 @@ import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2, Upload } from 'lucide-react'
 import api from '@/lib/api'
+import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
+import type { Resource, ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type BOQCategory = 'Civil' | 'Structural' | 'Architectural' | 'Electrical' | 'Plumbing' | 'HVAC' | 'Finishing' | 'Miscellaneous'
 type EstimateStatus = 'Draft' | 'Approved' | 'Revised' | 'Rejected'
 
 interface Project  { id: number; projectCode: string; projectName: string }
-interface Material { id: number; materialName: string; materialCode: string; unit: string; category?: string }
+interface Material { id: number; resourceName: string; resourceCode: string; unit: string; category?: string }
 interface BOQItem {
-  id?: number; materialId?: number; materialName?: string
+  id?: number; resourceId?: number; resourceName?: string; resourceType?: ResourceType
   category: BOQCategory; description: string
   unit: string; quantity: number; unitRate: number
   estimatedAmount: number; actualAmount: number
@@ -45,34 +47,55 @@ const lbl  = 'block text-sm font-medium text-content mb-1'
 const tinp = 'border border-border-default rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none w-full'
 
 // ── BOQ line-item editor ───────────────────────────────────────────────────────
-type DraftItem = Omit<BOQItem, 'id' | 'estimatedAmount' | 'actualAmount' | 'materialName'> & { key: string }
+type DraftItem = Omit<BOQItem, 'id' | 'estimatedAmount' | 'actualAmount' | 'resourceName'>
+  & { key: string; resourceType: ResourceType }
 
 function newLine(): DraftItem {
-  return { key: Math.random().toString(36).slice(2), materialId: undefined, category: 'Civil', description: '', unit: 'LS', quantity: 1, unitRate: 0 }
+  // Default to Material so existing habits are unaffected; the type narrows the resource list.
+  return { key: Math.random().toString(36).slice(2), resourceId: undefined, resourceType: 'Material',
+           category: 'Civil', description: '', unit: 'LS', quantity: 1, unitRate: 0 }
 }
 
-function BOQEditor({ items, materials, onChange }: {
+const RESOURCE_TYPES: ResourceType[] = ['Material', 'Equipment', 'Service', 'Labour']
+
+function BOQEditor({ items, onChange }: {
   items: DraftItem[]
-  materials: Material[]
   onChange: (items: DraftItem[]) => void
 }) {
+  // Rate provenance per line, so the user can see why a rate was suggested.
+  const [rateInfo, setRateInfo] = useState<Record<string, ResolvedRate>>({})
+
   const update = (key: string, patch: Partial<DraftItem>) =>
     onChange(items.map(i => i.key === key ? { ...i, ...patch } : i))
   const remove = (key: string) => onChange(items.filter(i => i.key !== key))
 
   const totalEstimated = items.reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.unitRate) || 0), 0)
 
-  const handleMaterialChange = (key: string, materialId: string) => {
-    const mat = materials.find(m => m.id === Number(materialId))
-    if (mat) {
-      update(key, {
-        materialId:  mat.id,
-        description: mat.materialName,
-        unit:        mat.unit,
-      })
+  const clearRate = (key: string) =>
+    setRateInfo(prev => { const next = { ...prev }; delete next[key]; return next })
+
+  const handleResourceChange = (key: string, resourceId: number | '', resource?: Resource) => {
+    if (resource) {
+      // Unit always follows the resource; the rate is handled by onResolved so a
+      // rate the user already typed is not clobbered.
+      update(key, { resourceId: resource.id, description: resource.resourceName, unit: resource.unit })
     } else {
-      update(key, { materialId: undefined })
+      update(key, { resourceId: undefined })
+      clearRate(key)
     }
+  }
+
+  // Changing the type invalidates the picked resource, its unit and its suggested rate.
+  const handleTypeChange = (key: string, resourceType: ResourceType) => {
+    update(key, { resourceType, resourceId: undefined, description: '', unit: '', unitRate: 0 })
+    clearRate(key)
+  }
+
+  const handleResolved = (key: string, resolved: ResolvedRate) => {
+    setRateInfo(prev => ({ ...prev, [key]: resolved }))
+    const line = items.find(i => i.key === key)
+    // Prefill only an empty rate — never overwrite a number the user entered.
+    if (line && !Number(line.unitRate) && resolved.rate > 0) update(key, { unitRate: resolved.rate })
   }
 
   return (
@@ -80,7 +103,7 @@ function BOQEditor({ items, materials, onChange }: {
       <div className="flex items-center justify-between mb-1">
         <div>
           <span className="text-sm font-medium text-content">Bill of Quantities</span>
-          <span className="ml-2 text-xs text-content-muted">— link each line to a material to enable budget vs actual tracking</span>
+          <span className="ml-2 text-xs text-content-muted">— link each line to a resource (material, equipment, service or labour) to enable budget vs actual tracking</span>
         </div>
         <button type="button" onClick={() => onChange([...items, newLine()])}
           className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1 shrink-0">
@@ -88,10 +111,11 @@ function BOQEditor({ items, materials, onChange }: {
         </button>
       </div>
       <div className="border border-border-default rounded-lg overflow-x-auto">
-        <table className="w-full min-w-[860px] text-xs">
+        <table className="w-full min-w-[980px] text-xs">
           <thead className="bg-surface-muted border-b border-border-default">
             <tr>
-              <th className="px-2 py-2 text-left font-semibold text-content-muted w-44">Material <span className="text-primary">*</span></th>
+              <th className="px-2 py-2 text-left font-semibold text-content-muted w-28">Type <span className="text-primary">*</span></th>
+              <th className="px-2 py-2 text-left font-semibold text-content-muted w-52">Resource <span className="text-primary">*</span></th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-32">Category</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-16">Unit</th>
@@ -105,20 +129,26 @@ function BOQEditor({ items, materials, onChange }: {
             {items.map(item => {
               const amount = (Number(item.quantity) || 0) * (Number(item.unitRate) || 0)
               return (
-                <tr key={item.key} className={item.materialId ? 'hover:bg-surface-muted' : 'bg-warning/15 hover:bg-warning/15'}>
+                <tr key={item.key} className={item.resourceId ? 'hover:bg-surface-muted' : 'bg-warning/15 hover:bg-warning/15'}>
                   <td className="px-2 py-1.5">
-                    <Select
-                      value={item.materialId ?? ''}
-                      onChange={e => handleMaterialChange(item.key, e.target.value)}
-                      className={'text-xs py-1' + (item.materialId ? '' : ' border-warning/20')}
-                    >
-                      <option value="">— select material —</option>
-                      {materials.map(m => (
-                        <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>
-                      ))}
+                    <Select value={item.resourceType}
+                      onChange={e => handleTypeChange(item.key, e.target.value as ResourceType)}
+                      className="text-xs py-1">
+                      {RESOURCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                     </Select>
-                    {!item.materialId && (
-                      <p className="text-[10px] text-warning mt-0.5">Link material for budget tracking</p>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <ResourcePicker
+                      value={item.resourceId ?? ''}
+                      types={[item.resourceType]}
+                      onChange={(id, resource) => handleResourceChange(item.key, id, resource)}
+                      onResolved={resolved => handleResolved(item.key, resolved)}
+                      placeholder={`Select ${item.resourceType.toLowerCase()}…`}
+                      invalid={!item.resourceId}
+                      className={'text-xs py-1' + (item.resourceId ? '' : ' border-warning/20')}
+                    />
+                    {!item.resourceId && (
+                      <p className="text-[10px] text-warning mt-0.5">Required — every line must reference a resource</p>
                     )}
                   </td>
                   <td className="px-2 py-1.5">
@@ -131,7 +161,7 @@ function BOQEditor({ items, materials, onChange }: {
                       className={tinp} placeholder="Work description…" />
                   </td>
                   <td className="px-2 py-1.5">
-                    <input value={item.unit} onChange={e => update(item.key, { unit: e.target.value })}
+                    <input value={item.unit} readOnly disabled title="Unit comes from the selected resource"
                       className={tinp} placeholder="m²" />
                   </td>
                   <td className="px-2 py-1.5">
@@ -141,6 +171,13 @@ function BOQEditor({ items, materials, onChange }: {
                   <td className="px-2 py-1.5">
                     <input type="number" min={0} step="any" value={item.unitRate}
                       onChange={e => update(item.key, { unitRate: Number(e.target.value) })} className={tinp} />
+                    <div className="mt-0.5">
+                      <RateSourceChip
+                        resolved={rateInfo[item.key]}
+                        currentValue={Number(item.unitRate)}
+                        onApply={rate => update(item.key, { unitRate: rate })}
+                      />
+                    </div>
                   </td>
                   <td className="px-2 py-1.5 font-semibold text-content text-right pr-3">
                     {fmt(amount)}
@@ -157,16 +194,16 @@ function BOQEditor({ items, materials, onChange }: {
           </tbody>
           <tfoot className="bg-surface-muted border-t border-border-default">
             <tr>
-              <td colSpan={6} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Estimated</td>
+              <td colSpan={7} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Estimated</td>
               <td className="px-2 py-2 text-right font-bold text-content pr-3">{fmt(totalEstimated)}</td>
               <td />
             </tr>
           </tfoot>
         </table>
       </div>
-      {items.some(i => !i.materialId) && (
+      {items.some(i => !i.resourceId) && (
         <p className="text-xs text-warning flex items-center gap-1">
-          ⚠ Lines without a material won't appear in Material Budget vs Actual tracking.
+          ⚠ Every line must reference a resource before the estimate can be saved.
         </p>
       )}
     </div>
@@ -187,7 +224,8 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
     estimate?.items?.length
       ? estimate.items.map(i => ({
           key:        String(i.id ?? Math.random()),
-          materialId: i.materialId ?? undefined,
+          resourceId: i.resourceId ?? undefined,
+          resourceType: (i.resourceType ?? "Material") as ResourceType,
           category:   i.category,
           description: i.description,
           unit:        i.unit,
@@ -197,22 +235,23 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
       : [newLine()]
   )
 
-  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
+  // Only drives the "catalogue is empty" hint; the picker fetches its own list.
+  const { data: materials = [] } = useApiData<Resource[]>({ url: '/resources', queryKey: ['resources-all'] })
 
-  const validItems     = items.filter(i => i.description.trim() && Number(i.quantity) > 0 && Number(i.unitRate) >= 0)
+  const validItems     = items.filter(i => i.resourceId && i.description.trim() && Number(i.quantity) > 0 && Number(i.unitRate) >= 0)
   const totalEstimated = validItems.reduce((s, i) => s + Number(i.quantity) * Number(i.unitRate), 0)
-  const unlinkedCount  = validItems.filter(i => !i.materialId).length
+  const unlinkedCount  = items.filter(i => !i.resourceId && i.description.trim()).length
 
   const onSubmit = async () => {
     if (!projectId)           { setErr('Select a project'); return }
     if (!title.trim())        { setErr('Title is required'); return }
-    if (validItems.length === 0) { setErr('Add at least one BOQ line with a description and quantity'); return }
+    if (validItems.length === 0) { setErr('Add at least one BOQ line with a resource, description and quantity'); return }
     setSaving(true); setErr('')
     try {
       const payload = {
         projectId: Number(projectId), title,
         items: validItems.map(i => ({
-          materialId:      i.materialId ?? null,
+          resourceId:      i.resourceId,
           category:        i.category,
           description:     i.description,
           unit:            i.unit,
@@ -249,18 +288,18 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
 
         {materials.length === 0 && (
           <div className="rounded-lg border border-warning/20 bg-warning/15 px-3 py-2 text-xs text-warning">
-            ⚠ No materials found in the master list. <a href="/inventory/materials" className="underline font-medium">Add materials first</a> so you can link BOQ lines for budget tracking.
+            ⚠ No resources found in the master list. <a href="/inventory/resources" className="underline font-medium">Add resources first</a> so you can link BOQ lines for budget tracking.
           </div>
         )}
 
-        <BOQEditor items={items} materials={materials} onChange={setItems} />
+        <BOQEditor items={items} onChange={setItems} />
 
         {totalEstimated > 0 && (
           <div className="bg-primary/10 border border-info/20 rounded-lg px-4 py-2 flex justify-between text-sm">
             <span className="text-primary font-medium">Total Estimated Cost</span>
             <div className="flex items-center gap-3">
               {unlinkedCount > 0 && (
-                <span className="text-xs text-warning">{unlinkedCount} line{unlinkedCount !== 1 ? 's' : ''} not linked to material</span>
+                <span className="text-xs text-warning">{unlinkedCount} line{unlinkedCount !== 1 ? 's' : ''} missing a resource — will not be saved</span>
               )}
               <span className="font-bold text-info">{fmt(totalEstimated)}</span>
             </div>
@@ -326,8 +365,8 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
               {estimate.items.map((item, idx) => (
                 <tr key={idx} className="hover:bg-surface-muted">
                   <td className="px-3 py-2 text-xs">
-                    {item.materialName
-                      ? <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-medium">{item.materialName}</span>
+                    {item.resourceName
+                      ? <span className="bg-primary/10 text-primary px-2 py-0.5 rounded text-[10px] font-medium">{item.resourceName}</span>
                       : <span className="text-content-muted/50 text-[10px]">Not linked</span>}
                   </td>
                   <td className="px-3 py-2 text-xs">

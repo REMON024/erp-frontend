@@ -9,9 +9,9 @@ import { Package, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react'
 interface Project { id: number; projectCode: string; projectName: string }
 
 interface MaterialBudgetV2Line {
-  materialId:    number
-  materialName:  string
-  materialCode:  string
+  resourceId:    number
+  resourceName:  string
+  resourceCode:  string
   category:      string
   unit:          string
   budgetedQty:   number
@@ -23,6 +23,8 @@ interface MaterialBudgetV2Line {
   variance:      number
   budgetUtilPct: number
   status:        string   // 'within' | 'approaching' | 'exceeded' (PRD-02 FR-EST-09)
+  resourceType:   string  // Material | Equipment | Service | Labour
+  isStockTracked: boolean // only materials accrue actuals from stock issues
 }
 
 function fmt(n: number) {
@@ -237,10 +239,15 @@ export function MaterialBudgetPage() {
                         {items.map(item => {
                           const over = item.actualCost > item.budgetedCost && item.budgetedCost > 0
                           return (
-                            <tr key={item.materialId} className={over ? 'bg-danger/10' : 'hover:bg-surface-muted'}>
+                            <tr key={item.resourceId} className={over ? 'bg-danger/10' : 'hover:bg-surface-muted'}>
                               <td className="px-4 py-2.5">
-                                <div className="font-medium text-content leading-tight">{item.materialName}</div>
-                                <div className="text-xs text-content-muted">{item.materialCode}</div>
+                                <div className="font-medium text-content leading-tight">{item.resourceName}</div>
+                                <div className="text-xs text-content-muted flex items-center gap-1.5">
+                                  {item.resourceCode}
+                                  {item.resourceType && item.resourceType !== 'Material' && (
+                                    <span className="px-1.5 py-0.5 rounded bg-info/10 text-info">{item.resourceType}</span>
+                                  )}
+                                </div>
                               </td>
                               <td className="px-4 py-2.5 text-content-muted">{item.unit}</td>
                               <td className="px-4 py-2.5 text-right text-content-muted">{fmtQ(item.budgetedQty)}</td>
@@ -253,7 +260,12 @@ export function MaterialBudgetPage() {
                                 {item.variance !== 0 ? (item.variance > 0 ? '+' : '') + fmt(item.variance) : '—'}
                               </td>
                               <td className="px-4 py-2.5">
-                                <UtilBar pct={item.budgetUtilPct} overBudget={over} />
+                                {/* Non-material resources never produce stock issues, so a 0%
+                                    utilisation bar would read as "nothing used" rather than
+                                    "not measured this way". Show nothing instead. */}
+                                {item.isStockTracked
+                                  ? <UtilBar pct={item.budgetUtilPct} overBudget={over} />
+                                  : <span className="text-xs text-content-muted" title="Utilisation is tracked from stock issues, which only apply to materials">n/a</span>}
                               </td>
                               <td className="px-4 py-2.5">
                                 <StatusBadge line={item} />

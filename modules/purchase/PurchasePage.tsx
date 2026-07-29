@@ -11,11 +11,13 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { Plus, Trash2, ShoppingCart, Eye, CheckCircle, AlertTriangle } from 'lucide-react'
 import api from '@/lib/api'
+import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
+import type { ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 interface Vendor   { id: number; vendorName: string }
 interface Project  { id: number; projectName: string; projectCode: string }
-interface Material { id: number; materialName: string; unit: string; averageCost: number }
-interface PoItem   { id: number; materialId: number; materialName: string; qty: number; unitPrice: number; amount: number }
+interface Material { id: number; resourceName: string; unit: string; averageCost: number }
+interface PoItem   { id: number; resourceId: number; resourceName: string; qty: number; unitPrice: number; amount: number }
 interface PurchaseOrder {
   id: number; poNumber: string; projectId?: number; projectName?: string
   vendorId: number; vendorName: string; poDate: string; deliveryDate?: string
@@ -35,12 +37,12 @@ const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm fo
 const lbl = 'block text-sm font-medium text-content mb-1'
 
 interface MaterialBudgetV2Line {
-  materialId: number; budgetedCost: number; committedCost: number; actualCost: number
+  resourceId: number; budgetedCost: number; committedCost: number; actualCost: number
 }
 
 interface PoForm {
   vendorId: string; projectId: string; poDate: string; deliveryDate: string
-  items: { materialId: string; qty: string; unitPrice: string; unmatchedReason?: string }[]
+  items: { resourceId: string; resourceType: ResourceType; qty: string; unitPrice: string; unmatchedReason?: string }[]
 }
 
 function PoModal({ vendors, projects, materials, onClose, onSaved }: {
@@ -48,13 +50,27 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
 }) {
   const [err, setErr] = useState('')
   const [saving, setSaving] = useState(false)
-  const { register, control, handleSubmit, watch } = useForm<PoForm>({
-    defaultValues: { poDate: isoToday(), deliveryDate: '', items: [{ materialId: '', qty: '', unitPrice: '', unmatchedReason: '' }] },
+  const { register, control, handleSubmit, watch, setValue } = useForm<PoForm>({
+    defaultValues: { poDate: isoToday(), deliveryDate: '', items: [{ resourceId: '', resourceType: 'Material', qty: '', unitPrice: '', unmatchedReason: '' }] },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'items' })
   const items      = watch('items')
   const projectId  = watch('projectId')
+  const vendorId   = watch('vendorId')
+  const poDate     = watch('poDate')
   const total      = items.reduce((s, i) => s + (parseFloat(i.qty) || 0) * (parseFloat(i.unitPrice) || 0), 0)
+
+  // Rate provenance per line index, shown next to the price box.
+  const [rateInfo, setRateInfo] = useState<Record<number, ResolvedRate>>({})
+
+  const handleResolvedRate = (i: number, resolved: ResolvedRate) => {
+    setRateInfo(prev => ({ ...prev, [i]: resolved }))
+    // Prefill only an empty price. A price the buyer already negotiated and typed
+    // must survive changing the vendor or the PO date.
+    const current = parseFloat(watch(`items.${i}.unitPrice`) || '')
+    if ((!current || Number.isNaN(current)) && resolved.rate > 0)
+      setValue(`items.${i}.unitPrice`, String(resolved.rate))
+  }
 
   const { data: budgetLines = [] } = useApiData<MaterialBudgetV2Line[]>({
     url: `/cost-estimates/material-budget/${projectId || '0'}`,
@@ -62,29 +78,29 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
     enabled: !!projectId,
   })
 
-  const budgetByMaterial = Object.fromEntries(budgetLines.map(l => [l.materialId, l]))
+  const budgetByMaterial = Object.fromEntries(budgetLines.map(l => [l.resourceId, l]))
 
   // Approved EPL items for the selected project → match purchase material lines (PRD-04).
-  const { data: approvedEpls = [] } = useApiData<{ items: { id: number; materialId?: number }[] }[]>({
+  const { data: approvedEpls = [] } = useApiData<{ items: { id: number; resourceId?: number }[] }[]>({
     url: '/cost-estimates',
     params: { projectId: projectId || undefined, status: 'Approved' },
     queryKey: ['approved-epls', projectId],
     enabled: !!projectId,
   })
   const eplItemByMaterial: Record<number, number> = {}
-  approvedEpls.forEach(e => e.items?.forEach(it => { if (it.materialId) eplItemByMaterial[it.materialId] = it.id }))
-  const eplItemFor = (materialId: string) => (materialId ? eplItemByMaterial[Number(materialId)] : undefined)
+  approvedEpls.forEach(e => e.items?.forEach(it => { if (it.resourceId) eplItemByMaterial[it.resourceId] = it.id }))
+  const eplItemFor = (resourceId: string) => (resourceId ? eplItemByMaterial[Number(resourceId)] : undefined)
 
   const budgetWarnings = items
     .map((item, i) => {
-      if (!item.materialId || !projectId) return null
-      const line      = budgetByMaterial[Number(item.materialId)]
+      if (!item.resourceId || !projectId) return null
+      const line      = budgetByMaterial[Number(item.resourceId)]
       if (!line || line.budgetedCost === 0) return null
       const newAmount = (parseFloat(item.qty) || 0) * (parseFloat(item.unitPrice) || 0)
       const projected = line.committedCost + newAmount
       if (projected > line.budgetedCost) {
-        const mat = materials.find(m => m.id === Number(item.materialId))
-        return { index: i, name: mat?.materialName ?? 'Material', projected, budget: line.budgetedCost }
+        const mat = materials.find(m => m.id === Number(item.resourceId))
+        return { index: i, name: mat?.resourceName ?? 'Material', projected, budget: line.budgetedCost }
       }
       return null
     })
@@ -92,14 +108,14 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
 
   const onSubmit = async (d: PoForm) => {
     if (!d.vendorId) { setErr('Vendor is required.'); return }
-    const validItems = d.items.filter(i => i.materialId && parseFloat(i.qty) > 0)
+    const validItems = d.items.filter(i => i.resourceId && parseFloat(i.qty) > 0)
     if (validItems.length === 0) { setErr('At least one valid line item is required.'); return }
     // Warn-mode (PRD-04 default): a material with no approved-EPL match needs a reason to proceed.
     if (d.projectId) {
-      const missing = validItems.find(i => !eplItemFor(i.materialId) && !(i.unmatchedReason ?? '').trim())
+      const missing = validItems.find(i => !eplItemFor(i.resourceId) && !(i.unmatchedReason ?? '').trim())
       if (missing) {
-        const mat = materials.find(m => m.id === Number(missing.materialId))
-        setErr(`"${mat?.materialName ?? 'A material'}" has no approved EPL line — enter a reason to proceed.`)
+        const mat = materials.find(m => m.id === Number(missing.resourceId))
+        setErr(`"${mat?.resourceName ?? 'A material'}" has no approved EPL line — enter a reason to proceed.`)
         return
       }
     }
@@ -111,9 +127,9 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
         poDate:    d.poDate,
         deliveryDate: d.deliveryDate || undefined,
         items: validItems.map(i => {
-          const eplId = d.projectId ? eplItemFor(i.materialId) : undefined
+          const eplId = d.projectId ? eplItemFor(i.resourceId) : undefined
           return {
-            materialId: Number(i.materialId), qty: Number(i.qty), unitPrice: Number(i.unitPrice),
+            resourceId: Number(i.resourceId), qty: Number(i.qty), unitPrice: Number(i.unitPrice),
             costEstimateItemId: eplId ?? null,
             unmatchedReason: (!eplId && d.projectId) ? ((i.unmatchedReason ?? '').trim() || null) : null,
           }
@@ -159,7 +175,7 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-content">Line Items</label>
-            <button type="button" onClick={() => append({ materialId: '', qty: '', unitPrice: '', unmatchedReason: '' })}
+            <button type="button" onClick={() => append({ resourceId: '', resourceType: 'Material', qty: '', unitPrice: '', unmatchedReason: '' })}
               className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1">
               <Plus className="w-3.5 h-3.5" /> Add Item
             </button>
@@ -178,19 +194,48 @@ function PoModal({ vendors, projects, materials, onClose, onSaved }: {
                 {fields.map((field, i) => (
                   <tr key={field.id}>
                     <td className="px-2 py-1.5">
-                      <Select {...register(`items.${i}.materialId`)} className="text-xs py-1.5">
-                        <option value="">Select…</option>
-                        {materials.map(m => <option key={m.id} value={m.id}>{m.materialName} ({m.unit})</option>)}
+                      <Select
+                        className="text-xs py-1.5 mb-1"
+                        value={items[i]?.resourceType ?? 'Material'}
+                        onChange={e => {
+                          // Changing the type invalidates the picked resource and its rate.
+                          setValue(`items.${i}.resourceType`, e.target.value as ResourceType)
+                          setValue(`items.${i}.resourceId`, '')
+                          setValue(`items.${i}.unitPrice`, '')
+                          setRateInfo(prev => { const next = { ...prev }; delete next[i]; return next })
+                        }}
+                      >
+                        {(['Material', 'Equipment', 'Service', 'Labour'] as ResourceType[]).map(t =>
+                          <option key={t} value={t}>{t}</option>)}
                       </Select>
-                      {projectId && items[i]?.materialId && (
-                        eplItemFor(items[i].materialId)
+                      <ResourcePicker
+                        value={items[i]?.resourceId ? Number(items[i].resourceId) : ''}
+                        types={[items[i]?.resourceType ?? 'Material']}
+                        vendorId={Number(vendorId) || null}
+                        asOf={poDate || undefined}
+                        onChange={id => setValue(`items.${i}.resourceId`, id ? String(id) : '')}
+                        onResolved={resolved => handleResolvedRate(i, resolved)}
+                        placeholder={`Select ${(items[i]?.resourceType ?? 'Material').toLowerCase()}…`}
+                        className="text-xs py-1.5"
+                      />
+                      {projectId && items[i]?.resourceId && (
+                        eplItemFor(items[i].resourceId)
                           ? <p className="text-[10px] text-success mt-0.5">✓ EPL-linked</p>
                           : <input {...register(`items.${i}.unmatchedReason`)} placeholder="No EPL match — reason to proceed"
                               className="mt-1 w-full border border-warning/20 bg-warning/15 rounded px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-warning/40" />
                       )}
                     </td>
                     <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.qty`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
-                    <td className="px-2 py-1.5"><input type="number" step="any" {...register(`items.${i}.unitPrice`)} className={inp + ' text-xs py-1.5'} placeholder="0" /></td>
+                    <td className="px-2 py-1.5">
+                      <input type="number" step="any" {...register(`items.${i}.unitPrice`)} className={inp + ' text-xs py-1.5'} placeholder="0" />
+                      <div className="mt-0.5">
+                        <RateSourceChip
+                          resolved={rateInfo[i]}
+                          currentValue={parseFloat(items[i]?.unitPrice || '') || undefined}
+                          onApply={rate => setValue(`items.${i}.unitPrice`, String(rate))}
+                        />
+                      </div>
+                    </td>
                     <td className="px-2 py-1.5 text-center">
                       {fields.length > 1 && (
                         <button type="button" onClick={() => remove(i)} className="text-content-muted/50 hover:text-danger"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -242,7 +287,7 @@ export function PurchasePage() {
 
   const { data: vendors = [] }   = useApiData<Vendor[]>({ url: '/vendors', queryKey: ['vendors-list'] })
   const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
-  const { data: materials = [] } = useApiData<Material[]>({ url: '/materials', queryKey: ['materials-list'] })
+  const { data: materials = [] } = useApiData<Material[]>({ url: '/resources', params: { types: 'Material' }, queryKey: ['materials-list'] })
 
   const { data: orders = [], isLoading, error, refetch } = useApiData<PurchaseOrder[]>({
     url: '/purchase-orders',
@@ -360,7 +405,7 @@ export function PurchasePage() {
                 <tbody className="divide-y divide-border-default">
                   {viewing.items.map(it => (
                     <tr key={it.id}>
-                      <td className="px-3 py-2 text-xs font-medium text-content">{it.materialName}</td>
+                      <td className="px-3 py-2 text-xs font-medium text-content">{it.resourceName}</td>
                       <td className="px-3 py-2 text-xs text-content-muted text-right tabular-nums">{it.qty}</td>
                       <td className="px-3 py-2 text-xs text-content-muted text-right tabular-nums">{fmt(it.unitPrice)}</td>
                       <td className="px-3 py-2 text-xs font-semibold text-content text-right tabular-nums">{fmt(it.amount)}</td>

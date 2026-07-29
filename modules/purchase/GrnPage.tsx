@@ -11,9 +11,9 @@ import { useApiData } from '@/hooks/useApiData'
 import { Plus, PackageCheck } from 'lucide-react'
 import api from '@/lib/api'
 
-interface PoItem   { id: number; materialId: number; materialName: string; qty: number; unitPrice: number }
+interface PoItem   { id: number; resourceId: number; resourceName: string; qty: number; unitPrice: number }
 interface PO       { id: number; poNumber: string; vendorName: string; poDate: string; totalAmount: number; status: string; items: PoItem[] }
-interface GrnItem  { materialName: string; orderedQty: number; receivedQty: number; unitCost: number }
+interface GrnItem  { resourceName: string; orderedQty: number; receivedQty: number; unitCost: number }
 interface Grn {
   id: number; grnNo: string; poId: number; poNumber: string; vendorName: string
   receiptDate: string; totalAmount: number; status: string; items: GrnItem[]
@@ -31,7 +31,7 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
   const [selectedPoId, setSelectedPoId] = useState<number | ''>('')
   const [receiptDate, setReceiptDate] = useState(isoToday())
   const [notes,       setNotes]       = useState('')
-  const [lines,       setLines]       = useState<{ poItemId: number; materialName: string; orderedQty: number; receivedQty: string; unitCost: string }[]>([])
+  const [lines,       setLines]       = useState<{ poItemId: number; resourceName: string; orderedQty: number; receivedQty: string; unitCost: string }[]>([])
 
   const approvedPos = pos.filter(p => p.status === 'Approved')
 
@@ -41,7 +41,7 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
     if (!po) { setLines([]); return }
     setLines(po.items.map(item => ({
       poItemId:    item.id,
-      materialName: item.materialName,
+      resourceName: item.resourceName,
       orderedQty:  item.qty,
       receivedQty: String(item.qty),
       unitCost:    String(item.unitPrice),
@@ -122,7 +122,7 @@ function GrnModal({ pos, onClose, onSaved }: { pos: PO[]; onClose: () => void; o
                 <tbody className="divide-y divide-border-default">
                   {lines.map((l, idx) => (
                     <tr key={l.poItemId} className="hover:bg-surface-muted">
-                      <td className="px-3 py-2 text-content font-medium text-xs">{l.materialName}</td>
+                      <td className="px-3 py-2 text-content font-medium text-xs">{l.resourceName}</td>
                       <td className="px-3 py-2 text-content-muted text-xs text-center">{l.orderedQty}</td>
                       <td className="px-3 py-2">
                         <input
