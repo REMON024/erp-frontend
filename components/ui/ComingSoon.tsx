@@ -1,4 +1,4 @@
-import { Construction } from 'lucide-react'
+import { Construction } from "lucide-react";
 
 export function ComingSoon({ module }: { module: string }) {
   return (
@@ -8,8 +8,10 @@ export function ComingSoon({ module }: { module: string }) {
       </div>
       <div>
         <h2 className="text-xl font-semibold text-content">{module}</h2>
-        <p className="text-content-muted mt-1 text-sm">This module is being built. Coming in the next sprint.</p>
+        <p className="text-content-muted mt-1 text-sm">
+          This module is being built. Coming in the next sprint1.
+        </p>
       </div>
     </div>
-  )
+  );
 }
