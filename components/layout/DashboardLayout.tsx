@@ -5,21 +5,14 @@ import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { useAuthStore } from '@/store/auth.store'
 
-// Pre-warm Turbopack for all routes so first navigation is instant
-const PREFETCH_ROUTES = [
-  '/projects', '/tasks', '/inventory', '/inventory/stock',
-  '/inventory/stock-in', '/inventory/issue',
-  '/contractors', '/vendors', '/procurement',
-  '/finance', '/accounting', '/sales',
-  '/safety', '/equipment', '/documents',
-  '/users', '/roles', '/settings', '/reports',
-]
+// Always warmed, because they are reachable without a menu row.
+const ALWAYS_PREFETCH = ['/dashboard', '/settings']
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const { token, menusLoaded, loadMenus, isPathAllowed } = useAuthStore()
+  const { token, menusLoaded, menuRoutes, loadMenus, isPathAllowed } = useAuthStore()
 
   useEffect(() => {
     if (!token) router.replace('/login')
@@ -37,14 +30,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }
   }, [token, menusLoaded, pathname, isPathAllowed, router])
 
-  // Prefetch all routes in the background after the first render,
-  // with a small delay to avoid competing with the initial page load.
+  // Pre-warm the routes this user can actually reach, after a short delay so we don't compete
+  // with the initial page load. Driven off the menu tree rather than a hardcoded list: the old
+  // list had drifted badly — 8 of its 19 entries pointed at pages that no longer exist, it
+  // missed 39 real routes, and it omitted /dashboard, which is the redirect target above.
   useEffect(() => {
+    if (!menusLoaded) return
     const id = setTimeout(() => {
-      PREFETCH_ROUTES.forEach(route => router.prefetch(route))
+      for (const route of new Set([...ALWAYS_PREFETCH, ...menuRoutes]))
+        router.prefetch(route)
     }, 2000)
     return () => clearTimeout(id)
-  }, [router])
+  }, [router, menusLoaded, menuRoutes])
 
   if (!token) return null
 

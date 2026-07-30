@@ -4,7 +4,6 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { Package, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react'
-
 import { ScopePicker, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 
 interface MaterialBudgetV2Line {
@@ -117,9 +116,9 @@ export function MaterialBudgetPage() {
 
       {selectedProject && (filter.blockId || filter.floorId || filter.unitId) && (
         <p className="text-xs text-content-muted bg-surface-muted border border-border-default rounded-lg px-3 py-2">
-          Narrowing below project level filters the <strong className="font-medium text-content">budget</strong> side
-          only. Purchase orders and stock issues are recorded against the project, not against a
-          block, floor or unit, so committed and actual figures remain project-wide.
+          Budget and actual are narrowed to this scope. <strong className="font-medium text-content">Committed</strong> is
+          not — purchase orders are raised against the project as a whole, so that column stays
+          project-wide.
         </p>
       )}
 

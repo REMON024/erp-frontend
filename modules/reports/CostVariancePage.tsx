@@ -4,8 +4,8 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { TrendingUp, TrendingDown } from 'lucide-react'
-
 import { ScopePicker, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
+
 interface CostVarianceRow {
   category: string; description: string
   estimatedAmount: number; actualAmount: number
@@ -59,7 +59,9 @@ export function CostVariancePage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 { label: 'Total Estimated', value: fmt(data?.totalEstimated ?? 0), color: 'text-primary', bg: 'bg-primary/10' },
-                { label: 'Total Actual',    value: fmt(data?.totalActual    ?? 0), color: data?.totalActual ?? 0 > (data?.totalEstimated ?? 0) ? 'text-danger' : 'text-success', bg: 'bg-surface' },
+                // `??` binds looser than `>`, so the parens around the left operand are load-bearing:
+                // without them this reads as `totalActual ?? (0 > totalEstimated)` and colour became a number.
+                { label: 'Total Actual',    value: fmt(data?.totalActual    ?? 0), color: (data?.totalActual ?? 0) > (data?.totalEstimated ?? 0) ? 'text-danger' : 'text-success', bg: 'bg-surface' },
                 { label: 'Total Variance',  value: fmt(data?.totalVariance  ?? 0), color: (data?.totalVariance ?? 0) > 0 ? 'text-danger' : 'text-success', bg: (data?.totalVariance ?? 0) > 0 ? 'bg-danger/10' : 'bg-success/10' },
                 { label: 'Variance %',      value: `${totalVariancePct > 0 ? '+' : ''}${totalVariancePct}%`, color: totalVariancePct > 0 ? 'text-danger' : 'text-success', bg: 'bg-surface' },
               ].map(k => (

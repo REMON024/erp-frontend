@@ -1,0 +1,42 @@
+name: CI — Typecheck & Build
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Typecheck & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # pnpm, not npm: the repo has pnpm-workspace.yaml and a v9 pnpm-lock.yaml.
+      # (A stale package-lock.json is also checked in — see README/housekeeping.)
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # package.json has no lint or test script, so these two are the whole gate.
+      # tsc is kept separate from the build because `next build` does not fail on
+      # type errors in every configuration.
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Build
+        run: pnpm build

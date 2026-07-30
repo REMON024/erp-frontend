@@ -11,9 +11,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, PackageCheck, AlertTriangle } from 'lucide-react'
+import { ScopePicker } from '@/components/pickers/ScopePicker'
 import api from '@/lib/api'
 
-interface Project  { id: number; projectName: string; projectCode: string }
 interface BudgetLine { resourceId: number; budgetedQty: number; issuedQty: number; unit: string }
 interface StockBalanceRow { warehouseId: number | null; balance: number }
 interface MaterialRollup { resourceId: number; resourceName: string; unit: string; warehouses: StockBalanceRow[] }
@@ -32,6 +32,11 @@ const schema = z.object({
   warehouseId:     z.coerce.number().min(1, 'Required'),
   resourceId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
+  // Optional: which part of the project consumed the material. Left blank the issue stays
+  // project-level and only counts toward project-wide estimates.
+  blockId:         z.coerce.number().optional(),
+  floorId:         z.coerce.number().optional(),
+  unitId:          z.coerce.number().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
@@ -39,12 +44,12 @@ const schema = z.object({
 })
 type Form = z.infer<typeof schema>
 
-function IssueModal({ projects, warehouses, onClose, onSaved }: {
-  projects: Project[]; warehouses: { id: number; name: string }[]; onClose: () => void; onSaved: () => void
+function IssueModal({ warehouses, onClose, onSaved }: {
+  warehouses: { id: number; name: string }[]; onClose: () => void; onSaved: () => void
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
-  const { register, handleSubmit, watch, resetField, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, watch, setValue, resetField, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: { transactionDate: isoToday() },
   })
@@ -113,12 +118,26 @@ function IssueModal({ projects, warehouses, onClose, onSaved }: {
             Available: <strong>{selectedMat.balance.toLocaleString()} {selectedMat.unit}</strong>
           </div>
         )}
-        <div>
-          <label className={lbl}>Project <span className="text-danger">*</span></label>
-          <Select {...register('projectId')}>
-            <option value="">Select project</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-          </Select>
+        <div className="rounded-lg border border-border-default p-3">
+          <p className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-3">Issued to</p>
+          <ScopePicker
+            value={{
+              projectId: watch('projectId') ? String(watch('projectId')) : '',
+              blockId:   watch('blockId')   ? String(watch('blockId'))   : '',
+              floorId:   watch('floorId')   ? String(watch('floorId'))   : '',
+              unitId:    watch('unitId')    ? String(watch('unitId'))    : '',
+            }}
+            onChange={next => {
+              // Empty string clears the field so zod's optional() sees undefined, not NaN.
+              const set = (k: 'projectId' | 'blockId' | 'floorId' | 'unitId', v: string) =>
+                setValue(k, (v ? Number(v) : undefined) as any, { shouldValidate: false })
+              set('projectId', next.projectId)
+              set('blockId',   next.blockId)
+              set('floorId',   next.floorId)
+              set('unitId',    next.unitId)
+            }}
+            mode="form"
+          />
           {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -167,7 +186,6 @@ export function IssueToProjectPage() {
   const qc = useQueryClient()
   const [showNew, setShowNew] = useState(false)
 
-  const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
   const { data: warehouses = [] } = useApiData<{ id: number; name: string }[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
   const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
     url: '/stock-transactions',
@@ -232,7 +250,7 @@ export function IssueToProjectPage() {
         </div>
       </DataState>
 
-      {showNew && <IssueModal projects={projects} warehouses={warehouses} onClose={() => setShowNew(false)} onSaved={invalidate} />}
+      {showNew && <IssueModal warehouses={warehouses} onClose={() => setShowNew(false)} onSaved={invalidate} />}
     </div>
   )
 }

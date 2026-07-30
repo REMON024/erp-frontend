@@ -11,12 +11,19 @@ import {
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
-  Calculator, BarChart3, ShoppingBag, Rows3, type LucideProps,
+  Calculator, BarChart3, ShoppingBag, Rows3,
+  PlusCircle, FileBarChart2, UserCheck, CalendarCheck, CalendarDays, Banknote,
+  FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal,
+  type LucideProps,
 } from 'lucide-react'
 
-// Map icon name strings (stored in DB) → Lucide components.
-// Anything the seeder references but this map omits silently renders the generic
-// fallback below, so keep it in sync with DbSeeder.MenuDefs.
+// Map icon name strings (stored in DB) → Lucide components, falling back to the generic
+// Menu icon below.
+//
+// Only TOP-LEVEL rows render an icon — children render a bullet (see the nav markup), so a
+// missing entry is invisible until that menu is promoted to top level, or an admin types a
+// new icon name at /menus, which accepts any string. The map is kept complete against
+// DbSeeder.MenuDefs anyway so neither case surprises anyone.
 const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   LayoutDashboard, FolderKanban, TrendingUp, ShoppingCart,
   Package, Receipt, BookOpen, PieChart, Users, Settings,
@@ -25,6 +32,9 @@ const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
   Calculator, BarChart3, ShoppingBag, Rows3,
+  // Child-menu icons from the seeder — latent until one is promoted, but cheap to map.
+  PlusCircle, FileBarChart2, UserCheck, CalendarCheck, CalendarDays, Banknote,
+  FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal,
 }
 // Settings stays in ICON_MAP so the DB icon string "Settings" resolves correctly
 const getIcon = (name: string | null): React.FC<LucideProps> =>
