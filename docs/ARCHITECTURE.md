@@ -24,7 +24,7 @@ settles into the **accounting ledger** at the bottom.
 ║      │ (the spine)│      │  BOQ         │      │  MATERIAL BUDGET   │         ║
 ║      └─────┬──────┘      └──────────────┘      └─────────▲──────────┘         ║
 ║            │              budget baseline                │ checked against     ║
-║            │  Blocks · Units · Setup Checklist           │                     ║
+║            │  Blocks · Floors · Units · Setup Checklist  │                     ║
 ╚════════════╪════════════════════════════════════════════╪═════════════════════╝
              │                                             │
              ▼                                             │
@@ -68,7 +68,7 @@ settles into the **accounting ledger** at the bottom.
 | Layer | Purpose | Pages |
 |-------|---------|-------|
 | **0 · Foundation** | Access control, global rules, the accounting period | Users, Roles, Menus, Audit Logs, System Settings, Fiscal Years |
-| **1 · Planning** | Define projects and their budgets | Projects, Blocks, Units, Estimates/BOQ, Budget Tracker, Material Budget |
+| **1 · Planning** | Define projects and their budgets | Projects, Blocks, Floors, Units, Estimates/BOQ, Budget Tracker, Material Budget |
 | **2 · Operations** | Day-to-day activity that generates money movement | Sales, Purchase, Inventory, Construction, Investment |
 | **3 · Accounting** | Everything settles into the ledger | Vouchers, Ledger, Trial Balance, P&L, Profit Distribution |
 

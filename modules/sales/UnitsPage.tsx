@@ -11,14 +11,17 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Edit2, Building2 } from 'lucide-react'
+import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
 interface Project { id: number; projectName: string; projectCode: string }
 interface Block   { id: number; projectId: number; name: string }
+interface Floor   { id: number; blockId: number; name: string; floorNumber: number }
 export interface Unit {
   id: number; projectId: number; blockId: number; blockName: string
-  unitNo: string; floorNo?: string; unitType?: string; facing?: string
-  sizeSqFt?: number; basePrice: number; additionalPrice: number
+  floorId: number; floorName: string; floorNumber: number
+  unitNo: string; unitType?: string; facing?: string
+  areaSqFt?: number; basePrice: number; additionalPrice: number
   totalPrice: number; status: string
 }
 
@@ -37,34 +40,43 @@ const lbl = 'block text-sm font-medium text-content mb-1'
 const schema = z.object({
   projectId:       z.coerce.number().min(1, 'Required'),
   blockId:         z.coerce.number().min(1, 'Required'),
+  floorId:         z.coerce.number().min(1, 'Required'),
   unitNo:          z.string().min(1, 'Required'),
-  floorNo:         z.string().optional(),
   unitType:        z.string().optional(),
   facing:          z.string().optional(),
-  sizeSqFt:        z.coerce.number().optional(),
+  areaSqFt:        z.coerce.number().optional(),
   basePrice:       z.coerce.number().min(1, 'Required'),
   additionalPrice: z.coerce.number().optional(),
   status:          z.string(),
 })
 type Form = z.infer<typeof schema>
 
-function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
-  unit?: Unit; projects: Project[]; blocks: Block[]; onClose: () => void; onSaved: () => void
+function UnitModal({ unit, projects, blocks, floors, onClose, onSaved }: {
+  unit?: Unit; projects: Project[]; blocks: Block[]; floors: Floor[]
+  onClose: () => void; onSaved: () => void
 }) {
   const isEdit = !!unit
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: unit
-      ? { projectId: unit.projectId, blockId: unit.blockId, unitNo: unit.unitNo, floorNo: unit.floorNo,
-          unitType: unit.unitType, facing: unit.facing, sizeSqFt: unit.sizeSqFt,
+      ? { projectId: unit.projectId, blockId: unit.blockId, floorId: unit.floorId, unitNo: unit.unitNo,
+          unitType: unit.unitType, facing: unit.facing, areaSqFt: unit.areaSqFt,
           basePrice: unit.basePrice, additionalPrice: unit.additionalPrice, status: unit.status }
       : { status: 'Available', additionalPrice: 0 },
   })
 
+  // Project → Block → Floor. Each level clears its descendants on change, otherwise a stale
+  // child id survives the switch and the unit lands under the wrong parent.
   const selectedProject = watch('projectId')
+  const selectedBlock   = watch('blockId')
   const eligibleBlocks  = blocks.filter(b => b.projectId === Number(selectedProject))
+  const eligibleFloors  = floors
+    .filter(f => f.blockId === Number(selectedBlock))
+    .sort((a, b) => a.floorNumber - b.floorNumber)
+  const clear = (field: 'blockId' | 'floorId') =>
+    setValue(field, undefined as any, { shouldValidate: false })
   const basePrice       = Number(watch('basePrice') || 0)
   const additionalPrice = Number(watch('additionalPrice') || 0)
   const totalPrice      = basePrice + additionalPrice
@@ -85,10 +97,10 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
     <Modal open onClose={onClose} title={isEdit ? 'Edit Unit' : 'Add Unit'} size="lg">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Project <span className="text-danger">*</span></label>
-            <Select {...register('projectId')}>
+            <Select {...register('projectId', { onChange: () => { clear('blockId'); clear('floorId') } })}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
@@ -96,22 +108,26 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
           </div>
           <div>
             <label className={lbl}>Block <span className="text-danger">*</span></label>
-            <Select {...register('blockId')}>
-              <option value="">Select block</option>
+            <Select {...register('blockId', { onChange: () => clear('floorId') })} disabled={!selectedProject}>
+              <option value="">{selectedProject ? 'Select block' : 'Select a project first'}</option>
               {eligibleBlocks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
             {errors.blockId && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
           </div>
+          <div>
+            <label className={lbl}>Floor <span className="text-danger">*</span></label>
+            <Select {...register('floorId')} disabled={!selectedBlock}>
+              <option value="">{selectedBlock ? 'Select floor' : 'Select a block first'}</option>
+              {eligibleFloors.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </Select>
+            {errors.floorId && <p className="text-xs text-danger mt-1">{errors.floorId.message}</p>}
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Unit No. <span className="text-danger">*</span></label>
             <input {...register('unitNo')} className={inp} placeholder="A-101" />
             {errors.unitNo && <p className="text-xs text-danger mt-1">{errors.unitNo.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Floor</label>
-            <input {...register('floorNo')} className={inp} placeholder="3" />
           </div>
           <div>
             <label className={lbl}>Type</label>
@@ -121,7 +137,7 @@ function UnitModal({ unit, projects, blocks, onClose, onSaved }: {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className={lbl}>Area (sqft)</label>
-            <input type="number" {...register('sizeSqFt')} className={inp} placeholder="1200" />
+            <input type="number" {...register('areaSqFt')} className={inp} placeholder="1200" />
           </div>
           <div>
             <label className={lbl}>Facing</label>
@@ -175,6 +191,7 @@ export function UnitsPage() {
 
   const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
   const { data: blocks = [] }   = useApiData<Block[]>({ url: '/blocks', queryKey: ['blocks-list'] })
+  const { data: floors = [] }   = useApiData<Floor[]>({ url: '/floors', queryKey: ['floors-list'] })
 
   const { data: units = [], isLoading, error, refetch } = useApiData<Unit[]>({
     url: '/units',
@@ -257,8 +274,8 @@ export function UnitsPage() {
                       <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-content-muted" />{u.blockName}</div>
                     </td>
                     <td className="px-4 py-3 text-content-muted text-xs">{u.unitType ?? '—'}</td>
-                    <td className="px-4 py-3 text-content-muted text-center">{u.floorNo ?? '—'}</td>
-                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{u.sizeSqFt?.toLocaleString() ?? '—'}</td>
+                    <td className="px-4 py-3 text-content-muted text-center">{u.floorName}</td>
+                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(u.areaSqFt)}</td>
                     <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(u.totalPrice)}</td>
                     <td className="px-4 py-3 text-content-muted text-xs">{u.facing ?? '—'}</td>
                     <td className="px-4 py-3">
@@ -279,10 +296,10 @@ export function UnitsPage() {
       </DataState>
 
       {modal === 'add' && (
-        <UnitModal projects={projects} blocks={blocks} onClose={() => setModal(null)} onSaved={invalidate} />
+        <UnitModal projects={projects} blocks={blocks} floors={floors} onClose={() => setModal(null)} onSaved={invalidate} />
       )}
       {modal === 'edit' && target && (
-        <UnitModal unit={target} projects={projects} blocks={blocks}
+        <UnitModal unit={target} projects={projects} blocks={blocks} floors={floors}
           onClose={() => { setModal(null); setTarget(null) }} onSaved={invalidate} />
       )}
     </div>

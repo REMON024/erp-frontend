@@ -47,8 +47,14 @@ Site Execution → Sales). Each step shows whether it's complete, a count, and a
 link to the page where you do it. Helps a new project get fully configured.
 
 ### Blocks — `/projects/blocks`
-Buildings/blocks within a project (name, total floors, description). Units live
-inside blocks. Shows how many units each block has.
+Buildings/blocks within a project (name, planned floors, area breakdown, description).
+Floors live inside blocks, and units live inside floors. Shows floors created vs planned
+and how many units each block has.
+
+### Floors — `/projects/floors`
+Floors within a block (name, floor number, area breakdown, description). Every unit
+belongs to a floor, so a block needs its floors before its units can be added. Shows how
+many units sit on each floor.
 
 ### Cost Estimates / BOQ — `/estimates`
 The **Bill of Quantities** (budget estimate) for a project. Each estimate has
@@ -76,9 +82,9 @@ Customer master (buyers). Code, name, mobile, email, address, NID, profession,
 nominee, status. Create/edit clients.
 
 ### Units — `/sales/units`
-Sellable units (flats/apartments) inside a project's block. Unit no, floor, type,
-facing, size (sqft), base price + additional price = total price. Status:
-Available → Booked → Sold → Cancelled.
+Sellable units (flats/apartments) inside a project's block. Unit no, floor (picked from
+the block's floors), type, facing, area (sqft), base price + additional price = total
+price. Status: Available → Booked → Sold → Cancelled.
 
 ### Bookings — `/sales/bookings`
 Records a customer booking a unit. Captures booking amount, discount, net amount,
@@ -400,7 +406,8 @@ These show how the pages chain together for the main business processes.
 ### A. Standing up a new project
 1. **Projects → New Project** — create the project (code, name, estimated cost/revenue).
 2. Open its **Setup Checklist** to see the remaining stages.
-3. **Blocks** — add the building blocks; **Units** — add the sellable flats.
+3. **Blocks** — add the building blocks; **Floors** — add each block's floors;
+   **Units** — add the sellable flats onto those floors.
 4. **Estimates** — build the BOQ (budget) and **Approve** it. This becomes the
    baseline for Budget Tracker, Material Budget and Cost Variance.
 

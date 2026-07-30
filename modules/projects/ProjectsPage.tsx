@@ -11,13 +11,16 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, MapPin, Building2, TrendingUp, Edit2, AlertTriangle, Package, ClipboardList, CheckCircle2 } from 'lucide-react'
+import { Plus, MapPin, Building2, TrendingUp, Edit2, AlertTriangle, Package, ClipboardList, CheckCircle2, Ruler } from 'lucide-react'
 import { ProjectSetupChecklist } from './ProjectSetupChecklist'
+import { AreaBreakdownFields } from '@/components/ui/AreaBreakdownFields'
+import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
 interface Project {
   id: number; projectCode: string; projectName: string
   projectType?: string; landArea?: number; address?: string
+  areaSqFt?: number; commonAreaSqFt?: number; serviceAreaSqFt?: number; netAreaSqFt?: number
   startDate?: string; endDate?: string
   estimatedCost?: number; estimatedRevenue?: number; status: string
 }
@@ -40,13 +43,19 @@ const schema = z.object({
   projectName:      z.string().min(1, 'Required'),
   projectType:      z.string().optional(),
   address:          z.string().optional(),
-  landArea:         z.coerce.number().optional(),
+  landArea:         z.coerce.number().min(0).optional(),
+  areaSqFt:         z.coerce.number().min(0).optional(),
+  commonAreaSqFt:   z.coerce.number().min(0).optional(),
+  serviceAreaSqFt:  z.coerce.number().min(0).optional(),
   startDate:        z.string().optional(),
   endDate:          z.string().optional(),
   estimatedCost:    z.coerce.number().optional(),
   estimatedRevenue: z.coerce.number().optional(),
   status:           z.string().min(1, 'Required'),
-})
+}).refine(
+  d => d.areaSqFt == null || (d.commonAreaSqFt ?? 0) + (d.serviceAreaSqFt ?? 0) <= d.areaSqFt,
+  { message: 'Common + service area cannot exceed the total area.', path: ['areaSqFt'] },
+)
 type Form = z.infer<typeof schema>
 
 function ProjectModal({ project, onClose, onSaved }: {
@@ -55,7 +64,7 @@ function ProjectModal({ project, onClose, onSaved }: {
   const isEdit = !!project
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
-  const { register, handleSubmit, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: project ?? { status: 'Planning' },
   })
@@ -99,10 +108,25 @@ function ProjectModal({ project, onClose, onSaved }: {
             </Select>
           </div>
         </div>
-        <div>
-          <label className={lbl}>Address</label>
-          <input {...register('address')} className={inp} placeholder="Area, Dhaka" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={lbl}>Address</label>
+            <input {...register('address')} className={inp} placeholder="Area, Dhaka" />
+          </div>
+          <div>
+            {/* Land plot footprint — distinct from the built-up area below. */}
+            <label className={lbl}>Land Area (sqft)</label>
+            <input type="number" {...register('landArea')} className={inp} placeholder="16730" min={0} />
+          </div>
         </div>
+
+        <AreaBreakdownFields
+          register={register}
+          areaSqFt={watch('areaSqFt')}
+          commonAreaSqFt={watch('commonAreaSqFt')}
+          serviceAreaSqFt={watch('serviceAreaSqFt')}
+        />
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Estimated Cost (৳)</label>
@@ -165,6 +189,15 @@ function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: (
         <div className="flex items-center gap-2 text-xs text-content-muted">
           <Building2 className="w-3.5 h-3.5 text-success" />
           <span>Revenue: <span className="font-medium text-content">{fmt(project.estimatedRevenue)}</span></span>
+        </div>
+        {/* Gross and net built-up area; the full breakdown lives in the modal. */}
+        <div className="flex items-center gap-2 text-xs text-content-muted">
+          <Ruler className="w-3.5 h-3.5 text-info" />
+          <span>Area: <span className="font-medium text-content tabular-nums">{formatArea(project.areaSqFt)}</span></span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-content-muted">
+          <Ruler className="w-3.5 h-3.5 text-content-muted" />
+          <span>Net: <span className="font-medium text-content tabular-nums">{formatArea(project.netAreaSqFt)}</span></span>
         </div>
       </div>
       <button

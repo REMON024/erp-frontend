@@ -11,4 +11,11 @@ export const formatCurrency = (amount: number) =>
 
 export const formatNumber = (n: number) => new Intl.NumberFormat('en-BD').format(n)
 
+/**
+ * Square footage, formatted the same way at every level of the hierarchy
+ * (project → block → floor → unit). Renders an em dash when not recorded.
+ */
+export const formatArea = (n?: number | null) =>
+  n == null ? '—' : new Intl.NumberFormat('en-BD', { maximumFractionDigits: 2 }).format(n)
+
 export const formatPercent = (n: number) => `${Math.round(n)}%`

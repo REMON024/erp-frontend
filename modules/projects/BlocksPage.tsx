@@ -11,20 +11,30 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Edit2, Layers, Home } from 'lucide-react'
+import { AreaBreakdownFields } from '@/components/ui/AreaBreakdownFields'
+import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
 interface Project { id: number; projectName: string; projectCode: string }
 interface Block {
   id: number; projectId: number; projectName: string
-  name: string; totalFloors?: number; description?: string; unitCount: number
+  name: string; totalFloors?: number; floorCount: number
+  areaSqFt?: number; commonAreaSqFt?: number; serviceAreaSqFt?: number; netAreaSqFt?: number
+  description?: string; unitCount: number
 }
 
 const schema = z.object({
-  projectId:   z.coerce.number().min(1, 'Required'),
-  name:        z.string().min(1, 'Required'),
-  totalFloors: z.coerce.number().int().min(1, 'Min 1 floor').optional(),
-  description: z.string().optional(),
-})
+  projectId:       z.coerce.number().min(1, 'Required'),
+  name:            z.string().min(1, 'Required'),
+  totalFloors:     z.coerce.number().int().min(1, 'Min 1 floor').optional(),
+  areaSqFt:        z.coerce.number().min(0).optional(),
+  commonAreaSqFt:  z.coerce.number().min(0).optional(),
+  serviceAreaSqFt: z.coerce.number().min(0).optional(),
+  description:     z.string().optional(),
+}).refine(
+  d => d.areaSqFt == null || (d.commonAreaSqFt ?? 0) + (d.serviceAreaSqFt ?? 0) <= d.areaSqFt,
+  { message: 'Common + service area cannot exceed the total area.', path: ['areaSqFt'] },
+)
 type Form = z.infer<typeof schema>
 
 const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
@@ -36,10 +46,12 @@ function BlockModal({ block, projects, onClose, onSaved }: {
   const isEdit = !!block
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
-  const { register, handleSubmit, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: block
-      ? { projectId: block.projectId, name: block.name, totalFloors: block.totalFloors, description: block.description }
+      ? { projectId: block.projectId, name: block.name, totalFloors: block.totalFloors,
+          areaSqFt: block.areaSqFt, commonAreaSqFt: block.commonAreaSqFt,
+          serviceAreaSqFt: block.serviceAreaSqFt, description: block.description }
       : {},
   })
 
@@ -73,10 +85,18 @@ function BlockModal({ block, projects, onClose, onSaved }: {
             {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
           </div>
           <div>
-            <label className={lbl}>Total Floors</label>
+            <label className={lbl}>Planned Floors</label>
             <input type="number" {...register('totalFloors')} className={inp} placeholder="6" min={1} />
           </div>
         </div>
+
+        <AreaBreakdownFields
+          register={register}
+          areaSqFt={watch('areaSqFt')}
+          commonAreaSqFt={watch('commonAreaSqFt')}
+          serviceAreaSqFt={watch('serviceAreaSqFt')}
+        />
+
         <div>
           <label className={lbl}>Description</label>
           <textarea {...register('description')} className={inp} rows={2} placeholder="Short note about this block…" />
@@ -155,11 +175,18 @@ export function BlocksPage() {
         empty={blocks.length === 0} emptyMessage="No blocks found. Create a block within a project.">
         <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[900px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  {['Block / Tower', 'Project', 'Floors', 'Units', 'Description', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-content-muted uppercase tracking-wide">{h}</th>
+                  {[
+                    { h: 'Block / Tower' }, { h: 'Project' }, { h: 'Floors', num: true },
+                    { h: 'Area', num: true }, { h: 'Common', num: true }, { h: 'Service', num: true },
+                    { h: 'Net', num: true }, { h: 'Units', num: true }, { h: '' },
+                  ].map(({ h, num }) => (
+                    <th key={h}
+                      className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -175,16 +202,22 @@ export function BlocksPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-content-muted text-sm">{b.projectName}</td>
-                    <td className="px-4 py-3 text-content-muted">{b.totalFloors ?? '—'} floors</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5 text-content">
+                    {/* actual floors created vs the planned figure */}
+                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">
+                      {b.floorCount}{b.totalFloors != null && ` / ${b.totalFloors}`}
+                    </td>
+                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(b.areaSqFt)}</td>
+                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{formatArea(b.commonAreaSqFt)}</td>
+                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{formatArea(b.serviceAreaSqFt)}</td>
+                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(b.netAreaSqFt)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5 text-content">
                         <Home className="w-3.5 h-3.5 text-content-muted" />
-                        <span className="font-medium">{b.unitCount}</span>
+                        <span className="font-medium tabular-nums">{b.unitCount}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-content-muted text-xs max-w-xs truncate">{b.description}</td>
                     <td className="px-4 py-3">
-                      <button onClick={() => { setTarget(b); setModal('edit') }}
+                      <button onClick={() => { setTarget(b); setModal('edit') }} aria-label={`Edit ${b.name}`}
                         className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>

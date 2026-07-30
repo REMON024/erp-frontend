@@ -11,7 +11,7 @@ import {
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
-  Calculator, BarChart3, ShoppingBag, type LucideProps,
+  Calculator, BarChart3, ShoppingBag, Rows3, type LucideProps,
 } from 'lucide-react'
 
 // Map icon name strings (stored in DB) → Lucide components.
@@ -24,7 +24,7 @@ const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
-  Calculator, BarChart3, ShoppingBag,
+  Calculator, BarChart3, ShoppingBag, Rows3,
 }
 // Settings stays in ICON_MAP so the DB icon string "Settings" resolves correctly
 const getIcon = (name: string | null): React.FC<LucideProps> =>
