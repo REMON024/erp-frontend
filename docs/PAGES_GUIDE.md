@@ -57,21 +57,30 @@ belongs to a floor, so a block needs its floors before its units can be added. S
 many units sit on each floor.
 
 ### Cost Estimates / BOQ — `/estimates`
-The **Bill of Quantities** (budget estimate) for a project. Each estimate has
-versioned line items grouped by trade category (Civil, Structural, Electrical,
-Plumbing, HVAC, Finishing, etc.) with quantity × rate = estimated amount, plus
-actuals. Estimates move Draft → Approved → Revised/Rejected. This is the budget
-baseline everything else is compared against. Lines can be linked to materials.
+The **Bill of Quantities** (budget estimate). Each estimate has versioned line items
+grouped by trade category (Civil, Structural, Electrical, Plumbing, HVAC, Finishing,
+etc.) with quantity × rate = estimated amount, plus actuals. Estimates move
+Draft → Approved → Revised/Rejected. This is the budget baseline everything else is
+compared against. Lines can be linked to materials.
+
+An estimate is **scoped** to one level of the hierarchy — the whole project, a single
+block, a single floor, or a single unit. Leave a level blank in the scope picker to
+cover everything below it. Because the full ancestor chain is stored, filtering the
+list by a block also shows the floor- and unit-scoped estimates inside it. A project
+can hold estimates at several levels at once; totals sum them all, so take care not to
+budget the same work twice.
 
 ### Budget Tracker — `/budget`
-Read-mostly view comparing **estimated vs actual** cost per project (from approved
-estimates), highlighting overruns. This is where the "Budget Overrun Alert" on the
-Projects page points.
+Read-mostly view comparing **estimated vs actual** cost (from approved estimates),
+highlighting overruns. Filterable down to a block, floor or unit. This is where the
+"Budget Overrun Alert" on the Projects page points.
 
 ### Material Budget — `/material-budget`
-Per-material budget tracking for a project: budgeted qty/cost vs **committed**
-(ordered via POs) vs **actual** (issued to site), with a utilisation % and a
-status of within / approaching / exceeded budget. Prevents material overspend.
+Per-material budget tracking: budgeted qty/cost vs **committed** (ordered via POs) vs
+**actual** (issued to site), with a utilisation % and a status of within / approaching
+/ exceeded budget. Prevents material overspend. Narrowing below project level filters
+the **budget** side only — purchase orders and stock issues are recorded against the
+project, so committed and actual figures stay project-wide.
 
 ---
 
@@ -258,7 +267,9 @@ Per work order: contract amount, billed, paid, retention held, advance given/rec
 % billed. Filter by project.
 
 ### Cost Variance — `/reports/cost-variance`
-Estimated vs actual by cost category for a selected project, with variance amount and %.
+Estimated vs actual by cost category, with variance amount and %. Covers **every** approved
+estimate for the selected scope, so a project holding both a project-wide and a unit-scoped
+estimate sees both. Filterable down to a block, floor or unit.
 
 ### Trial Balance — see Accounting above (also linked from reports).
 
@@ -408,7 +419,8 @@ These show how the pages chain together for the main business processes.
 2. Open its **Setup Checklist** to see the remaining stages.
 3. **Blocks** — add the building blocks; **Floors** — add each block's floors;
    **Units** — add the sellable flats onto those floors.
-4. **Estimates** — build the BOQ (budget) and **Approve** it. This becomes the
+4. **Estimates** — build the BOQ (budget), choosing whether it covers the whole project
+   or just one block, floor or unit, then **Approve** it. This becomes the
    baseline for Budget Tracker, Material Budget and Cost Variance.
 
 ### B. Procure-to-stock (buying materials)

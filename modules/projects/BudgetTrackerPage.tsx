@@ -1,16 +1,15 @@
 'use client'
 import { useState } from 'react'
-import { Select } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { AlertTriangle, CheckCircle, TrendingUp, TrendingDown, Edit2 } from 'lucide-react'
+import { ScopePicker, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 import api from '@/lib/api'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-interface Project { id: number; projectCode: string; projectName: string }
 interface BOQItem {
   id: number; category: string; description: string; unit: string
   quantity: number; unitRate: number
@@ -213,13 +212,12 @@ function EstimatePanel({ estimate, onItemUpdated }: { estimate: CostEstimate; on
 // ── Main page ──────────────────────────────────────────────────────────────────
 export function BudgetTrackerPage() {
   const qc = useQueryClient()
-  const [selectedProject, setSelectedProject] = useState('')
+  const [filter, setFilter] = useState<ScopeValue>(EMPTY_SCOPE)
 
-  const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
   const { data: estimates = [], isLoading, error, refetch } = useApiData<CostEstimate[]>({
     url: '/cost-estimates',
-    params: { projectId: selectedProject || undefined, status: 'Approved' },
-    queryKey: ['budget-estimates', selectedProject],
+    params: { ...scopeToParams(filter), status: 'Approved' },
+    queryKey: ['budget-estimates', filter.projectId, filter.blockId, filter.floorId, filter.unitId],
   })
 
   const invalidate = () => {
@@ -271,14 +269,10 @@ export function BudgetTrackerPage() {
         </div>
       )}
 
-      {/* Project filter */}
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-content shrink-0">Filter by project:</label>
-        <Select value={selectedProject} onChange={e => setSelectedProject(e.target.value)}
-          className="min-w-[150px]">
-          <option value="">All Projects</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-        </Select>
+      {/* Scope filter */}
+      <div className="flex items-end gap-3 flex-wrap">
+        <label className="text-sm font-medium text-content shrink-0 pb-2">Filter by scope:</label>
+        <ScopePicker value={filter} onChange={setFilter} mode="filter" />
       </div>
 
       <DataState loading={isLoading} error={error ? 'Failed to load budget data.' : null} onRetry={refetch}

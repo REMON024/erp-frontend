@@ -1,12 +1,11 @@
 'use client'
 import { useState } from 'react'
-import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { Package, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react'
 
-interface Project { id: number; projectCode: string; projectName: string }
+import { ScopePicker, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 
 interface MaterialBudgetV2Line {
   resourceId:    number
@@ -76,13 +75,18 @@ const CATEGORY_COLORS: Record<string, string> = {
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? 'bg-info/10 text-info'
 
 export function MaterialBudgetPage() {
-  const [selectedProject, setSelectedProject] = useState('')
-
-  const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  const [filter, setFilter] = useState<ScopeValue>(EMPTY_SCOPE)
+  const selectedProject = filter.projectId
 
   const { data: lines = [], isLoading, error, refetch } = useApiData<MaterialBudgetV2Line[]>({
+    // Project stays in the path; the sub-scope narrows the budget side via query params.
     url: `/cost-estimates/material-budget/${selectedProject || '0'}`,
-    queryKey: ['material-budget-v2', selectedProject],
+    params: {
+      blockId: filter.blockId || undefined,
+      floorId: filter.floorId || undefined,
+      unitId:  filter.unitId  || undefined,
+    },
+    queryKey: ['material-budget-v2', selectedProject, filter.blockId, filter.floorId, filter.unitId],
     enabled: !!selectedProject,
   })
 
@@ -105,20 +109,19 @@ export function MaterialBudgetPage() {
         subtitle="Budgeted (BOQ) · Committed (POs) · Actual (stock issues) — per material per project"
       />
 
-      {/* Project selector */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-sm font-medium text-content shrink-0">Project:</label>
-        <Select
-          value={selectedProject}
-          onChange={e => setSelectedProject(e.target.value)}
-          className="min-w-[260px]"
-        >
-          <option value="">— select a project —</option>
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>
-          ))}
-        </Select>
+      {/* Scope selector */}
+      <div className="flex items-end gap-3 flex-wrap">
+        <label className="text-sm font-medium text-content shrink-0 pb-2">Scope:</label>
+        <ScopePicker value={filter} onChange={setFilter} mode="filter" />
       </div>
+
+      {selectedProject && (filter.blockId || filter.floorId || filter.unitId) && (
+        <p className="text-xs text-content-muted bg-surface-muted border border-border-default rounded-lg px-3 py-2">
+          Narrowing below project level filters the <strong className="font-medium text-content">budget</strong> side
+          only. Purchase orders and stock issues are recorded against the project, not against a
+          block, floor or unit, so committed and actual figures remain project-wide.
+        </p>
+      )}
 
       {!selectedProject && (
         <div className="rounded-xl border border-dashed border-border-default bg-surface-muted p-12 text-center">

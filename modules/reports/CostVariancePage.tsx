@@ -1,12 +1,11 @@
 'use client'
 import { useState } from 'react'
-import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 
-interface Project { id: number; projectCode: string; projectName: string }
+import { ScopePicker, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 interface CostVarianceRow {
   category: string; description: string
   estimatedAmount: number; actualAmount: number
@@ -21,13 +20,13 @@ interface CostVarianceDto {
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 
 export function CostVariancePage() {
-  const [projectId, setProjectId] = useState('')
-  const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  const [filter, setFilter] = useState<ScopeValue>(EMPTY_SCOPE)
+  const projectId = filter.projectId
 
   const { data, isLoading, error, refetch } = useApiData<CostVarianceDto>({
     url: `/reports/cost-variance`,
-    params: { projectId: projectId || undefined },
-    queryKey: ['cost-variance', projectId],
+    params: scopeToParams(filter),
+    queryKey: ['cost-variance', projectId, filter.blockId, filter.floorId, filter.unitId],
     enabled: !!projectId,
   })
 
@@ -39,15 +38,11 @@ export function CostVariancePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Cost Variance Report" subtitle="Estimated vs actual cost per BOQ line for the latest approved estimate" />
+      <PageHeader title="Cost Variance Report" subtitle="Estimated vs actual cost per BOQ line across every approved estimate" />
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-sm font-medium text-content shrink-0">Project:</label>
-        <Select value={projectId} onChange={e => setProjectId(e.target.value)}
-          className="min-w-[260px]">
-          <option value="">— select a project —</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-        </Select>
+      <div className="flex items-end gap-3 flex-wrap">
+        <label className="text-sm font-medium text-content shrink-0 pb-2">Scope:</label>
+        <ScopePicker value={filter} onChange={setFilter} mode="filter" />
       </div>
 
       {!projectId && (

@@ -10,6 +10,7 @@ import { useApiData } from '@/hooks/useApiData'
 import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2, Upload } from 'lucide-react'
 import api from '@/lib/api'
 import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
+import { ScopePicker, scopeToPayload, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 import type { Resource, ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -29,6 +30,19 @@ interface CostEstimate {
   title: string; version: number; status: EstimateStatus
   totalEstimated: number; totalActual: number; variance: number
   items: BOQItem[]; createdAt: string
+  // Scope covered. All three ids are null for a project-wide estimate.
+  blockId?: number; blockName?: string
+  floorId?: number; floorName?: string
+  unitId?: number;  unitNo?: string
+  scopeLevel: 'Project' | 'Block' | 'Floor' | 'Unit'
+  scopeLabel: string
+}
+
+const SCOPE_COLORS: Record<CostEstimate['scopeLevel'], string> = {
+  Project: 'bg-surface-muted text-content-muted',
+  Block:   'bg-info/10 text-info',
+  Floor:   'bg-primary/10 text-primary',
+  Unit:    'bg-success/10 text-success',
 }
 
 const BOQ_CATEGORIES: BOQCategory[] = ['Civil', 'Structural', 'Architectural', 'Electrical', 'Plumbing', 'HVAC', 'Finishing', 'Miscellaneous']
@@ -211,15 +225,20 @@ function BOQEditor({ items, onChange }: {
 }
 
 // ── Create / Edit modal ────────────────────────────────────────────────────────
-function EstimateModal({ estimate, projects, onClose, onSaved }: {
-  estimate?: CostEstimate; projects: Project[]
+function EstimateModal({ estimate, onClose, onSaved }: {
+  estimate?: CostEstimate
   onClose: () => void; onSaved: () => void
 }) {
   const isEdit = !!estimate
-  const [saving, setSaving]       = useState(false)
-  const [err,    setErr]          = useState('')
-  const [projectId, setProjectId] = useState(String(estimate?.projectId ?? ''))
-  const [title,     setTitle]     = useState(estimate?.title ?? '')
+  const [saving, setSaving] = useState(false)
+  const [err,    setErr]    = useState('')
+  const [scope,  setScope]  = useState<ScopeValue>({
+    projectId: String(estimate?.projectId ?? ''),
+    blockId:   estimate?.blockId ? String(estimate.blockId) : '',
+    floorId:   estimate?.floorId ? String(estimate.floorId) : '',
+    unitId:    estimate?.unitId  ? String(estimate.unitId)  : '',
+  })
+  const [title, setTitle] = useState(estimate?.title ?? '')
   const [items, setItems] = useState<DraftItem[]>(
     estimate?.items?.length
       ? estimate.items.map(i => ({
@@ -243,13 +262,13 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
   const unlinkedCount  = items.filter(i => !i.resourceId && i.description.trim()).length
 
   const onSubmit = async () => {
-    if (!projectId)           { setErr('Select a project'); return }
+    if (!scope.projectId)     { setErr('Select a project'); return }
     if (!title.trim())        { setErr('Title is required'); return }
     if (validItems.length === 0) { setErr('Add at least one BOQ line with a resource, description and quantity'); return }
     setSaving(true); setErr('')
     try {
       const payload = {
-        projectId: Number(projectId), title,
+        ...scopeToPayload(scope), title,
         items: validItems.map(i => ({
           resourceId:      i.resourceId,
           category:        i.category,
@@ -272,18 +291,14 @@ function EstimateModal({ estimate, projects, onClose, onSaved }: {
     <Modal open onClose={onClose} title={isEdit ? 'Edit Cost Estimate' : 'New Cost Estimate'} size="xl">
       <div className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Project <span className="text-danger">*</span></label>
-            <Select value={projectId} onChange={e => setProjectId(e.target.value)}>
-              <option value="">Select project</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-            </Select>
-          </div>
-          <div>
-            <label className={lbl}>Estimate Title <span className="text-danger">*</span></label>
-            <input value={title} onChange={e => setTitle(e.target.value)} className={inp} placeholder="e.g. Phase 1 Construction Budget" />
-          </div>
+        <div>
+          <label className={lbl}>Estimate Title <span className="text-danger">*</span></label>
+          <input value={title} onChange={e => setTitle(e.target.value)} className={inp} placeholder="e.g. Phase 1 Construction Budget" />
+        </div>
+
+        <div className="rounded-lg border border-border-default p-3">
+          <p className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-3">Scope</p>
+          <ScopePicker value={scope} onChange={setScope} mode="form" />
         </div>
 
         {materials.length === 0 && (
@@ -334,6 +349,13 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
   return (
     <Modal open onClose={onClose} title={`${estimate.title} — v${estimate.version}`} size="lg">
       <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-content-muted">Covers</span>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${SCOPE_COLORS[estimate.scopeLevel]}`}>
+            {estimate.scopeLevel === 'Project' ? 'Whole project' : estimate.scopeLabel}
+          </span>
+          <span className="text-content-muted">in {estimate.projectCode}</span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div className="bg-primary/10 rounded-lg p-3">
             <p className="text-xs text-primary font-medium uppercase">Total Estimated</p>
@@ -407,20 +429,24 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
 export function CostEstimatesPage() {
   const qc = useQueryClient()
   const [search,  setSearch]  = useState('')
-  const [projFilter, setProjFilter] = useState('')
+  const [filter,  setFilter]  = useState<ScopeValue>(EMPTY_SCOPE)
   const [modal,   setModal]   = useState<'new' | 'edit' | null>(null)
   const [viewing, setViewing] = useState<CostEstimate | null>(null)
   const [target,  setTarget]  = useState<CostEstimate | null>(null)
 
-  const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
-
   const { data: estimates = [], isLoading, error, refetch } = useApiData<CostEstimate[]>({
     url: '/cost-estimates',
-    params: { search: search || undefined, projectId: projFilter || undefined },
-    queryKey: ['cost-estimates', search, projFilter],
+    params: { search: search || undefined, ...scopeToParams(filter) },
+    queryKey: ['cost-estimates', search, filter.projectId, filter.blockId, filter.floorId, filter.unitId],
   })
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['cost-estimates'] })
+  // Four other screens read /cost-estimates under their own keys; clearing only
+  // ['cost-estimates'] left the dashboard and projects banners showing stale budgets.
+  const invalidate = () => {
+    for (const key of [['cost-estimates'], ['projects-estimates'], ['dash-estimates'],
+                       ['budget-estimates'], ['material-budget-v2'], ['material-budget-summary']])
+      qc.invalidateQueries({ queryKey: key })
+  }
 
   const approve = async (id: number) => {
     try { await api.post(`/cost-estimates/${id}/approve`); invalidate() } catch { /* noop */ }
@@ -483,11 +509,7 @@ export function CostEstimatesPage() {
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search estimates…" onRefresh={refetch}>
-        <Select value={projFilter} onChange={e => setProjFilter(e.target.value)}
-          className="min-w-[150px]">
-          <option value="">All Projects</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode}</option>)}
-        </Select>
+        <ScopePicker value={filter} onChange={setFilter} mode="filter" />
       </SearchBar>
 
       <DataState loading={isLoading} error={error ? 'Failed to load estimates.' : null} onRetry={refetch}
@@ -498,7 +520,7 @@ export function CostEstimatesPage() {
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
                   {[
-                    { h: 'Title' }, { h: 'Project' }, { h: 'Ver.', align: 'center' as const }, { h: 'Status' },
+                    { h: 'Title' }, { h: 'Project' }, { h: 'Scope' }, { h: 'Ver.', align: 'center' as const }, { h: 'Status' },
                     { h: 'Total Estimated', num: true }, { h: 'Actual Cost', num: true }, { h: 'Variance' }, { h: '' },
                   ].map(({ h, num, align }) => (
                     <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
@@ -521,6 +543,12 @@ export function CostEstimatesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">{e.projectCode}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${SCOPE_COLORS[e.scopeLevel]}`}
+                          title={e.scopeLabel}>
+                          {e.scopeLevel === 'Project' ? 'Whole project' : e.scopeLabel}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-content-muted text-center">v{e.version}</td>
                       <td className="px-4 py-3">
@@ -576,10 +604,10 @@ export function CostEstimatesPage() {
       </DataState>
 
       {modal === 'new' && (
-        <EstimateModal projects={projects} onClose={() => setModal(null)} onSaved={invalidate} />
+        <EstimateModal onClose={() => setModal(null)} onSaved={invalidate} />
       )}
       {modal === 'edit' && target && (
-        <EstimateModal estimate={target} projects={projects} onClose={() => { setModal(null); setTarget(null) }} onSaved={invalidate} />
+        <EstimateModal estimate={target} onClose={() => { setModal(null); setTarget(null) }} onSaved={invalidate} />
       )}
       {viewing && <ViewModal estimate={viewing} onClose={() => setViewing(null)} />}
     </div>
