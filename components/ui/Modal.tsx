@@ -14,16 +14,29 @@ interface ModalProps {
 // Desktop: centred dialog. Mobile: slides up from bottom (bottom-sheet).
 const SIZES = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-lg', xl: 'sm:max-w-2xl' }
 
+/**
+ * How many modals are open. Nesting one modal inside another (the resource form opening a
+ * quick-create dialog) used to break twice: the inner one's unmount cleared body overflow while
+ * the outer was still open, and a single Escape closed both because both listeners fired.
+ */
+let openModals = 0
+
 export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    if (open) {
-      document.addEventListener('keydown', onKey)
-      document.body.style.overflow = 'hidden'
-    }
+    if (!open) return
+
+    openModals++
+    const depth = openModals
+
+    // Only the top-most modal reacts, so Escape closes one layer at a time.
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && depth === openModals) onClose() }
+    document.addEventListener('keydown', onKey)
+    document.body.style.overflow = 'hidden'
+
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      openModals--
+      if (openModals === 0) document.body.style.overflow = ''
     }
   }, [open, onClose])
 

@@ -16,8 +16,11 @@ import api from '@/lib/api'
 
 interface Material { id: number; resourceName: string; unit: string; averageCost: number }
 interface Warehouse { id: number; name: string }
-interface WorkOrderMaterialLine { resourceId: number | null; resourceName: string | null; unit: string; quantity: number; receivedQty: number }
-interface WorkOrder { id: number; workOrderNo: string; projectName: string; materials: WorkOrderMaterialLine[] }
+interface WorkOrderResourceLine {
+  resourceId: number | null; resourceName: string | null; resourceType?: string
+  unit: string; quantity: number; receivedQty: number
+}
+interface WorkOrder { id: number; workOrderNo: string; projectName: string; resources?: WorkOrderResourceLine[] }
 interface StockTxn {
   id: number; resourceName: string; unit: string; transactionType: string
   qty: number; unitCost: number; totalCost: number
@@ -52,14 +55,16 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
     defaultValues: { transactionDate: isoToday() },
   })
 
-  // A budget line is receivable when it links a material master and isn't fully received yet.
-  const isReceivable = (m: WorkOrderMaterialLine) => m.resourceId != null && m.receivedQty < m.quantity
+  // A budget line is receivable when it links a stock-tracked material master and isn't fully
+  // received yet. Equipment/Service/Labour lines never enter inventory — the backend rejects them.
+  const isReceivable = (m: WorkOrderResourceLine) =>
+    m.resourceId != null && m.resourceType === 'Material' && m.receivedQty < m.quantity
   // Only show work orders that still have at least one receivable material line.
-  const selectableWorkOrders = workOrders.filter(w => w.materials.some(isReceivable))
+  const selectableWorkOrders = workOrders.filter(w => (w.resources ?? []).some(isReceivable))
 
   const selectedWorkOrder = workOrders.find(w => w.id === Number(watch('workOrderId')))
   const woMaterialIds = new Set(
-    (selectedWorkOrder?.materials ?? [])
+    (selectedWorkOrder?.resources ?? [])
       .filter(isReceivable)
       .map(m => m.resourceId as number))
   const availableMaterials = materials.filter(m => woMaterialIds.has(m.id))

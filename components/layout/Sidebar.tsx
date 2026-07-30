@@ -13,7 +13,7 @@ import {
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
   Calculator, BarChart3, ShoppingBag, Rows3,
   PlusCircle, FileBarChart2, UserCheck, CalendarCheck, CalendarDays, Banknote,
-  FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal,
+  FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal, FolderTree,
   type LucideProps,
 } from 'lucide-react'
 
@@ -34,7 +34,7 @@ const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   Calculator, BarChart3, ShoppingBag, Rows3,
   // Child-menu icons from the seeder — latent until one is promoted, but cheap to map.
   PlusCircle, FileBarChart2, UserCheck, CalendarCheck, CalendarDays, Banknote,
-  FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal,
+  FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal, FolderTree,
 }
 // Settings stays in ICON_MAP so the DB icon string "Settings" resolves correctly
 const getIcon = (name: string | null): React.FC<LucideProps> =>

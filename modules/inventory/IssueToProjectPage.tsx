@@ -32,15 +32,20 @@ const schema = z.object({
   warehouseId:     z.coerce.number().min(1, 'Required'),
   resourceId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
-  // Optional: which part of the project consumed the material. Left blank the issue stays
-  // project-level and only counts toward project-wide estimates.
+  // Which part of the project consumed the material. Required unless the issue is declared
+  // project-wide: the scope is write-once, so an unattributed issue can never afterwards be
+  // traced back to the flat it was spent on.
   blockId:         z.coerce.number().optional(),
   floorId:         z.coerce.number().optional(),
   unitId:          z.coerce.number().optional(),
+  projectWide:     z.boolean().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
   notes:           z.string().optional(),
+}).refine(d => d.projectWide || d.blockId || d.floorId || d.unitId, {
+  message: 'Pick the block, floor or unit that consumed this — or tick "Project-wide".',
+  path: ['blockId'],
 })
 type Form = z.infer<typeof schema>
 
@@ -135,10 +140,34 @@ function IssueModal({ warehouses, onClose, onSaved }: {
               set('blockId',   next.blockId)
               set('floorId',   next.floorId)
               set('unitId',    next.unitId)
+              // Naming a scope and calling it project-wide contradict each other, so picking
+              // one clears the other — in both directions.
+              if (next.blockId || next.floorId || next.unitId)
+                setValue('projectWide', false, { shouldValidate: false })
             }}
             mode="form"
           />
+          <label className="flex items-start gap-2 mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              {...register('projectWide', {
+                onChange: e => {
+                  if (!e.target.checked) return
+                  for (const k of ['blockId', 'floorId', 'unitId'] as const)
+                    setValue(k, undefined as any, { shouldValidate: false })
+                },
+              })}
+            />
+            <span className="text-sm text-content">
+              Project-wide
+              <span className="block text-xs text-content-muted">
+                Substructure, boundary wall or site works — spend that belongs to no single block or flat.
+              </span>
+            </span>
+          </label>
           {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
+          {errors.blockId   && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
