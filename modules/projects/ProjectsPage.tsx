@@ -13,6 +13,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, MapPin, Building2, TrendingUp, Edit2, AlertTriangle, Package, ClipboardList, CheckCircle2, Ruler } from 'lucide-react'
 import { ProjectSetupChecklist } from './ProjectSetupChecklist'
+import { Input, Field } from '@/components/ui/Input'
+import { Card, StatCard } from '@/components/ui/Card'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { AreaBreakdownFields } from '@/components/ui/AreaBreakdownFields'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
@@ -25,18 +28,17 @@ interface Project {
   estimatedCost?: number; estimatedRevenue?: number; status: string
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  Planning:  'bg-surface-muted text-content-muted',
-  Active:    'bg-success/10 text-success',
-  OnHold:    'bg-warning/15 text-warning',
-  Completed: 'bg-primary/10 text-primary',
+// Domain tones rather than the shared statusTone(): "OnHold" and "Planning" have specific
+// meanings here that the generic helper would flatten. Still a Badge, so no inline pills.
+const STATUS_TONES: Record<string, BadgeTone> = {
+  Planning:  'neutral',
+  Active:    'success',
+  OnHold:    'warning',
+  Completed: 'primary',
 }
 const STATUSES = ['Planning', 'Active', 'OnHold', 'Completed']
 
 function fmt(n?: number) { return n ? `৳${(n / 100000).toFixed(1)}L` : '—' }
-
-const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
-const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   projectCode:      z.string().min(1, 'Required'),
@@ -85,39 +87,31 @@ function ProjectModal({ project, onClose, onSaved }: {
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Project Name <span className="text-danger">*</span></label>
-            <input {...register('projectName')} className={inp} placeholder="Block-E Residential" />
-            {errors.projectName && <p className="text-xs text-danger mt-1">{errors.projectName.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Project Code <span className="text-danger">*</span></label>
-            <input {...register('projectCode')} className={inp} placeholder="BLK-E-001" />
-            {errors.projectCode && <p className="text-xs text-danger mt-1">{errors.projectCode.message}</p>}
-          </div>
+          <Field label="Project Name" required error={errors.projectName?.message}>
+            <Input {...register('projectName')} invalid={!!errors.projectName} placeholder="Block-E Residential" />
+          </Field>
+          <Field label="Project Code" required error={errors.projectCode?.message}>
+            <Input {...register('projectCode')} invalid={!!errors.projectCode} placeholder="BLK-E-001" />
+          </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Project Type</label>
-            <input {...register('projectType')} className={inp} placeholder="Residential" />
-          </div>
-          <div>
-            <label className={lbl}>Status <span className="text-danger">*</span></label>
+          <Field label="Project Type">
+            <Input {...register('projectType')} placeholder="Residential" />
+          </Field>
+          <Field label="Status" required error={errors.status?.message}>
             <Select {...register('status')}>
               {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </Select>
-          </div>
+          </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Address</label>
-            <input {...register('address')} className={inp} placeholder="Area, Dhaka" />
-          </div>
-          <div>
-            {/* Land plot footprint — distinct from the built-up area below. */}
-            <label className={lbl}>Land Area (sqft)</label>
-            <input type="number" {...register('landArea')} className={inp} placeholder="16730" min={0} />
-          </div>
+          <Field label="Address">
+            <Input {...register('address')} placeholder="Area, Dhaka" />
+          </Field>
+          {/* Land plot footprint — distinct from the built-up area below. */}
+          <Field label="Land Area (sqft)">
+            <Input type="number" min={0} {...register('landArea')} placeholder="16730" />
+          </Field>
         </div>
 
         <AreaBreakdownFields
@@ -128,24 +122,20 @@ function ProjectModal({ project, onClose, onSaved }: {
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Estimated Cost (৳)</label>
-            <input type="number" {...register('estimatedCost')} className={inp} placeholder="10000000" />
-          </div>
-          <div>
-            <label className={lbl}>Estimated Revenue (৳)</label>
-            <input type="number" {...register('estimatedRevenue')} className={inp} placeholder="14000000" />
-          </div>
+          <Field label="Estimated Cost (৳)">
+            <Input type="number" {...register('estimatedCost')} placeholder="10000000" />
+          </Field>
+          <Field label="Estimated Revenue (৳)">
+            <Input type="number" {...register('estimatedRevenue')} placeholder="14000000" />
+          </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Start Date</label>
+          <Field label="Start Date">
             <DateField {...register('startDate')} />
-          </div>
-          <div>
-            <label className={lbl}>Est. Completion</label>
+          </Field>
+          <Field label="Est. Completion">
             <DateField {...register('endDate')} />
-          </div>
+          </Field>
         </div>
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
@@ -160,7 +150,7 @@ function ProjectModal({ project, onClose, onSaved }: {
 
 function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: () => void; onSetup: () => void }) {
   return (
-    <div className="bg-surface rounded-xl border border-border-default p-5 hover:shadow-md transition-shadow">
+    <Card className="p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-2 mb-4">
         <div className="min-w-0">
           <p className="text-xs text-content-muted font-mono">{project.projectCode}</p>
@@ -170,9 +160,7 @@ function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: (
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[project.status] ?? 'bg-surface-muted text-content-muted'}`}>
-            {project.status}
-          </span>
+          <Badge tone={STATUS_TONES[project.status] ?? 'neutral'}>{project.status}</Badge>
           <button onClick={onEdit} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Edit project">
             <Edit2 className="w-3.5 h-3.5" />
           </button>
@@ -206,7 +194,7 @@ function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: (
       >
         <CheckCircle2 className="w-3.5 h-3.5" /> View Setup Checklist
       </button>
-    </div>
+    </Card>
   )
 }
 
@@ -273,22 +261,10 @@ export function ProjectsPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-sm text-content-muted">Total Projects</p>
-          <p className="text-2xl font-bold text-primary mt-1">{projects.length}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-sm text-content-muted">Active</p>
-          <p className="text-2xl font-bold text-success mt-1">{activeCount}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-sm text-content-muted">Completed</p>
-          <p className="text-2xl font-bold text-primary mt-1">{completedCount}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-sm text-content-muted">Planning</p>
-          <p className="text-2xl font-bold text-content-muted mt-1">{projects.filter(p => p.status === 'Planning').length}</p>
-        </div>
+        <StatCard label="Total Projects" value={String(projects.length)} tone="primary" />
+        <StatCard label="Active" value={String(activeCount)} tone="success" />
+        <StatCard label="Completed" value={String(completedCount)} tone="primary" />
+        <StatCard label="Planning" value={String(projects.filter(p => p.status === 'Planning').length)} tone="neutral" />
       </div>
 
       {/* Material budget health widget */}

@@ -11,6 +11,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Edit2, Building2 } from 'lucide-react'
+import { Input, Field } from '@/components/ui/Input'
+import { Table, TH, TR, TD } from '@/components/ui/Table'
+import { StatCard } from '@/components/ui/Card'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
@@ -25,17 +29,17 @@ export interface Unit {
   totalPrice: number; status: string
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  Available: 'bg-success/10 text-success',
-  Booked:    'bg-primary/10 text-primary',
-  Sold:      'bg-surface-muted text-content-muted',
-  Cancelled: 'bg-danger/10 text-danger',
+// Domain tones rather than the shared statusTone(): that helper reads "Available" and
+// "Booked" as neutral, which would flatten the distinction this list exists to show.
+// Still a Badge, so no inline pills.
+const STATUS_TONES: Record<string, BadgeTone> = {
+  Available: 'success',
+  Booked:    'primary',
+  Sold:      'neutral',
+  Cancelled: 'danger',
 }
 const STATUSES = ['Available', 'Booked', 'Sold', 'Cancelled']
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD')}` }
-
-const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
-const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   projectId:       z.coerce.number().min(1, 'Required'),
@@ -98,71 +102,56 @@ function UnitModal({ unit, projects, blocks, floors, onClose, onSaved }: {
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={lbl}>Project <span className="text-danger">*</span></label>
+          <Field label="Project" required error={errors.projectId?.message}>
             <Select {...register('projectId', { onChange: () => { clear('blockId'); clear('floorId') } })}>
               <option value="">Select project</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
-            {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Block <span className="text-danger">*</span></label>
+          </Field>
+          <Field label="Block" required error={errors.blockId?.message}>
             <Select {...register('blockId', { onChange: () => clear('floorId') })} disabled={!selectedProject}>
               <option value="">{selectedProject ? 'Select block' : 'Select a project first'}</option>
               {eligibleBlocks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
-            {errors.blockId && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Floor <span className="text-danger">*</span></label>
+          </Field>
+          <Field label="Floor" required error={errors.floorId?.message}>
             <Select {...register('floorId')} disabled={!selectedBlock}>
               <option value="">{selectedBlock ? 'Select floor' : 'Select a block first'}</option>
               {eligibleFloors.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
             </Select>
-            {errors.floorId && <p className="text-xs text-danger mt-1">{errors.floorId.message}</p>}
-          </div>
+          </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Unit No. <span className="text-danger">*</span></label>
-            <input {...register('unitNo')} className={inp} placeholder="A-101" />
-            {errors.unitNo && <p className="text-xs text-danger mt-1">{errors.unitNo.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Type</label>
-            <input {...register('unitType')} className={inp} placeholder="3 BHK" />
-          </div>
+          <Field label="Unit No." required error={errors.unitNo?.message}>
+            <Input {...register('unitNo')} invalid={!!errors.unitNo} placeholder="A-101" />
+          </Field>
+          <Field label="Type">
+            <Input {...register('unitType')} placeholder="3 BHK" />
+          </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className={lbl}>Area (sqft)</label>
-            <input type="number" {...register('areaSqFt')} className={inp} placeholder="1200" />
-          </div>
-          <div>
-            <label className={lbl}>Facing</label>
+          <Field label="Area (sqft)">
+            <Input type="number" {...register('areaSqFt')} placeholder="1200" />
+          </Field>
+          <Field label="Facing">
             <Select {...register('facing')}>
               <option value="">—</option>
               {['North', 'South', 'East', 'West', 'North-East', 'South-West'].map(f => <option key={f} value={f}>{f}</option>)}
             </Select>
-          </div>
-          <div>
-            <label className={lbl}>Status</label>
+          </Field>
+          <Field label="Status">
             <Select {...register('status')}>
               {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </Select>
-          </div>
+          </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Base Price (৳) <span className="text-danger">*</span></label>
-            <input type="number" {...register('basePrice')} className={inp} placeholder="5000000" />
-            {errors.basePrice && <p className="text-xs text-danger mt-1">{errors.basePrice.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Additional Price (৳)</label>
-            <input type="number" {...register('additionalPrice')} className={inp} placeholder="0" />
-          </div>
+          <Field label="Base Price (৳)" required error={errors.basePrice?.message}>
+            <Input type="number" {...register('basePrice')} invalid={!!errors.basePrice} placeholder="5000000" />
+          </Field>
+          <Field label="Additional Price (৳)">
+            <Input type="number" {...register('additionalPrice')} placeholder="0" />
+          </Field>
         </div>
         {totalPrice > 0 && (
           <div className="bg-surface-muted rounded-lg px-4 py-2 flex justify-between items-center text-sm">
@@ -223,17 +212,14 @@ export function UnitsPage() {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'Total Units',     value: units.length,        color: 'text-content',    bg: 'bg-surface' },
-          { label: 'Available',       value: available,           color: 'text-success', bg: 'bg-success/10' },
-          { label: 'Booked',          value: booked,              color: 'text-primary',    bg: 'bg-primary/10' },
-          { label: 'Sold',            value: sold,                color: 'text-content-muted',    bg: 'bg-surface-muted' },
-          { label: 'Available Value', value: fmt(availableValue), color: 'text-info',  bg: 'bg-info/10' },
-        ].map(s => (
-          <div key={s.label} className={`rounded-xl border border-border-default p-4 ${s.bg}`}>
-            <p className="text-xs text-content-muted uppercase tracking-wide leading-tight">{s.label}</p>
-            <p className={`text-xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-          </div>
+        {([
+          { label: 'Total Units',     value: String(units.length), tone: 'neutral' },
+          { label: 'Available',       value: String(available),    tone: 'success' },
+          { label: 'Booked',          value: String(booked),       tone: 'primary' },
+          { label: 'Sold',            value: String(sold),         tone: 'neutral' },
+          { label: 'Available Value', value: fmt(availableValue),  tone: 'info'    },
+        ] as const).map(s => (
+          <StatCard key={s.label} label={s.label} value={s.value} tone={s.tone} />
         ))}
       </div>
 
@@ -252,47 +238,37 @@ export function UnitsPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load units.' : null} onRetry={refetch}
         empty={units.length === 0} emptyMessage="No units found.">
-        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-sm">
-              <thead className="bg-surface-muted border-b border-border-default">
-                <tr>
-                  {[
-                    { h: 'Unit No.' }, { h: 'Block' }, { h: 'Type' }, { h: 'Floor', align: 'center' as const },
-                    { h: 'Area (sqft)', num: true }, { h: 'Total Price', num: true },
-                    { h: 'Facing' }, { h: 'Status' }, { h: '' },
-                  ].map(({ h, num, align }) => (
-                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-default">
-                {units.map(u => (
-                  <tr key={u.id} className="hover:bg-surface-muted">
-                    <td className="px-4 py-3 font-semibold text-content">{u.unitNo}</td>
-                    <td className="px-4 py-3 text-content-muted text-xs">
-                      <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-content-muted" />{u.blockName}</div>
-                    </td>
-                    <td className="px-4 py-3 text-content-muted text-xs">{u.unitType ?? '—'}</td>
-                    <td className="px-4 py-3 text-content-muted text-center">{u.floorName}</td>
-                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(u.areaSqFt)}</td>
-                    <td className="px-4 py-3 font-semibold text-content text-right tabular-nums">{fmt(u.totalPrice)}</td>
-                    <td className="px-4 py-3 text-content-muted text-xs">{u.facing ?? '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLORS[u.status] ?? 'bg-surface-muted text-content-muted'}`}>{u.status}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => { setTarget(u); setModal('edit') }}
-                        className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Table
+          minWidth={860}
+          head={<>
+            <TH>Unit No.</TH><TH>Block</TH><TH>Type</TH><TH align="center">Floor</TH>
+            <TH num>Area (sqft)</TH><TH num>Total Price</TH>
+            <TH>Facing</TH><TH>Status</TH><TH />
+          </>}
+        >
+          {units.map(u => (
+            <TR key={u.id}>
+              <TD className="font-semibold text-content">{u.unitNo}</TD>
+              <TD className="text-content-muted text-xs">
+                <div className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-content-muted" />{u.blockName}</div>
+              </TD>
+              <TD className="text-content-muted text-xs">{u.unitType ?? '—'}</TD>
+              <TD align="center" className="text-content-muted">{u.floorName}</TD>
+              <TD num className="text-content font-medium">{formatArea(u.areaSqFt)}</TD>
+              <TD num className="font-semibold text-content">{fmt(u.totalPrice)}</TD>
+              <TD className="text-content-muted text-xs">{u.facing ?? '—'}</TD>
+              <TD>
+                <Badge tone={STATUS_TONES[u.status] ?? 'neutral'}>{u.status}</Badge>
+              </TD>
+              <TD>
+                <button onClick={() => { setTarget(u); setModal('edit') }} aria-label={`Edit ${u.unitNo}`}
+                  className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </Table>
       </DataState>
 
       {modal === 'add' && (

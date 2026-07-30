@@ -11,6 +11,10 @@ import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2, Upload }
 import api from '@/lib/api'
 import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
 import { ScopePicker, scopeToPayload, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
+import { Input, Field } from '@/components/ui/Input'
+import { Table, TH, TR, TD } from '@/components/ui/Table'
+import { StatCard } from '@/components/ui/Card'
+import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import type { Resource, ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -38,26 +42,26 @@ interface CostEstimate {
   scopeLabel: string
 }
 
-const SCOPE_COLORS: Record<CostEstimate['scopeLevel'], string> = {
-  Project: 'bg-surface-muted text-content-muted',
-  Block:   'bg-info/10 text-info',
-  Floor:   'bg-primary/10 text-primary',
-  Unit:    'bg-success/10 text-success',
+// Domain tones: the scope level is a hierarchy position, not a status, so statusTone()
+// has nothing sensible to say about it. Still a Badge, so no inline pills.
+const SCOPE_TONES: Record<CostEstimate['scopeLevel'], BadgeTone> = {
+  Project: 'neutral',
+  Block:   'info',
+  Floor:   'primary',
+  Unit:    'success',
 }
 
 const BOQ_CATEGORIES: BOQCategory[] = ['Civil', 'Structural', 'Architectural', 'Electrical', 'Plumbing', 'HVAC', 'Finishing', 'Miscellaneous']
-const STATUS_COLORS: Record<EstimateStatus, string> = {
-  Draft:    'bg-surface-muted text-content-muted',
-  Approved: 'bg-success/10 text-success',
-  Revised:  'bg-warning/15 text-warning',
-  Rejected: 'bg-danger/10 text-danger',
+const STATUS_TONES: Record<EstimateStatus, BadgeTone> = {
+  Draft:    'neutral',
+  Approved: 'success',
+  Revised:  'warning',
+  Rejected: 'danger',
 }
 
 function fmt(n: number)  { return `৳${n.toLocaleString('en-BD')}` }
 function isoToday()      { return new Date().toISOString().split('T')[0] }
 
-const inp  = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
-const lbl  = 'block text-sm font-medium text-content mb-1'
 const tinp = 'border border-border-default rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none w-full'
 
 // ── BOQ line-item editor ───────────────────────────────────────────────────────
@@ -124,6 +128,8 @@ function BOQEditor({ items, onChange }: {
           <Plus className="w-3.5 h-3.5" /> Add Line
         </button>
       </div>
+      {/* Hand-rolled rather than <Table>: this is a dense editable grid with fixed column
+          widths and an input in every cell — the primitive's row padding fights it. */}
       <div className="border border-border-default rounded-lg overflow-x-auto">
         <table className="w-full min-w-[980px] text-xs">
           <thead className="bg-surface-muted border-b border-border-default">
@@ -291,10 +297,9 @@ function EstimateModal({ estimate, onClose, onSaved }: {
     <Modal open onClose={onClose} title={isEdit ? 'Edit Cost Estimate' : 'New Cost Estimate'} size="xl">
       <div className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
-        <div>
-          <label className={lbl}>Estimate Title <span className="text-danger">*</span></label>
-          <input value={title} onChange={e => setTitle(e.target.value)} className={inp} placeholder="e.g. Phase 1 Construction Budget" />
-        </div>
+        <Field label="Estimate Title" required>
+          <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Phase 1 Construction Budget" />
+        </Field>
 
         <div className="rounded-lg border border-border-default p-3">
           <p className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-3">Scope</p>
@@ -351,9 +356,9 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
       <div className="space-y-4">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-content-muted">Covers</span>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${SCOPE_COLORS[estimate.scopeLevel]}`}>
+          <Badge tone={SCOPE_TONES[estimate.scopeLevel]}>
             {estimate.scopeLevel === 'Project' ? 'Whole project' : estimate.scopeLabel}
-          </span>
+          </Badge>
           <span className="text-content-muted">in {estimate.projectCode}</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
@@ -374,6 +379,8 @@ function ViewModal({ estimate, onClose }: { estimate: CostEstimate; onClose: () 
           </div>
         </div>
 
+        {/* Hand-rolled rather than <Table>: this one needs a <tfoot> totals row, which the
+            shared primitive does not render. */}
         <div className="overflow-x-auto border border-border-default rounded-lg">
           <table className="w-full min-w-[700px] text-sm">
             <thead className="bg-surface-muted border-b border-border-default">
@@ -495,17 +502,10 @@ export function CostEstimatesPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Estimates',  value: estimates.length,       color: 'text-content',  bg: 'bg-surface' },
-          { label: 'Total Budgeted',   value: fmt(totalEstimated),    color: 'text-primary',  bg: 'bg-primary/10' },
-          { label: 'Actual Cost',      value: fmt(totalActual),       color: 'text-warning',bg: 'bg-warning/15' },
-          { label: 'Over Budget',      value: overBudget,             color: overBudget > 0 ? 'text-danger' : 'text-success', bg: overBudget > 0 ? 'bg-danger/10' : 'bg-success/10' },
-        ].map(k => (
-          <div key={k.label} className={`rounded-xl border border-border-default p-4 ${k.bg}`}>
-            <p className="text-xs text-content-muted uppercase tracking-wide">{k.label}</p>
-            <p className={`text-xl font-bold mt-1 ${k.color}`}>{k.value}</p>
-          </div>
-        ))}
+        <StatCard label="Total Estimates" value={String(estimates.length)} tone="neutral" />
+        <StatCard label="Total Budgeted"  value={fmt(totalEstimated)}      tone="primary" />
+        <StatCard label="Actual Cost"     value={fmt(totalActual)}         tone="warning" />
+        <StatCard label="Over Budget"     value={String(overBudget)}       tone={overBudget > 0 ? 'danger' : 'success'} />
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search estimates…" onRefresh={refetch}>
@@ -514,53 +514,43 @@ export function CostEstimatesPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load estimates.' : null} onRetry={refetch}
         empty={estimates.length === 0} emptyMessage="No cost estimates yet.">
-        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead className="bg-surface-muted border-b border-border-default">
-                <tr>
-                  {[
-                    { h: 'Title' }, { h: 'Project' }, { h: 'Scope' }, { h: 'Ver.', align: 'center' as const }, { h: 'Status' },
-                    { h: 'Total Estimated', num: true }, { h: 'Actual Cost', num: true }, { h: 'Variance' }, { h: '' },
-                  ].map(({ h, num, align }) => (
-                    <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-default">
+        <Table
+          minWidth={820}
+          head={<>
+            <TH>Title</TH><TH>Project</TH><TH>Scope</TH><TH align="center">Ver.</TH><TH>Status</TH>
+            <TH num>Total Estimated</TH><TH num>Actual Cost</TH><TH>Variance</TH><TH />
+          </>}
+        >
                 {estimates.map(e => {
                   const isOver = e.totalActual > e.totalEstimated && e.totalActual > 0
                   const variancePct = e.totalEstimated > 0 && e.totalActual > 0
                     ? Math.round((e.totalActual / e.totalEstimated) * 100)
                     : null
                   return (
-                    <tr key={e.id} className="hover:bg-surface-muted">
-                      <td className="px-4 py-3">
+                    <TR key={e.id}>
+                      <TD>
                         <div className="flex items-center gap-2">
                           <FileBarChart2 className="w-4 h-4 text-content-muted shrink-0" />
                           <p className="font-medium text-content text-sm">{e.title}</p>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs bg-primary/10 text-primary font-medium px-2 py-0.5 rounded-full">{e.projectCode}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${SCOPE_COLORS[e.scopeLevel]}`}
-                          title={e.scopeLabel}>
-                          {e.scopeLevel === 'Project' ? 'Whole project' : e.scopeLabel}
+                      </TD>
+                      <TD><Badge tone="primary">{e.projectCode}</Badge></TD>
+                      <TD>
+                        <span title={e.scopeLabel}>
+                          <Badge tone={SCOPE_TONES[e.scopeLevel]}>
+                            {e.scopeLevel === 'Project' ? 'Whole project' : e.scopeLabel}
+                          </Badge>
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-content-muted text-center">v{e.version}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[e.status]}`}>{e.status}</span>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-primary text-right tabular-nums">{fmt(e.totalEstimated)}</td>
-                      <td className="px-4 py-3 font-semibold text-right tabular-nums">
+                      </TD>
+                      <TD align="center" className="text-content-muted">v{e.version}</TD>
+                      <TD><Badge tone={STATUS_TONES[e.status]}>{e.status}</Badge></TD>
+                      <TD num className="font-semibold text-primary">{fmt(e.totalEstimated)}</TD>
+                      <TD num className="font-semibold">
                         {e.totalActual > 0
                           ? <span className={isOver ? 'text-danger' : 'text-success'}>{fmt(e.totalActual)}</span>
                           : <span className="text-content-muted/50 font-normal">Not started</span>}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TD>
+                      <TD>
                         {variancePct !== null
                           ? <div className="flex items-center gap-2">
                               <div className="w-16 h-1.5 bg-surface-muted rounded-full overflow-hidden">
@@ -571,8 +561,8 @@ export function CostEstimatesPage() {
                               {isOver && <span className="text-xs text-danger font-medium">Over</span>}
                             </div>
                           : <span className="text-content-muted/50 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
+                      </TD>
+                      <TD>
                         <div className="flex items-center gap-1">
                           <button onClick={() => setViewing(e)} title="View BOQ"
                             className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
@@ -593,14 +583,11 @@ export function CostEstimatesPage() {
                             </>
                           )}
                         </div>
-                      </td>
-                    </tr>
+                      </TD>
+                    </TR>
                   )
                 })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        </Table>
       </DataState>
 
       {modal === 'new' && (

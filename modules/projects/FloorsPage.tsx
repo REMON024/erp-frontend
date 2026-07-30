@@ -11,7 +11,10 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Edit2, Rows3, Home } from 'lucide-react'
+import { Input, Field } from '@/components/ui/Input'
+import { Table, TH, TR, TD } from '@/components/ui/Table'
+import { StatCard } from '@/components/ui/Card'
+import { Plus, Edit2, Rows3, Home, Ruler } from 'lucide-react'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
@@ -39,9 +42,6 @@ const schema = z.object({
   { message: 'Common + service area cannot exceed the total area.', path: ['areaSqFt'] },
 )
 type Form = z.infer<typeof schema>
-
-const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
-const lbl = 'block text-sm font-medium text-content mb-1'
 
 function FloorModal({ floor, projects, blocks, onClose, onSaved }: {
   floor?: Floor; projects: Project[]; blocks: Block[]; onClose: () => void; onSaved: () => void
@@ -78,8 +78,7 @@ function FloorModal({ floor, projects, blocks, onClose, onSaved }: {
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Project <span className="text-danger">*</span></label>
+          <Field label="Project" required error={errors.projectId?.message}>
             <Select
               {...register('projectId', {
                 // Changing the project invalidates the chosen block, so clear it rather than
@@ -90,29 +89,22 @@ function FloorModal({ floor, projects, blocks, onClose, onSaved }: {
               <option value="">Select project…</option>
               {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
             </Select>
-            {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Block <span className="text-danger">*</span></label>
+          </Field>
+          <Field label="Block" required error={errors.blockId?.message}>
             <Select {...register('blockId')} disabled={!selectedProject}>
               <option value="">{selectedProject ? 'Select block…' : 'Select a project first'}</option>
               {eligibleBlocks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
-            {errors.blockId && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
-          </div>
+          </Field>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Floor Name <span className="text-danger">*</span></label>
-            <input {...register('name')} className={inp} placeholder="Level 3" />
-            {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Floor No. <span className="text-danger">*</span></label>
-            <input type="number" {...register('floorNumber')} className={inp} placeholder="3" min={0} />
-            {errors.floorNumber && <p className="text-xs text-danger mt-1">{errors.floorNumber.message}</p>}
-          </div>
+          <Field label="Floor Name" required error={errors.name?.message}>
+            <Input {...register('name')} invalid={!!errors.name} placeholder="Level 3" />
+          </Field>
+          <Field label="Floor No." required error={errors.floorNumber?.message}>
+            <Input type="number" min={0} {...register('floorNumber')} invalid={!!errors.floorNumber} placeholder="3" />
+          </Field>
         </div>
 
         <AreaBreakdownFields
@@ -122,10 +114,11 @@ function FloorModal({ floor, projects, blocks, onClose, onSaved }: {
           serviceAreaSqFt={watch('serviceAreaSqFt')}
         />
 
-        <div>
-          <label className={lbl}>Description</label>
-          <textarea {...register('description')} className={inp} rows={2} placeholder="Short note about this floor…" />
-        </div>
+        <Field label="Description">
+          {/* No shared primitive for multiline yet; Input's classes are mirrored here. */}
+          <textarea {...register('description')} rows={2} placeholder="Short note about this floor…"
+            className="w-full border border-border-default rounded-lg px-3 py-2 text-sm bg-surface text-content focus:ring-2 focus:ring-primary/40 focus:outline-none" />
+        </Field>
 
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose}
@@ -188,18 +181,9 @@ export function FloorsPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Total Floors</p>
-          <p className="text-3xl font-bold text-content mt-1">{floors.length}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Total Units</p>
-          <p className="text-3xl font-bold text-primary mt-1">{totalUnits}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Total Area (sqft)</p>
-          <p className="text-3xl font-bold text-primary mt-1 tabular-nums">{formatArea(totalArea)}</p>
-        </div>
+        <StatCard label="Total Floors" value={String(floors.length)} icon={Rows3} tone="info" />
+        <StatCard label="Total Units" value={String(totalUnits)} icon={Home} tone="primary" />
+        <StatCard label="Total Area (sqft)" value={formatArea(totalArea)} icon={Ruler} tone="primary" />
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search floors…" onRefresh={refetch}>
@@ -217,60 +201,46 @@ export function FloorsPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load floors.' : null} onRetry={refetch}
         empty={floors.length === 0} emptyMessage="No floors found. Add floors to a block before creating units.">
-        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[940px] text-sm">
-              <thead className="bg-surface-muted border-b border-border-default">
-                <tr>
-                  {[
-                    { h: 'Floor' }, { h: 'Block' }, { h: 'Project' },
-                    { h: 'No.', num: true }, { h: 'Area', num: true }, { h: 'Common', num: true },
-                    { h: 'Service', num: true }, { h: 'Net', num: true }, { h: 'Units', num: true },
-                    { h: '' },
-                  ].map(({ h, num }) => (
-                    <th key={h}
-                      className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-default">
-                {floors.map(f => (
-                  <tr key={f.id} className="hover:bg-surface-muted">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
-                          <Rows3 className="w-4 h-4 text-info" />
-                        </div>
-                        <span className="font-semibold text-content">{f.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-content-muted text-sm">{f.blockName}</td>
-                    <td className="px-4 py-3 text-content-muted text-xs">{f.projectName}</td>
-                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{f.floorNumber}</td>
-                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(f.areaSqFt)}</td>
-                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{formatArea(f.commonAreaSqFt)}</td>
-                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{formatArea(f.serviceAreaSqFt)}</td>
-                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(f.netAreaSqFt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5 text-content">
-                        <Home className="w-3.5 h-3.5 text-content-muted" />
-                        <span className="font-medium tabular-nums">{f.unitCount}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => { setTarget(f); setModal('edit') }} aria-label={`Edit ${f.name}`}
-                        className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Table
+          minWidth={940}
+          head={<>
+            <TH>Floor</TH><TH>Block</TH><TH>Project</TH>
+            <TH num>No.</TH><TH num>Area</TH><TH num>Common</TH>
+            <TH num>Service</TH><TH num>Net</TH><TH num>Units</TH><TH />
+          </>}
+        >
+          {floors.map(f => (
+            <TR key={f.id}>
+              <TD>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+                    <Rows3 className="w-4 h-4 text-info" />
+                  </div>
+                  <span className="font-semibold text-content">{f.name}</span>
+                </div>
+              </TD>
+              <TD className="text-content-muted">{f.blockName}</TD>
+              <TD className="text-content-muted text-xs">{f.projectName}</TD>
+              <TD num className="text-content-muted">{f.floorNumber}</TD>
+              <TD num className="text-content font-medium">{formatArea(f.areaSqFt)}</TD>
+              <TD num className="text-content-muted">{formatArea(f.commonAreaSqFt)}</TD>
+              <TD num className="text-content-muted">{formatArea(f.serviceAreaSqFt)}</TD>
+              <TD num className="text-content font-medium">{formatArea(f.netAreaSqFt)}</TD>
+              <TD num>
+                <div className="flex items-center justify-end gap-1.5 text-content">
+                  <Home className="w-3.5 h-3.5 text-content-muted" />
+                  <span className="font-medium">{f.unitCount}</span>
+                </div>
+              </TD>
+              <TD>
+                <button onClick={() => { setTarget(f); setModal('edit') }} aria-label={`Edit ${f.name}`}
+                  className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg">
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </Table>
       </DataState>
 
       {modal === 'add' && (

@@ -10,7 +10,10 @@ import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, Edit2, Layers, Home } from 'lucide-react'
+import { Plus, Edit2, Layers, Home, FolderKanban } from 'lucide-react'
+import { Input, Field } from '@/components/ui/Input'
+import { Table, TH, TR, TD } from '@/components/ui/Table'
+import { StatCard } from '@/components/ui/Card'
 import { AreaBreakdownFields } from '@/components/ui/AreaBreakdownFields'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
@@ -36,9 +39,6 @@ const schema = z.object({
   { message: 'Common + service area cannot exceed the total area.', path: ['areaSqFt'] },
 )
 type Form = z.infer<typeof schema>
-
-const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
-const lbl = 'block text-sm font-medium text-content mb-1'
 
 function BlockModal({ block, projects, onClose, onSaved }: {
   block?: Block; projects: Project[]; onClose: () => void; onSaved: () => void
@@ -70,24 +70,19 @@ function BlockModal({ block, projects, onClose, onSaved }: {
     <Modal open onClose={onClose} title={isEdit ? 'Edit Block' : 'Add Block'} size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
-        <div>
-          <label className={lbl}>Project <span className="text-danger">*</span></label>
+        <Field label="Project" required error={errors.projectId?.message}>
           <Select {...register('projectId')}>
             <option value="">Select project…</option>
             {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
           </Select>
-          {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
-        </div>
+        </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>Block / Tower Name <span className="text-danger">*</span></label>
-            <input {...register('name')} className={inp} placeholder="Tower A1" />
-            {errors.name && <p className="text-xs text-danger mt-1">{errors.name.message}</p>}
-          </div>
-          <div>
-            <label className={lbl}>Planned Floors</label>
-            <input type="number" {...register('totalFloors')} className={inp} placeholder="6" min={1} />
-          </div>
+          <Field label="Block / Tower Name" required error={errors.name?.message}>
+            <Input {...register('name')} invalid={!!errors.name} placeholder="Tower A1" />
+          </Field>
+          <Field label="Planned Floors">
+            <Input type="number" min={1} {...register('totalFloors')} placeholder="6" />
+          </Field>
         </div>
 
         <AreaBreakdownFields
@@ -97,10 +92,11 @@ function BlockModal({ block, projects, onClose, onSaved }: {
           serviceAreaSqFt={watch('serviceAreaSqFt')}
         />
 
-        <div>
-          <label className={lbl}>Description</label>
-          <textarea {...register('description')} className={inp} rows={2} placeholder="Short note about this block…" />
-        </div>
+        <Field label="Description">
+          {/* No shared primitive for multiline yet; Input's classes are mirrored here. */}
+          <textarea {...register('description')} rows={2} placeholder="Short note about this block…"
+            className="w-full border border-border-default rounded-lg px-3 py-2 text-sm bg-surface text-content focus:ring-2 focus:ring-primary/40 focus:outline-none" />
+        </Field>
         <div className="flex justify-end gap-3 pt-2 border-t border-border-default">
           <button type="button" onClick={onClose}
             className="px-4 py-2 text-sm border border-border-default rounded-lg hover:bg-surface-muted">Cancel</button>
@@ -149,18 +145,9 @@ export function BlocksPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Total Blocks</p>
-          <p className="text-3xl font-bold text-content mt-1">{blocks.length}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Projects</p>
-          <p className="text-3xl font-bold text-primary mt-1">{projects.length}</p>
-        </div>
-        <div className="bg-surface rounded-xl border border-border-default p-4">
-          <p className="text-xs text-content-muted uppercase tracking-wide font-medium">Total Units</p>
-          <p className="text-3xl font-bold text-primary mt-1">{totalUnits}</p>
-        </div>
+        <StatCard label="Total Blocks" value={String(blocks.length)} icon={Layers} tone="info" />
+        <StatCard label="Projects" value={String(projects.length)} icon={FolderKanban} tone="primary" />
+        <StatCard label="Total Units" value={String(totalUnits)} icon={Home} tone="primary" />
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search blocks…" onRefresh={refetch}>
@@ -173,61 +160,48 @@ export function BlocksPage() {
 
       <DataState loading={isLoading} error={error ? 'Failed to load blocks.' : null} onRetry={refetch}
         empty={blocks.length === 0} emptyMessage="No blocks found. Create a block within a project.">
-        <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead className="bg-surface-muted border-b border-border-default">
-                <tr>
-                  {[
-                    { h: 'Block / Tower' }, { h: 'Project' }, { h: 'Floors', num: true },
-                    { h: 'Area', num: true }, { h: 'Common', num: true }, { h: 'Service', num: true },
-                    { h: 'Net', num: true }, { h: 'Units', num: true }, { h: '' },
-                  ].map(({ h, num }) => (
-                    <th key={h}
-                      className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-default">
-                {blocks.map(b => (
-                  <tr key={b.id} className="hover:bg-surface-muted">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
-                          <Layers className="w-4 h-4 text-info" />
-                        </div>
-                        <span className="font-semibold text-content">{b.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-content-muted text-sm">{b.projectName}</td>
-                    {/* actual floors created vs the planned figure */}
-                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">
-                      {b.floorCount}{b.totalFloors != null && ` / ${b.totalFloors}`}
-                    </td>
-                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(b.areaSqFt)}</td>
-                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{formatArea(b.commonAreaSqFt)}</td>
-                    <td className="px-4 py-3 text-content-muted text-right tabular-nums">{formatArea(b.serviceAreaSqFt)}</td>
-                    <td className="px-4 py-3 text-content font-medium text-right tabular-nums">{formatArea(b.netAreaSqFt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5 text-content">
-                        <Home className="w-3.5 h-3.5 text-content-muted" />
-                        <span className="font-medium tabular-nums">{b.unitCount}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => { setTarget(b); setModal('edit') }} aria-label={`Edit ${b.name}`}
-                        className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Table
+          minWidth={900}
+          head={<>
+            <TH>Block / Tower</TH><TH>Project</TH><TH num>Floors</TH>
+            <TH num>Area</TH><TH num>Common</TH><TH num>Service</TH>
+            <TH num>Net</TH><TH num>Units</TH><TH />
+          </>}
+        >
+          {blocks.map(b => (
+            <TR key={b.id}>
+              <TD>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+                    <Layers className="w-4 h-4 text-info" />
+                  </div>
+                  <span className="font-semibold text-content">{b.name}</span>
+                </div>
+              </TD>
+              <TD className="text-content-muted">{b.projectName}</TD>
+              {/* actual floors created vs the planned figure */}
+              <TD num className="text-content-muted">
+                {b.floorCount}{b.totalFloors != null && ` / ${b.totalFloors}`}
+              </TD>
+              <TD num className="text-content font-medium">{formatArea(b.areaSqFt)}</TD>
+              <TD num className="text-content-muted">{formatArea(b.commonAreaSqFt)}</TD>
+              <TD num className="text-content-muted">{formatArea(b.serviceAreaSqFt)}</TD>
+              <TD num className="text-content font-medium">{formatArea(b.netAreaSqFt)}</TD>
+              <TD num>
+                <div className="flex items-center justify-end gap-1.5 text-content">
+                  <Home className="w-3.5 h-3.5 text-content-muted" />
+                  <span className="font-medium">{b.unitCount}</span>
+                </div>
+              </TD>
+              <TD>
+                <button onClick={() => { setTarget(b); setModal('edit') }} aria-label={`Edit ${b.name}`}
+                  className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg">
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+              </TD>
+            </TR>
+          ))}
+        </Table>
       </DataState>
 
       {modal === 'add' && <BlockModal projects={projects} onClose={() => setModal(null)} onSaved={invalidate} />}
