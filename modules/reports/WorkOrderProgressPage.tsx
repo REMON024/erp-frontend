@@ -14,7 +14,7 @@ interface WorkOrderProgressRow {
 }
 interface WorkOrderProgressDto {
   rows: WorkOrderProgressRow[]
-  totalContract: number; totalBilled: number; totalRetention: number
+  totalContract: number; totalBilled: number; totalPaid: number; totalRetention: number
 }
 
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
@@ -49,7 +49,7 @@ export function WorkOrderProgressPage() {
       <DataState loading={isLoading} error={error ? 'Failed to load.' : null} onRetry={refetch}
         empty={!isLoading && (data?.rows.length ?? 0) === 0} emptyMessage="No work orders found.">
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="rounded-xl border border-border-default bg-primary/10 p-4">
               <p className="text-xs text-primary uppercase font-semibold">Total Contract Value</p>
               <p className="text-2xl font-bold text-info mt-1">{fmt(data?.totalContract ?? 0)}</p>
@@ -57,6 +57,13 @@ export function WorkOrderProgressPage() {
             <div className="rounded-xl border border-border-default bg-warning/15 p-4">
               <p className="text-xs text-warning uppercase font-semibold">Total Billed</p>
               <p className="text-2xl font-bold text-warning mt-1">{fmt(data?.totalBilled ?? 0)}</p>
+            </div>
+            <div className="rounded-xl border border-border-default bg-success/10 p-4">
+              <p className="text-xs text-success uppercase font-semibold">Total Paid</p>
+              <p className="text-2xl font-bold text-success mt-1">{fmt(data?.totalPaid ?? 0)}</p>
+              <p className="text-xs text-content-muted mt-1">
+                {fmt(Math.max(0, (data?.totalBilled ?? 0) - (data?.totalPaid ?? 0)))} outstanding
+              </p>
             </div>
             <div className="rounded-xl border border-border-default bg-warning/15 p-4">
               <p className="text-xs text-warning uppercase font-semibold">Retention Held</p>

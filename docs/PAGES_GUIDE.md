@@ -90,7 +90,7 @@ project, so committed and actual figures stay project-wide.
 Customer master (buyers). Code, name, mobile, email, address, NID, profession,
 nominee, status. Create/edit clients.
 
-### Units — `/sales/units`
+### Units — `/projects/units`
 Sellable units (flats/apartments) inside a project's block. Unit no, floor (picked from
 the block's floors), type, facing, area (sqft), base price + additional price = total
 price. Status: Available → Booked → Sold → Cancelled.

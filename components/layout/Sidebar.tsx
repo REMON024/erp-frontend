@@ -11,7 +11,7 @@ import {
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
-  Calculator, BarChart3, ShoppingBag, Rows3,
+  Calculator, BarChart3, ShoppingBag, Rows3, Wallet, Database,
   PlusCircle, FileBarChart2, UserCheck, CalendarCheck, CalendarDays, Banknote,
   FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal, FolderTree,
   type LucideProps,
@@ -31,7 +31,7 @@ const ICON_MAP: Record<string, React.FC<LucideProps>> = {
   FileText, Building2, List, ArrowDownCircle, ArrowUpCircle,
   DollarSign, Calendar, Warehouse, ArrowLeftRight, Layers,
   Boxes, Tags, HardHat, Wrench, UserCog, Truck, PackagePlus, PackageCheck,
-  Calculator, BarChart3, ShoppingBag, Rows3,
+  Calculator, BarChart3, ShoppingBag, Rows3, Wallet, Database,
   // Child-menu icons from the seeder — latent until one is promoted, but cheap to map.
   PlusCircle, FileBarChart2, UserCheck, CalendarCheck, CalendarDays, Banknote,
   FileEdit, Clock, Scale, KeyRound, ScrollText, SlidersHorizontal, FolderTree,
@@ -103,6 +103,10 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             const Icon    = getIcon(item.icon)
             const isOpen  = open.includes(item.code)
             const hasKids = item.children.length > 0
+
+            // A group header (route === null) whose children were all filtered out by
+            // permissions has nothing to navigate to — drop it rather than render a dead row.
+            if (!hasKids && !item.route) return null
 
             // Parent active = self or any child matches current path
             const parentActive = isRouteActive(item.route, pathname) ||

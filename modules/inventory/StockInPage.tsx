@@ -20,7 +20,7 @@ interface WorkOrderResourceLine {
   resourceId: number | null; resourceName: string | null; resourceType?: string
   unit: string; quantity: number; receivedQty: number
 }
-interface WorkOrder { id: number; workOrderNo: string; projectName: string; resources?: WorkOrderResourceLine[] }
+interface WorkOrder { id: number; workOrderNo: string; projectName: string; status: string; resources?: WorkOrderResourceLine[] }
 interface StockTxn {
   id: number; resourceName: string; unit: string; transactionType: string
   qty: number; unitCost: number; totalCost: number
@@ -59,8 +59,10 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
   // received yet. Equipment/Service/Labour lines never enter inventory — the backend rejects them.
   const isReceivable = (m: WorkOrderResourceLine) =>
     m.resourceId != null && m.resourceType === 'Material' && m.receivedQty < m.quantity
-  // Only show work orders that still have at least one receivable material line.
-  const selectableWorkOrders = workOrders.filter(w => (w.resources ?? []).some(isReceivable))
+  // Only Active work orders with at least one receivable material line. Both halves mirror a
+  // backend rule, so offering anything else here just produces a rejected save.
+  const selectableWorkOrders = workOrders.filter(
+    w => w.status === 'Active' && (w.resources ?? []).some(isReceivable))
 
   const selectedWorkOrder = workOrders.find(w => w.id === Number(watch('workOrderId')))
   const woMaterialIds = new Set(
@@ -99,6 +101,14 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
             <option value="">Select work order</option>
             {selectableWorkOrders.map(w => <option key={w.id} value={w.id}>{w.workOrderNo} — {w.projectName}</option>)}
           </Select>
+          {/* An empty dropdown with no explanation is how "no material can be received at all"
+              went unnoticed — say which precondition is missing. */}
+          {selectableWorkOrders.length === 0 && (
+            <p className="text-xs text-warning mt-1">
+              No Active work order has unreceived material lines. Add material lines to a work order and
+              approve it before receiving stock.
+            </p>
+          )}
           {errors.workOrderId && <p className="text-xs text-danger mt-1">{errors.workOrderId.message}</p>}
         </div>
         <div>
@@ -168,7 +178,9 @@ export function StockInPage() {
 
   const { data: materials = [] } = useApiData<Material[]>({ url: '/resources', params: { types: 'Material' }, queryKey: ['materials-list'] })
   const { data: warehouses = [] } = useApiData<Warehouse[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
-  const { data: workOrders = [] } = useApiData<WorkOrder[]>({ url: '/work-orders', queryKey: ['work-orders-list'] })
+  // Not /work-orders — the store role has no WORK_ORDERS permission and that call 403s for
+  // them. This endpoint is authorised by STOCK_IN and already applies the receivable filter.
+  const { data: workOrders = [] } = useApiData<WorkOrder[]>({ url: '/work-orders/receivable', queryKey: ['work-orders-receivable'] })
   const { data: txns = [], isLoading, error, refetch } = useApiData<StockTxn[]>({
     url: '/stock-transactions',
     params: { type: 'In' },

@@ -12,7 +12,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Link from 'next/link'
-import { Plus, FileText, XCircle, Printer, Wallet } from 'lucide-react'
+import { Plus, FileText, Printer, Wallet } from 'lucide-react'
 import { printInvoice } from '@/utils/printUtils'
 import api from '@/lib/api'
 
@@ -170,11 +170,6 @@ export function InvoicesPage() {
     qc.invalidateQueries({ queryKey: ['invoices-list'] })
   }
 
-  const cancelInvoice = async (id: number) => {
-    if (!confirm('Cancel this invoice? This cannot be undone.')) return
-    try { await api.post(`/invoices/${id}/cancel`); invalidate() } catch { /* noop */ }
-  }
-
   const totalBilled    = invoices.reduce((s, i) => s + i.totalAmount, 0)
   const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
   const outstanding    = totalBilled - totalCollected
@@ -260,12 +255,6 @@ export function InvoicesPage() {
                           className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
                           <Printer className="w-3.5 h-3.5" />
                         </button>
-                        {(i.status === 'Draft' || i.status === 'Sent') && (
-                          <button onClick={() => cancelInvoice(i.id)} title="Cancel Invoice"
-                            className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg transition-colors">
-                            <XCircle className="w-3.5 h-3.5" />
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>

@@ -1,6 +1,6 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Menu, Search, User, Sun, Moon, Bell, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, Search, User, Sun, Moon, LogOut, ChevronDown } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 import { useThemeStore } from '@/store/theme.store'
 
@@ -56,15 +56,6 @@ export function Topbar({ onMobileMenuOpen }: TopbarProps) {
         className="p-2 rounded-lg text-content-muted hover:bg-surface-muted hover:text-content transition-colors"
       >
         {theme === 'dark' ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
-      </button>
-
-      {/* Notifications */}
-      <button
-        aria-label="Notifications"
-        className="relative p-2 rounded-lg text-content-muted hover:bg-surface-muted hover:text-content transition-colors"
-      >
-        <Bell className="w-[18px] h-[18px]" />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger ring-2 ring-surface" />
       </button>
 
       {/* Profile dropdown */}
