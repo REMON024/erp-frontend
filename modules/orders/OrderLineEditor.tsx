@@ -3,13 +3,18 @@ import { useState } from 'react'
 import { Select } from '@/components/ui/Select'
 import { Plus, Trash2 } from 'lucide-react'
 import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
-import type { Resource, ResourceType } from '@/modules/inventory/ResourceMasterPage'
+import { CategorySelect } from '@/components/pickers/CategorySelect'
+import { RESOURCE_TYPES, type Resource, type ResourceType } from '@/modules/inventory/ResourceMasterPage'
 import { type DraftOrderLine, newOrderLine, fmt, tinp } from './types'
 
 /**
  * Line editor shared by both order types. A purchase-order line (resource, qty, unit price) is a
  * strict subset of a work-order budget line, so one editor serves both; the caller supplies the
  * heading and any per-line warning, and turns on the unmatched-EPL reason box for purchases.
+ *
+ * Selection runs Vendor → Type → Category → Resource → Rate. The vendor is the order header's
+ * single vendor, never per line: it scopes the category list to what that vendor actually
+ * supplies, and the rate then resolves against their configured rate.
  *
  * Lifted from the work-order screen, where it was `WOResourceEditor`.
  */
@@ -47,9 +52,20 @@ export function OrderLineEditor({
     else { update(key, { resourceId: undefined }); clearRate(key) }
   }
 
-  // Changing the type invalidates the picked resource, its unit and its suggested rate.
+  // Changing the type invalidates everything downstream of it — category, resource, unit, rate.
   const handleTypeChange = (key: string, resourceType: ResourceType) => {
-    update(key, { resourceType, resourceId: undefined, description: '', unit: '', unitRate: 0 })
+    update(key, {
+      resourceType, categoryId: undefined, resourceId: undefined,
+      description: '', unit: '', unitRate: 0,
+    })
+    clearRate(key)
+  }
+
+  const handleCategoryChange = (key: string, categoryId: number | '') => {
+    update(key, {
+      categoryId: categoryId || undefined, resourceId: undefined,
+      description: '', unit: '', unitRate: 0,
+    })
     clearRate(key)
   }
 
@@ -67,16 +83,26 @@ export function OrderLineEditor({
           {hint && <span className="text-xs text-content-muted font-normal"> — {hint}</span>}
         </span>
         <button type="button" onClick={() => onChange([...items, newOrderLine()])}
-          className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1 shrink-0">
+          disabled={!vendorId}
+          title={vendorId ? undefined : 'Select a vendor first'}
+          className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed">
           <Plus className="w-3.5 h-3.5" /> Add Line
         </button>
       </div>
-      {items.length > 0 && (
+      {/* Rates and the category list are both vendor-specific, so lines cannot be entered until
+          the order's single vendor is chosen. */}
+      {!vendorId && (
+        <p className="text-xs text-content-muted border border-dashed border-border-default rounded-lg px-3 py-4 text-center">
+          Select a vendor to add lines.
+        </p>
+      )}
+      {vendorId && items.length > 0 && (
         <div className="border border-border-default rounded-lg overflow-x-auto">
-          <table className="w-full min-w-[840px] text-xs">
+          <table className="w-full min-w-[980px] text-xs">
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted w-28">Type <span className="text-primary">*</span></th>
+                <th className="px-2 py-2 text-left font-semibold text-content-muted w-40">Category</th>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted w-56">Resource <span className="text-primary">*</span></th>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
                 <th className="px-2 py-2 text-left font-semibold text-content-muted w-16">Unit</th>
@@ -97,14 +123,25 @@ export function OrderLineEditor({
                       <Select value={item.resourceType}
                         onChange={e => handleTypeChange(item.key, e.target.value as ResourceType)}
                         className="text-xs py-1">
-                        {(['Material', 'Equipment', 'Service', 'Labour'] as ResourceType[]).map(t =>
+                        {RESOURCE_TYPES.map(t =>
                           <option key={t} value={t}>{t}</option>)}
                       </Select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <CategorySelect
+                        value={item.categoryId ?? ''}
+                        resourceType={item.resourceType}
+                        vendorId={vendorId}
+                        onChange={id => handleCategoryChange(item.key, id)}
+                        placeholder="All categories"
+                        className="text-xs py-1"
+                      />
                     </td>
                     <td className="px-2 py-1.5">
                       <ResourcePicker
                         value={item.resourceId ?? ''}
                         types={[item.resourceType]}
+                        categoryId={item.categoryId}
                         vendorId={vendorId}
                         asOf={asOf}
                         onChange={(id, resource) => handleResourceChange(item.key, id, resource)}
@@ -152,7 +189,7 @@ export function OrderLineEditor({
             </tbody>
             <tfoot className="bg-surface-muted border-t border-border-default">
               <tr>
-                <td colSpan={6} className="px-2 py-2 text-xs font-bold text-content uppercase">Total</td>
+                <td colSpan={7} className="px-2 py-2 text-xs font-bold text-content uppercase">Total</td>
                 <td className="px-2 py-2 text-right font-bold text-content pr-3">{fmt(total)}</td>
                 <td />
               </tr>

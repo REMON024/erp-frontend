@@ -14,7 +14,7 @@ import { z } from 'zod'
 import { Plus, PackagePlus } from 'lucide-react'
 import api from '@/lib/api'
 
-interface Material { id: number; resourceName: string; unit: string; averageCost: number }
+interface Material { id: number; resourceName: string; unit: string; averageCost: number; category?: string }
 interface Warehouse { id: number; name: string }
 interface WorkOrderResourceLine {
   resourceId: number | null; resourceName: string | null; resourceType?: string
@@ -50,6 +50,8 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
+  // Narrows the material list only — the transaction still stores the specific resource.
+  const [category, setCategory] = useState('')
   const { register, handleSubmit, setValue, watch, resetField, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: { transactionDate: isoToday() },
@@ -69,7 +71,11 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
     (selectedWorkOrder?.resources ?? [])
       .filter(isReceivable)
       .map(m => m.resourceId as number))
-  const availableMaterials = materials.filter(m => woMaterialIds.has(m.id))
+  const woMaterials = materials.filter(m => woMaterialIds.has(m.id))
+  // Derived from the receivable lines rather than the category master, so the dropdown can only
+  // offer a category that actually narrows to something on this work order.
+  const categories = [...new Set(woMaterials.map(m => m.category).filter(Boolean))].sort() as string[]
+  const availableMaterials = category ? woMaterials.filter(m => m.category === category) : woMaterials
 
   const onSubmit = async (d: Form) => {
     setSaving(true); setErr('')
@@ -94,7 +100,9 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
           <label className={lbl}>Work Order <span className="text-danger">*</span></label>
           <Select {...register('workOrderId', {
             onChange: () => {
-              // Reset the material when the work order changes so a stale selection can't survive.
+              // Reset the category and material when the work order changes so a stale
+              // selection can't survive.
+              setCategory('')
               resetField('resourceId')
             },
           })}>
@@ -112,6 +120,14 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
           {errors.workOrderId && <p className="text-xs text-danger mt-1">{errors.workOrderId.message}</p>}
         </div>
         <div>
+          <label className={lbl}>Resource Category</label>
+          <Select value={category} disabled={!selectedWorkOrder}
+            onChange={e => { setCategory(e.target.value); resetField('resourceId') }}>
+            <option value="">All categories</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </div>
+        <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
           <Select {...register('resourceId', {
             onChange: e => {
@@ -120,7 +136,11 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
             },
           })} disabled={!selectedWorkOrder}>
             <option value="">{selectedWorkOrder ? 'Select material' : 'Select a work order first'}</option>
-            {availableMaterials.map(m => <option key={m.id} value={m.id}>{m.resourceName} ({m.unit})</option>)}
+            {availableMaterials.map(m => (
+              <option key={m.id} value={m.id}>
+                {m.resourceName} ({m.unit}){m.category ? ` · ${m.category}` : ''}
+              </option>
+            ))}
           </Select>
           {selectedWorkOrder && availableMaterials.length === 0 &&
             <p className="text-xs text-content-muted mt-1">This work order has no budgeted materials linked to the material master.</p>}

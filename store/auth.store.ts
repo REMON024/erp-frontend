@@ -17,6 +17,26 @@ export interface MenuNode {
   children: MenuNode[]
 }
 
+/**
+ * What the user may do inside a menu, as returned by GET /menus/my-permissions.
+ *
+ * Route access and action access are different questions. The menu tree answers "may I open this
+ * page"; this answers "may I create, edit or delete once I am there". Until Aug 2026 only the first
+ * existed, so a view-only user saw every Create/Edit/Delete control, clicked, and got a 403 — three
+ * of the four permissions an admin configures had no effect on what was rendered.
+ */
+export interface MenuPermission {
+  menuId: number
+  menuName: string
+  menuCode: string
+  canView: boolean
+  canCreate: boolean
+  canEdit: boolean
+  canDelete: boolean
+}
+
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete'
+
 // Routes always reachable regardless of menu config (no data-scoped content).
 const ALWAYS_ALLOWED = ['/dashboard', '/', '/settings']
 
@@ -39,6 +59,8 @@ interface AuthState {
   menus: MenuNode[]
   menuRoutes: string[]
   menusLoaded: boolean
+  /** Action permissions keyed by menu code. */
+  permissions: Record<string, MenuPermission>
 
   setHasHydrated: (val: boolean) => void
   setAuth: (user: User, token: string) => void
@@ -48,6 +70,12 @@ interface AuthState {
   isSuperAdmin: () => boolean
   /** Page/route access — driven by the user's menu set (super_admin sees all). */
   hasAccess: (routeOrCode: string) => boolean
+  /**
+   * Action access within a menu — the check that decides whether a Create/Edit/Delete control is
+   * rendered at all. Mirrors the server's [HasPermission(code, action)] so the UI stops offering
+   * what the API will refuse.
+   */
+  can: (menuCode: string, action?: PermissionAction) => boolean
   /** Route-guard check used by the dashboard shell. */
   isPathAllowed: (pathname: string) => boolean
 }
@@ -63,6 +91,7 @@ export const useAuthStore = create<AuthState>()(
       menus: [],
       menuRoutes: [],
       menusLoaded: false,
+      permissions: {},
 
       setHasHydrated: (val) => set({ _hasHydrated: val }),
 
@@ -73,7 +102,7 @@ export const useAuthStore = create<AuthState>()(
           // Cookie for middleware route protection (session-scoped)
           document.cookie = `erp_token=${token}; path=/; SameSite=Lax`
         }
-        set({ user, token, isAuthenticated: true, menusLoaded: false, menus: [], menuRoutes: [] })
+        set({ user, token, isAuthenticated: true, menusLoaded: false, menus: [], menuRoutes: [], permissions: {} })
       },
 
       logout: () => {
@@ -82,16 +111,25 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem('erp_user')
           document.cookie = 'erp_token=; path=/; max-age=0'
         }
-        set({ user: null, token: null, isAuthenticated: false, menus: [], menuRoutes: [], menusLoaded: false })
+        set({ user: null, token: null, isAuthenticated: false, menus: [], menuRoutes: [], menusLoaded: false, permissions: {} })
       },
 
+      // Loads navigation and action permissions together — they are two views of one access
+      // decision, and a UI that had the menus but not the permissions would render controls it
+      // cannot yet judge.
       loadMenus: async () => {
         try {
-          const res = await api.get<MenuNode[]>('/menus/my-menus')
-          set({ menus: res.data, menuRoutes: flattenRoutes(res.data), menusLoaded: true })
+          const [menuRes, permRes] = await Promise.all([
+            api.get<MenuNode[]>('/menus/my-menus'),
+            api.get<MenuPermission[]>('/menus/my-permissions'),
+          ])
+          const permissions: Record<string, MenuPermission> = {}
+          for (const p of permRes.data) permissions[p.menuCode] = p
+          set({ menus: menuRes.data, menuRoutes: flattenRoutes(menuRes.data), permissions, menusLoaded: true })
         } catch {
-          // Don't crash the shell on a transient failure; treat as "no menus yet".
-          set({ menus: [], menuRoutes: [], menusLoaded: true })
+          // Don't crash the shell on a transient failure; treat as "no access yet". Failing closed
+          // is right here — better to hide an action than to offer one that 403s.
+          set({ menus: [], menuRoutes: [], permissions: {}, menusLoaded: true })
         }
       },
 
@@ -111,6 +149,18 @@ export const useAuthStore = create<AuthState>()(
         })
         if (codeMatch) return true
         return menuRoutes.some((r) => routeOrCode === r || routeOrCode.startsWith(r + '/'))
+      },
+
+      can: (menuCode, action = 'view') => {
+        if (get().isSuperAdmin()) return true
+        const p = get().permissions[menuCode]
+        if (!p) return false
+        switch (action) {
+          case 'create': return p.canCreate
+          case 'edit':   return p.canEdit
+          case 'delete': return p.canDelete
+          default:       return p.canView
+        }
       },
 
       isPathAllowed: (pathname) => {

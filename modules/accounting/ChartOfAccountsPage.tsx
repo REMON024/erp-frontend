@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -137,10 +138,12 @@ export function ChartOfAccountsPage() {
         title="Chart of Accounts"
         subtitle="Manage the general ledger account structure"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Account
-          </button>
+          <PermissionGate module="CHART_OF_ACCOUNTS" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Account
+            </button>
+          </PermissionGate>
         }
       />
 

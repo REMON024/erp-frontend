@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { Plus, Trash2, CheckCircle, AlertCircle, Eye } from 'lucide-react'
@@ -264,10 +265,12 @@ export function VouchersPage() {
         title="Voucher Entry"
         subtitle="Create and post journal, payment, receipt and contra vouchers"
         action={
-          <button onClick={() => setShowNew(true)}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Voucher
-          </button>
+          <PermissionGate module="VOUCHERS" action="create">
+            <button onClick={() => setShowNew(true)}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Voucher
+            </button>
+          </PermissionGate>
         }
       />
 

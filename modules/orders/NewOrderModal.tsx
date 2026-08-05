@@ -4,11 +4,12 @@ import { DateField } from '@/components/ui/DateField'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { useApiData } from '@/hooks/useApiData'
+import { ScopePicker, scopeToPayload, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 import { ShoppingCart, ClipboardList, AlertTriangle } from 'lucide-react'
 import api from '@/lib/api'
 import { OrderLineEditor } from './OrderLineEditor'
 import {
-  type OrderType, type Project, type Vendor, type Material, type DraftOrderLine,
+  type OrderType, type Vendor, type Material, type DraftOrderLine,
   type OrderCapabilities, newOrderLine, fmt, isoToday, inp, lbl,
 } from './types'
 
@@ -20,9 +21,9 @@ interface MaterialBudgetLine { resourceId: number; budgetedCost: number; committ
  * that choice. The backend receives a single POST /orders and routes it to the command that
  * owns that type's rules.
  */
-export function NewOrderModal({ capabilities, projects, vendors, materials, onClose, onSaved }: {
+export function NewOrderModal({ capabilities, vendors, materials, onClose, onSaved }: {
   capabilities: OrderCapabilities
-  projects: Project[]; vendors: Vendor[]; materials: Material[]
+  vendors: Vendor[]; materials: Material[]
   onClose: () => void; onSaved: () => void
 }) {
   const allowed: OrderType[] = [
@@ -68,7 +69,7 @@ export function NewOrderModal({ capabilities, projects, vendors, materials, onCl
       orderType={orderType}
       canSwitchType={allowed.length > 1}
       onBack={() => setOrderType(null)}
-      projects={projects} vendors={vendors} materials={materials}
+      vendors={vendors} materials={materials}
       onClose={onClose} onSaved={onSaved}
     />
   )
@@ -87,11 +88,11 @@ function TypeCard({ icon, title, blurb, disabled, onClick }: {
   )
 }
 
-function OrderForm({ orderType, canSwitchType, onBack, projects, vendors, materials, onClose, onSaved }: {
+function OrderForm({ orderType, canSwitchType, onBack, vendors, materials, onClose, onSaved }: {
   orderType: OrderType
   canSwitchType: boolean
   onBack: () => void
-  projects: Project[]; vendors: Vendor[]; materials: Material[]
+  vendors: Vendor[]; materials: Material[]
   onClose: () => void; onSaved: () => void
 }) {
   const isWork = orderType === 'Work'
@@ -100,12 +101,15 @@ function OrderForm({ orderType, canSwitchType, onBack, projects, vendors, materi
   const [err,    setErr]    = useState('')
 
   const [vendorId,  setVendorId]  = useState('')
-  const [projectId, setProjectId] = useState('')
   const [orderDate, setOrderDate] = useState(isoToday())
+  // Which part of the build the order is for. Required for a work order; a purchase order may
+  // leave it empty entirely, which means general stock.
+  const [scope, setScope] = useState<ScopeValue>(EMPTY_SCOPE)
+  const projectId = scope.projectId
   // Purchase
   const [deliveryDate, setDeliveryDate] = useState('')
   // Work
-  const [scope,            setScope]            = useState('')
+  const [scopeOfWork,      setScopeOfWork]      = useState('')
   const [endDate,          setEndDate]          = useState('')
   const [advanceAmount,    setAdvanceAmount]    = useState('0')
   const [retentionPercent, setRetentionPercent] = useState('5')
@@ -148,13 +152,24 @@ function OrderForm({ orderType, canSwitchType, onBack, projects, vendors, materi
     ? vendors.filter(v => v.vendorType === 'Contractor' || v.vendorType === 'Both')
     : vendors
 
+  // An order carries exactly one vendor, and both the category list and the rate are scoped to
+  // them — so switching vendor has to drop every downstream choice rather than leave lines
+  // sitting on another vendor's categories and prices.
+  const handleVendorChange = (next: string) => {
+    setVendorId(next)
+    setLines(prev => prev.map(l => ({
+      ...l, categoryId: undefined, resourceId: undefined,
+      description: '', unit: '', unitRate: 0,
+    })))
+  }
+
   const submit = async () => {
     const valid = lines.filter(l => l.resourceId && Number(l.quantity) > 0)
     if (!vendorId)        { setErr(isWork ? 'Contractor is required.' : 'Vendor is required.'); return }
     if (valid.length === 0) { setErr('At least one valid line is required.'); return }
     if (isWork) {
       if (!projectId)     { setErr('Project is required for a work order.'); return }
-      if (!scope.trim())  { setErr('Scope of work is required.'); return }
+      if (!scopeOfWork.trim()) { setErr('Scope of work is required.'); return }
       if (Number(advanceAmount) > total) { setErr('Advance cannot exceed the contract amount.'); return }
     } else {
       const missing = valid.find(l => needsUnmatchedReason(l) && !(l.unmatchedReason ?? '').trim())
@@ -170,9 +185,9 @@ function OrderForm({ orderType, canSwitchType, onBack, projects, vendors, materi
         ? {
             orderType,
             work: {
-              projectId: Number(projectId),
+              ...scopeToPayload(scope),
               vendorId: Number(vendorId),
-              scope: scope.trim(),
+              scope: scopeOfWork.trim(),
               startDate: orderDate || undefined,
               endDate: endDate || undefined,
               contractAmount: total,
@@ -191,7 +206,12 @@ function OrderForm({ orderType, canSwitchType, onBack, projects, vendors, materi
             orderType,
             purchase: {
               vendorId: Number(vendorId),
+              // Not scopeToPayload: it coerces an empty projectId to 0, and a purchase order is
+              // allowed to carry no project at all.
               projectId: projectId ? Number(projectId) : undefined,
+              blockId:   scope.blockId ? Number(scope.blockId) : undefined,
+              floorId:   scope.floorId ? Number(scope.floorId) : undefined,
+              unitId:    scope.unitId  ? Number(scope.unitId)  : undefined,
               poDate: orderDate,
               deliveryDate: deliveryDate || undefined,
               items: valid.map(l => {
@@ -225,29 +245,32 @@ function OrderForm({ orderType, canSwitchType, onBack, projects, vendors, materi
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={lbl}>
-              Project {isWork && <span className="text-danger">*</span>}
-              {!isWork && <span className="text-xs text-content-muted font-normal"> — optional for general stock</span>}
-            </label>
-            <Select value={projectId} onChange={e => setProjectId(e.target.value)}>
-              <option value="">{isWork ? 'Select project' : 'No project (general stock)'}</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-            </Select>
-          </div>
+          {/* Vendor comes first: it is the one vendor for the whole order and it scopes the
+              categories, resources and rates every line below can use. */}
           <div>
             <label className={lbl}>{isWork ? 'Contractor' : 'Vendor'} <span className="text-danger">*</span></label>
-            <Select value={vendorId} onChange={e => setVendorId(e.target.value)}>
+            <Select value={vendorId} onChange={e => handleVendorChange(e.target.value)}>
               <option value="">Select {isWork ? 'contractor' : 'vendor'}</option>
               {vendorOptions.map(v => <option key={v.id} value={v.id}>{v.vendorName}</option>)}
             </Select>
           </div>
         </div>
 
+        {/* Which part of the build this order is for. Leaving a level blank covers everything
+            below it; for a purchase order, leaving even the project blank means general stock. */}
+        <div className="rounded-lg border border-border-default p-3">
+          <p className="text-xs font-semibold text-content-muted uppercase tracking-wide mb-3">
+            Scope {isWork
+              ? <span className="text-danger">*</span>
+              : <span className="normal-case font-normal"> — optional; leave blank for general stock</span>}
+          </p>
+          <ScopePicker value={scope} onChange={setScope} mode="form" />
+        </div>
+
         {isWork && (
           <div>
             <label className={lbl}>Scope of Work <span className="text-danger">*</span></label>
-            <textarea value={scope} onChange={e => setScope(e.target.value)} className={inp} rows={2} placeholder="Describe the work…" />
+            <textarea value={scopeOfWork} onChange={e => setScopeOfWork(e.target.value)} className={inp} rows={2} placeholder="Describe the work…" />
           </div>
         )}
 

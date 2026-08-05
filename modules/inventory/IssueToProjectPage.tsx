@@ -16,7 +16,7 @@ import api from '@/lib/api'
 
 interface BudgetLine { resourceId: number; budgetedQty: number; issuedQty: number; unit: string }
 interface StockBalanceRow { warehouseId: number | null; balance: number }
-interface MaterialRollup { resourceId: number; resourceName: string; unit: string; warehouses: StockBalanceRow[] }
+interface MaterialRollup { resourceId: number; resourceName: string; unit: string; category?: string | null; warehouses: StockBalanceRow[] }
 interface StockTxn {
   id: number; resourceName: string; unit: string; projectName?: string
   qty: number; totalCost: number; referenceNo?: string; transactionDate: string
@@ -54,6 +54,8 @@ function IssueModal({ warehouses, onClose, onSaved }: {
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
+  // Narrows the material list only — the issue still records the specific resource.
+  const [category, setCategory] = useState('')
   const { register, handleSubmit, watch, setValue, resetField, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: { transactionDate: isoToday() },
@@ -72,10 +74,16 @@ function IssueModal({ warehouses, onClose, onSaved }: {
     enabled: !!watchedWh,
   })
   // Only materials that have a positive balance in the chosen warehouse.
-  const availableMaterials = rollups
-    .map(r => ({ id: r.resourceId, name: r.resourceName, unit: r.unit, balance: r.warehouses.find(w => w.warehouseId === watchedWh)?.balance ?? 0 }))
+  const inStock = rollups
+    .map(r => ({
+      id: r.resourceId, name: r.resourceName, unit: r.unit, category: r.category ?? '',
+      balance: r.warehouses.find(w => w.warehouseId === watchedWh)?.balance ?? 0,
+    }))
     .filter(m => m.balance > 0)
-  const selectedMat = availableMaterials.find(m => m.id === watchedMat)
+  // Derived from what is actually in stock here, so no category leads to an empty list.
+  const categories = [...new Set(inStock.map(m => m.category).filter(Boolean))].sort()
+  const availableMaterials = category ? inStock.filter(m => m.category === category) : inStock
+  const selectedMat = inStock.find(m => m.id === watchedMat)
 
   const { data: budgetLines = [] } = useApiData<BudgetLine[]>({
     url: `/cost-estimates/material-budget/${watchedProj || '0'}`,
@@ -102,17 +110,31 @@ function IssueModal({ warehouses, onClose, onSaved }: {
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
         <div>
           <label className={lbl}>Warehouse <span className="text-danger">*</span></label>
-          <Select {...register('warehouseId', { onChange: () => resetField('resourceId') })}>
+          <Select {...register('warehouseId', {
+            onChange: () => { setCategory(''); resetField('resourceId') },
+          })}>
             <option value="">Select warehouse</option>
             {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </Select>
           {errors.warehouseId && <p className="text-xs text-danger mt-1">{errors.warehouseId.message}</p>}
         </div>
         <div>
+          <label className={lbl}>Resource Category</label>
+          <Select value={category} disabled={!watchedWh}
+            onChange={e => { setCategory(e.target.value); resetField('resourceId') }}>
+            <option value="">All categories</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </div>
+        <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
           <Select {...register('resourceId')} disabled={!watchedWh}>
             <option value="">{watchedWh ? 'Select material' : 'Select a warehouse first'}</option>
-            {availableMaterials.map(m => <option key={m.id} value={m.id}>{m.name} — {m.balance.toLocaleString()} {m.unit} available</option>)}
+            {availableMaterials.map(m => (
+              <option key={m.id} value={m.id}>
+                {m.name}{m.category ? ` · ${m.category}` : ''} — {m.balance.toLocaleString()} {m.unit} available
+              </option>
+            ))}
           </Select>
           {watchedWh && availableMaterials.length === 0 &&
             <p className="text-xs text-content-muted mt-1">No materials in stock in this warehouse.</p>}

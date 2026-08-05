@@ -6,14 +6,16 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
-import { Plus, ShoppingCart, ClipboardList, CheckCircle, Receipt, Undo2 } from 'lucide-react'
+import { ScopePicker, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
+import { Plus, ShoppingCart, ClipboardList, CheckCircle, Receipt, Undo2, ListTree } from 'lucide-react'
 import api from '@/lib/api'
 import { NewOrderModal } from './NewOrderModal'
 import { BillsModal } from './BillsModal'
+import { ItemsModal } from './ItemsModal'
 import {
   type OrderListItem, type OrderType, type OrderCapabilities,
-  type Project, type Vendor, type Material,
-  STATUS_COLORS, ORDER_TYPE_LABEL, fmt,
+  type Vendor, type Material,
+  STATUS_COLORS, SCOPE_COLORS, ORDER_TYPE_LABEL, fmt,
 } from './types'
 
 /**
@@ -26,15 +28,16 @@ export function OrdersPage() {
   const [search,  setSearch]  = useState('')
   const [type,    setType]    = useState<'' | OrderType>('')
   const [status,  setStatus]  = useState('')
-  const [project, setProject] = useState('')
+  const [scope,   setScope]   = useState<ScopeValue>(EMPTY_SCOPE)
   const [creating, setCreating] = useState(false)
   const [billsFor, setBillsFor] = useState<OrderListItem | null>(null)
+  const [itemsFor, setItemsFor] = useState<OrderListItem | null>(null)
   const [err,      setErr]      = useState('')
 
   const { data: capabilities } = useApiData<OrderCapabilities>({
     url: '/orders/capabilities', queryKey: ['order-capabilities'],
   })
-  const { data: projects = [] }  = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  // No projects fetch here — ScopePicker pulls the list itself off the shared cache key.
   const { data: vendors = [] }   = useApiData<Vendor[]>({ url: '/vendors', queryKey: ['vendors-list'] })
   const { data: materials = [] } = useApiData<Material[]>({ url: '/resources', queryKey: ['resources-list'] })
 
@@ -42,9 +45,10 @@ export function OrdersPage() {
     url: '/orders',
     params: {
       search: search || undefined, type: type || undefined,
-      status: status || undefined, projectId: project || undefined,
+      status: status || undefined, ...scopeToParams(scope),
     },
-    queryKey: ['orders', search, type, status, project],
+    queryKey: ['orders', search, type, status,
+               scope.projectId, scope.blockId, scope.floorId, scope.unitId],
   })
 
   const invalidate = () => {
@@ -107,10 +111,7 @@ export function OrdersPage() {
           <option value="">All statuses</option>
           {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
         </Select>
-        <Select value={project} onChange={e => setProject(e.target.value)} className="w-56">
-          <option value="">All projects</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>)}
-        </Select>
+        <ScopePicker value={scope} onChange={setScope} mode="filter" />
         <span className="text-xs text-content-muted ml-auto">
           {orders.length} order{orders.length === 1 ? '' : 's'} · {fmt(totalValue)}
         </span>
@@ -119,11 +120,12 @@ export function OrdersPage() {
       <DataState loading={isLoading} error={error?.message ?? null} empty={orders.length === 0}
         emptyMessage="No orders match these filters.">
         <div className="overflow-x-auto border border-border-default rounded-xl">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="w-full min-w-[1020px] text-sm">
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 {[
                   { h: 'Type' }, { h: 'Order No.' }, { h: 'Vendor' }, { h: 'Project' },
+                  { h: 'Scope' },
                   { h: 'Date' }, { h: 'Lines', num: true }, { h: 'Amount', num: true },
                   { h: 'Status' }, { h: '' },
                 ].map(({ h, num }) => (
@@ -145,6 +147,11 @@ export function OrdersPage() {
                     <td className="px-3 py-2 font-mono text-xs font-semibold text-primary">{o.orderNo}</td>
                     <td className="px-3 py-2 text-content text-xs">{o.vendorName}</td>
                     <td className="px-3 py-2 text-content-muted text-xs">{o.projectName ?? '—'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${SCOPE_COLORS[o.scopeLevel] ?? 'bg-surface-muted text-content-muted'}`}>
+                        {o.scopeLabel}
+                      </span>
+                    </td>
                     <td className="px-3 py-2 text-content-muted text-xs">{o.orderDate || '—'}</td>
                     <td className="px-3 py-2 text-content-muted text-xs text-right tabular-nums">{o.lineCount}</td>
                     <td className="px-3 py-2 font-semibold text-content text-xs text-right tabular-nums">{fmt(o.amount)}</td>
@@ -159,6 +166,14 @@ export function OrdersPage() {
                           <button onClick={() => approve(o)} title={isWork ? 'Approve → Active' : 'Approve'}
                             className="p-1 text-content-muted hover:text-success hover:bg-success/10 rounded transition-colors">
                             <CheckCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {/* Line-level receipt history: work orders carry resource lines that
+                            stock-in books against, so only they have a history to show. */}
+                        {isWork && (
+                          <button onClick={() => setItemsFor(o)} title="Item history"
+                            className="p-1 text-content-muted hover:text-primary hover:bg-primary/10 rounded transition-colors">
+                            <ListTree className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {/* Progress billing and retention exist only on work orders. */}
@@ -187,10 +202,13 @@ export function OrdersPage() {
       {creating && capabilities && (
         <NewOrderModal
           capabilities={capabilities}
-          projects={projects} vendors={vendors} materials={materials}
+          vendors={vendors} materials={materials}
           onClose={() => setCreating(false)}
           onSaved={invalidate}
         />
+      )}
+      {itemsFor && (
+        <ItemsModal wo={itemsFor} onClose={() => setItemsFor(null)} />
       )}
       {billsFor && (
         <BillsModal wo={billsFor} onClose={() => setBillsFor(null)} onChanged={invalidate} />

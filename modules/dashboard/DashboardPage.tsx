@@ -16,7 +16,7 @@ const Charts = dynamic(() => import('./DashboardCharts'), { ssr: false, loading:
 function fmt(n: number) { return `৳${(n / 100000).toFixed(1)}L` }
 function fmtFull(n: number) { return `৳${n.toLocaleString('en-BD')}` }
 
-interface Project   { id: number; projectCode: string; projectName: string; status: string; estimatedCost?: number; estimatedRevenue?: number }
+interface Project   { id: number; projectCode: string; projectName: string; status: string; budgetedCost?: number; budgetedRevenue?: number }
 interface Estimate  { id: number; totalEstimated: number; totalActual: number; status: string }
 interface Invoice   { id: number; totalAmount: number; paidAmount: number; dueAmount: number; status: string; invoiceDate: string; customerName: string; invoiceNo: string }
 interface Payment   { id: number; paymentNo: string; customerName: string; amount: number; paymentDate: string; method: string }
@@ -36,7 +36,6 @@ export function DashboardPage() {
   const activeProjects = projects.filter(p => p.status === 'Active').length
   const totalRevenue   = invoices.reduce((s, i) => s + i.totalAmount, 0)
   const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
-  const totalCost      = projects.reduce((s, p) => s + (p.estimatedCost ?? 0), 0)
   const lowStockCount  = materials.filter(m => m.isLowStock).length
   const totalBudget      = estimates.reduce((s, e) => s + e.totalEstimated, 0)
   const totalActualCost  = estimates.reduce((s, e) => s + e.totalActual, 0)
@@ -52,9 +51,9 @@ export function DashboardPage() {
   // Build chart data from real projects
   const chartData = projects.map(p => ({
     project:    p.projectCode,
-    investment: p.estimatedCost ?? 0,
-    cost:       p.estimatedCost ?? 0,
-    revenue:    p.estimatedRevenue ?? 0,
+    investment: p.budgetedCost ?? 0,
+    cost:       p.budgetedCost ?? 0,
+    revenue:    p.budgetedRevenue ?? 0,
   }))
 
   // Build recent activity from latest payments + bookings
@@ -126,8 +125,8 @@ export function DashboardPage() {
                   </div>
                   <div className="flex gap-4 text-xs text-content-muted">
                     <span className="font-mono text-content-muted">{p.projectCode}</span>
-                    {p.estimatedCost   && <span>Est. Cost: <strong className="text-content">{fmt(p.estimatedCost)}</strong></span>}
-                    {p.estimatedRevenue && <span>Est. Revenue: <strong className="text-content">{fmt(p.estimatedRevenue)}</strong></span>}
+                    {p.budgetedCost    && <span>Budget: <strong className="text-content">{fmt(p.budgetedCost)}</strong></span>}
+                    {p.budgetedRevenue && <span>Target: <strong className="text-content">{fmt(p.budgetedRevenue)}</strong></span>}
                   </div>
                 </div>
               ))}

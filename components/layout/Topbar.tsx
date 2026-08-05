@@ -1,8 +1,9 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Menu, Search, User, Sun, Moon, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, User, Sun, Moon, LogOut, ChevronDown } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 import { useThemeStore } from '@/store/theme.store'
+import { GlobalSearch } from './GlobalSearch'
 
 interface TopbarProps {
   onMobileMenuOpen?: () => void
@@ -30,22 +31,13 @@ export function Topbar({ onMobileMenuOpen }: TopbarProps) {
       {/* Hamburger — visible on mobile only */}
       <button
         onClick={onMobileMenuOpen}
+        aria-label="Open navigation menu"
         className="p-1.5 rounded-lg hover:bg-surface-muted transition-colors sm:hidden"
       >
         <Menu className="w-5 h-5 text-content-muted" />
       </button>
 
-      {/* Search */}
-      <div className="flex-1 max-w-sm hidden sm:block">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-content-muted" />
-          <input
-            type="text"
-            placeholder="Search projects, vendors…"
-            className="w-full pl-9 pr-3 py-1.5 text-sm border border-border-default rounded-lg bg-surface-muted text-content placeholder:text-content-muted focus:bg-surface focus:ring-2 focus:ring-primary/40 focus:outline-none transition"
-          />
-        </div>
-      </div>
+      <GlobalSearch />
 
       <div className="flex-1" />
 

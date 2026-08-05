@@ -15,8 +15,10 @@ interface CostNode {
   budgetAmount: number; variance: number; varianceStatus: string
 }
 interface CostPoolRow {
-  level: string; name: string; source: string
-  amount: number; allocated: number; unallocated: number
+  level: string; id: number | null; name: string; source: string
+  /** This pool's share of the CURRENT scope — these sum to scopeAllocated. */
+  allocatedIntoScope: number
+  unallocated: number
   unallocatedReason: string | null
 }
 interface ScopeCrumb { level: string; id: number | null; name: string }
@@ -84,6 +86,12 @@ export function CostRollupPage() {
     : `${data.childLevel}s under ${here?.name ?? ''}`
 
   const variance = (data?.scopeTotalAbsorbed ?? 0) - (data?.scopeBudget ?? 0)
+
+  // The pool rows are this scope's allocated cost, split by where it was booked — so they are a
+  // partition of scopeAllocated, and their total is a live check on the apportionment.
+  const scopeName = here?.name ?? 'this scope'
+  const poolTotal = (data?.pools ?? []).reduce((s, p) => s + p.allocatedIntoScope, 0)
+  const poolsReconcile = Math.abs(poolTotal - (data?.scopeAllocated ?? 0)) < 0.05
 
   return (
     <div className="space-y-6">
@@ -258,25 +266,25 @@ export function CostRollupPage() {
             <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
               <div className="px-4 py-2.5 bg-surface-muted border-b border-border-default">
                 <span className="text-xs font-semibold text-content uppercase tracking-wide">
-                  Shared cost pools — where the allocated figures come from
+                  Shared cost pools — where {scopeName}&apos;s allocated cost came from
                 </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-sm">
                   <thead className="bg-surface-muted border-b border-border-default">
                     <tr>
-                      {['Booked at', 'Source', 'Amount', 'Allocated', 'Not allocated'].map(h => (
-                        <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Booked at', 'Source'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
+                      {['Booked at', 'Level', 'Source', `Into ${scopeName}`, 'Not allocated'].map(h => (
+                        <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Booked at', 'Level', 'Source'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-default">
                     {data!.pools.map(p => (
-                      <tr key={`${p.level}-${p.source}`} className="hover:bg-surface-muted">
-                        <td className="px-3 py-2 text-content">{p.level}</td>
+                      <tr key={`${p.level}-${p.id ?? 0}-${p.source}`} className="hover:bg-surface-muted">
+                        <td className="px-3 py-2 text-content">{p.name}</td>
+                        <td className="px-3 py-2 text-content-muted">{p.level}</td>
                         <td className="px-3 py-2 text-content-muted">{p.source}</td>
-                        <td className="px-3 py-2 text-right text-content">{fmt(p.amount)}</td>
-                        <td className="px-3 py-2 text-right text-primary">{fmt(p.allocated)}</td>
+                        <td className="px-3 py-2 text-right text-primary">{fmt(p.allocatedIntoScope)}</td>
                         <td className="px-3 py-2 text-right">
                           {p.unallocated > 0
                             ? <span className="text-warning" title={p.unallocatedReason ?? undefined}>{fmt(p.unallocated)}</span>
@@ -285,8 +293,23 @@ export function CostRollupPage() {
                       </tr>
                     ))}
                   </tbody>
+                  {/* The rows are a partition of this scope's allocated cost, so they must add up
+                      to it. Shown rather than asserted, like reconciliationOk above. */}
+                  <tfoot className="bg-surface-muted border-t border-border-default">
+                    <tr>
+                      <td colSpan={3} className="px-3 py-2 text-xs font-bold text-content uppercase">Total allocated</td>
+                      <td className="px-3 py-2 text-right font-bold text-content tabular-nums">{fmt(poolTotal)}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
                 </table>
               </div>
+              {!poolsReconcile && (
+                <p className="px-4 py-2.5 text-xs text-warning border-t border-border-default">
+                  These pools total {fmt(poolTotal)} but this scope absorbed {fmt(data!.scopeAllocated)} in
+                  allocated cost. They should match — treat the breakdown as unreliable.
+                </p>
+              )}
               {(data?.scopeUnallocated ?? 0) > 0 && (
                 <p className="px-4 py-2.5 text-xs text-content-muted border-t border-border-default">
                   Cost shown as <em>not allocated</em> could not be pushed down to any unit — usually because

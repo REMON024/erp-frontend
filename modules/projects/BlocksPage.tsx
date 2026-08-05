@@ -15,6 +15,7 @@ import { Input, Field } from '@/components/ui/Input'
 import { Table, TH, TR, TD } from '@/components/ui/Table'
 import { StatCard } from '@/components/ui/Card'
 import { AreaBreakdownFields } from '@/components/ui/AreaBreakdownFields'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
@@ -137,10 +138,12 @@ export function BlocksPage() {
         title="Project Blocks"
         subtitle="Manage towers and blocks within each project — the foundation of your unit inventory"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Block
-          </button>
+          <PermissionGate module="BLOCKS" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Block
+            </button>
+          </PermissionGate>
         }
       />
 

@@ -14,6 +14,7 @@ import { z } from 'zod'
 import { Input, Field } from '@/components/ui/Input'
 import { Table, TH, TR, TD } from '@/components/ui/Table'
 import { StatCard } from '@/components/ui/Card'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { Plus, Edit2, Rows3, Home, Ruler } from 'lucide-react'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
@@ -173,10 +174,12 @@ export function FloorsPage() {
         title="Floors"
         subtitle="Manage the floors inside each block — units are assigned to a floor"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Floor
-          </button>
+          <PermissionGate module="FLOORS" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Floor
+            </button>
+          </PermissionGate>
         }
       />
 

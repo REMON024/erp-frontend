@@ -19,6 +19,9 @@ interface ConsumptionNode {
   costPerSqFt: number | null; sharePct: number
 }
 interface ScopeCrumb { level: string; id: number | null; name: string }
+interface MaterialSourceRow {
+  level: string; id: number | null; name: string; amountIntoScope: number
+}
 interface MaterialConsumptionDto {
   rows: MaterialConsumptionRow[]
   totalIssuedValue: number
@@ -29,6 +32,9 @@ interface MaterialConsumptionDto {
   scopeAreaSqFt: number | null
   scopeCostPerSqFt: number | null
   showStockColumns: boolean
+  mode: string
+  /** Absorbed mode only: where this scope's material came from; sums to totalIssuedValue. */
+  sources: MaterialSourceRow[]
 }
 
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
@@ -42,11 +48,12 @@ export function MaterialConsumptionPage() {
   const [scope, setScope]   = useState<ScopeValue>(EMPTY_SCOPE)
   const [dateFrom, setFrom] = useState('')
   const [dateTo,   setTo]   = useState('')
+  const [mode, setMode]     = useState<'direct' | 'absorbed'>('direct')
 
   const { data, isLoading, error, refetch } = useApiData<MaterialConsumptionDto>({
     url: '/reports/material-consumption',
-    params: { ...scopeToParams(scope), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined },
-    queryKey: ['material-consumption', scope.projectId, scope.blockId, scope.floorId, scope.unitId, dateFrom, dateTo],
+    params: { ...scopeToParams(scope), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, mode },
+    queryKey: ['material-consumption', scope.projectId, scope.blockId, scope.floorId, scope.unitId, dateFrom, dateTo, mode],
   })
 
   // The dropdowns above and the rollup rows below write the same scope, so there is never a
@@ -79,6 +86,14 @@ export function MaterialConsumptionPage() {
 
   const here          = data?.breadcrumb[data.breadcrumb.length - 1]
   const hasUnattributed = data?.children.some(c => c.level === 'Unattributed') ?? false
+
+  // The toggle only means something once a project is picked — the warehouse view has no
+  // hierarchy to apportion across, and the API forces direct mode there.
+  const scoped      = !!scope.projectId
+  const isAbsorbed  = data?.mode === 'absorbed'
+  const scopeName   = here?.name ?? 'this scope'
+  const sourceTotal = (data?.sources ?? []).reduce((s, r) => s + r.amountIntoScope, 0)
+  const sourcesReconcile = Math.abs(sourceTotal - (data?.totalIssuedValue ?? 0)) < 0.05
   const rollupTitle = !data?.childLevel ? null
     : data.childLevel === 'Project' ? 'Projects'
     : `${data.childLevel}s under ${here?.name ?? ''}`
@@ -101,12 +116,40 @@ export function MaterialConsumptionPage() {
           <label className="block text-xs font-medium text-content mb-1">To</label>
           <DateField value={dateTo} onChange={e => setTo(e.target.value)} className="min-w-[150px]" />
         </div>
+        {scoped && (
+          <div>
+            <label className="block text-xs font-medium text-content mb-1">Basis</label>
+            <div className="inline-flex rounded-lg border border-border-default overflow-hidden">
+              {([
+                ['direct',   'Direct',   'Only material issued naming this exact level'],
+                ['absorbed', 'Absorbed', "Adds this level's share, by area, of material issued above it"],
+              ] as const).map(([value, label, hint]) => (
+                <button key={value} type="button" title={hint} onClick={() => setMode(value)}
+                  className={`px-3 py-2 text-sm ${mode === value
+                    ? 'bg-primary text-white font-medium'
+                    : 'bg-surface text-content-muted hover:bg-surface-muted'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      {isAbsorbed && (
+        <p className="text-xs text-info bg-info/10 border border-info/20 rounded-lg px-3 py-2">
+          Showing what {scopeName} <strong>absorbed</strong>: material issued here, plus its share by floor
+          area of everything issued above it. This is the figure that matches the Cost Rollup for the
+          same scope. Switch to <em>Direct</em> to see only what was booked at this level.
+        </p>
+      )}
 
       <DataState
         loading={isLoading} error={error ? 'Failed to load.' : null} onRetry={refetch}
         empty={!isLoading && (data?.rows.length ?? 0) === 0}
-        emptyMessage="No material has been issued to this scope in the selected period."
+        emptyMessage={isAbsorbed
+          ? 'No material has reached this scope in the selected period.'
+          : 'No material has been issued to this scope in the selected period. Higher-level material is excluded — switch to Absorbed to include its share.'}
       >
         <>
           {data && data.breadcrumb.length > 1 && (
@@ -211,8 +254,54 @@ export function MaterialConsumptionPage() {
               </div>
               {hasUnattributed && (
                 <p className="px-4 py-2.5 text-xs text-content-muted border-t border-border-default">
-                  Unattributed spend was issued at this level without naming a child — site works, structure
-                  and common areas. It is shown so the rows always add up to the total.
+                  {isAbsorbed
+                    ? `Unattributed material could not be pushed down to any unit — usually because the units
+                       beneath it have no floor area recorded. Fill in those areas and it will be absorbed.`
+                    : `Unattributed spend was issued at this level without naming a child — site works, structure
+                       and common areas. It is shown so the rows always add up to the total.`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {isAbsorbed && (data?.sources.length ?? 0) > 0 && (
+            <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
+              <div className="px-4 py-2.5 bg-surface-muted border-b border-border-default">
+                <span className="text-xs font-semibold text-content uppercase tracking-wide">
+                  Where {scopeName}&apos;s material came from
+                </span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-sm">
+                  <thead className="bg-surface-muted border-b border-border-default">
+                    <tr>
+                      {['Issued at', 'Level', `Into ${scopeName}`].map(h => (
+                        <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${h.startsWith('Into') ? 'text-right' : 'text-left'}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-default">
+                    {data!.sources.map(s => (
+                      <tr key={`${s.level}-${s.id ?? 0}`} className="hover:bg-surface-muted">
+                        <td className="px-3 py-2 text-content">{s.name}</td>
+                        <td className="px-3 py-2 text-content-muted">{s.level}</td>
+                        <td className="px-3 py-2 text-right text-primary tabular-nums">{fmt(s.amountIntoScope)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {/* A partition of the total above, so it must add back up to it. */}
+                  <tfoot className="bg-surface-muted border-t border-border-default">
+                    <tr>
+                      <td colSpan={2} className="px-3 py-2 text-xs font-bold text-content uppercase">Total</td>
+                      <td className="px-3 py-2 text-right font-bold text-content tabular-nums">{fmt(sourceTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              {!sourcesReconcile && (
+                <p className="px-4 py-2.5 text-xs text-warning border-t border-border-default">
+                  These sources total {fmt(sourceTotal)} but {scopeName} consumed {fmt(data!.totalIssuedValue)}.
+                  They should match — treat the breakdown as unreliable.
                 </p>
               )}
             </div>
@@ -229,7 +318,9 @@ export function MaterialConsumptionPage() {
                 <thead className="bg-surface-muted border-b border-border-default">
                   <tr>
                     {headers.map(h => (
-                      <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${NUMERIC.includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                      <th key={h}
+                        title={h === 'Avg Cost' ? 'Company-wide moving average from the resource master — not this scope’s realised rate' : undefined}
+                        className={`px-3 py-2 text-xs font-semibold text-content-muted ${NUMERIC.includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -266,6 +357,11 @@ export function MaterialConsumptionPage() {
                 shown only under <em>All Projects</em>.
               </p>
             )}
+            <p className="px-4 py-2.5 text-xs text-content-muted border-t border-border-default">
+              <strong>Avg Cost</strong> is the material&apos;s company-wide moving average from the resource
+              master — not this scope&apos;s realised rate, and not affected by the date filter. It will
+              generally differ from issued value ÷ issued quantity.
+            </p>
           </div>
         </>
       </DataState>

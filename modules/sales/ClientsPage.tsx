@@ -11,6 +11,7 @@ import { Input, Label } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { Table, TH, TR, TD } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -144,9 +145,11 @@ export function ClientsPage() {
         title="Client Master"
         subtitle="Manage all unit buyers and their contact details"
         action={
-          <Button onClick={() => setModal('add')} leftIcon={<Plus className="w-4 h-4" />}>
-            Add Client
-          </Button>
+          <PermissionGate module="CLIENTS" action="create">
+            <Button onClick={() => setModal('add')} leftIcon={<Plus className="w-4 h-4" />}>
+              Add Client
+            </Button>
+          </PermissionGate>
         }
       />
 
@@ -195,9 +198,11 @@ export function ClientsPage() {
                 <Badge tone={c.status === 'Active' ? 'success' : 'neutral'}>{c.status}</Badge>
               </TD>
               <TD>
-                <button onClick={() => { setTarget(c); setModal('edit') }} aria-label={`Edit ${c.fullName}`} className="text-content-muted hover:text-primary p-1">
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
+                <PermissionGate module="CLIENTS" action="edit">
+                  <button onClick={() => { setTarget(c); setModal('edit') }} aria-label={`Edit ${c.fullName}`} className="text-content-muted hover:text-primary p-1">
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                </PermissionGate>
               </TD>
             </TR>
           ))}

@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { Plus, Warehouse as WarehouseIcon, Edit2 } from 'lucide-react'
 import api from '@/lib/api'
@@ -70,9 +71,11 @@ export function WarehousesPage() {
     <div className="space-y-6">
       <PageHeader title="Warehouses" subtitle="Storage locations for stock balances"
         action={
-          <button onClick={() => setModal({})} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Warehouse
-          </button>
+          <PermissionGate module="RESOURCE_MASTER" action="create">
+            <button onClick={() => setModal({})} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Warehouse
+            </button>
+          </PermissionGate>
         } />
 
       <DataState loading={isLoading} error={error ? 'Failed to load warehouses.' : null} onRetry={refetch}
@@ -88,7 +91,9 @@ export function WarehousesPage() {
                   <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full ${w.isActive ? 'bg-success/10 text-success' : 'bg-surface-muted text-content-muted'}`}>{w.isActive ? 'Active' : 'Inactive'}</span>
                 </div>
               </div>
-              <button onClick={() => setModal({ wh: w })} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Edit2 className="w-4 h-4" /></button>
+              <PermissionGate module="RESOURCE_MASTER" action="edit">
+                <button onClick={() => setModal({ wh: w })} aria-label={`Edit ${w.name}`} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Edit2 className="w-4 h-4" /></button>
+              </PermissionGate>
             </div>
           ))}
         </div>

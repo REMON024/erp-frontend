@@ -21,6 +21,12 @@ interface Props {
   onChange: (categoryId: number | '', category?: ResourceCategory) => void
   /** Narrows the list to this type's categories plus the type-agnostic ones. */
   resourceType?: ResourceType | string
+  /**
+   * Narrows to the categories this vendor actually deals in, derived from their PO/WO lines
+   * and configured rates. Falls back to the full master list when the vendor has no history,
+   * so a newly created vendor is not a dead end.
+   */
+  vendorId?: number | '' | null
   /** Include retired rows — an edit form must still be able to display one. */
   includeInactive?: boolean
   /** Renders a "+" button beside the select that fires onRequestCreate. */
@@ -45,16 +51,30 @@ interface Props {
  * screen readers.
  */
 export function CategorySelect({
-  value, onChange, resourceType, includeInactive, allowCreate, onRequestCreate,
+  value, onChange, resourceType, vendorId, includeInactive, allowCreate, onRequestCreate,
   placeholder = 'No category', className, disabled, invalid,
 }: Props) {
+  const vendor = vendorId ? Number(vendorId) : undefined
+
   // Prefix 'resource-categories' is what every mutation invalidates, so a quick-create
   // instantly refreshes every mounted picker.
-  const { data: categories = [] } = useApiData<ResourceCategory[]>({
+  const { data: all = [] } = useApiData<ResourceCategory[]>({
     url: '/resource-categories',
     params: { activeOnly: !includeInactive, resourceType: resourceType || undefined },
     queryKey: ['resource-categories', resourceType ?? 'all', includeInactive ?? false],
   })
+
+  const { data: vendorCats } = useApiData<ResourceCategory[]>({
+    url: `/vendors/${vendor}/resource-categories`,
+    params: { resourceType: resourceType || undefined },
+    queryKey: ['resource-categories', 'vendor', vendor ?? 0, resourceType ?? 'all'],
+    enabled: !!vendor,
+  })
+
+  // A vendor with no purchase history yet resolves to an empty list; showing nothing would
+  // make their first order unenterable, so fall back to the master list.
+  const categories = vendor && vendorCats?.length ? vendorCats : all
+  const scopedToVendor = !!(vendor && vendorCats?.length)
 
   const select = (
     <Select
@@ -67,7 +87,7 @@ export function CategorySelect({
         onChange(id, id ? categories.find(c => c.id === id) : undefined)
       }}
     >
-      <option value="">{placeholder}</option>
+      <option value="">{scopedToVendor ? 'Select a category…' : placeholder}</option>
       {categories.map(c => (
         <option key={c.id} value={c.id}>
           {c.name}{c.resourceType ? '' : ' · all types'}{c.isActive ? '' : ' (inactive)'}

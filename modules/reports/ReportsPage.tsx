@@ -33,28 +33,41 @@ function Table({ children, minW = 640 }: { children: React.ReactNode; minW?: num
 }
 
 // ─── Tab: Project Summary ─────────────────────────────────────────────────────
-interface Project { id: number; projectCode: string; projectName: string; status: string; estimatedCost?: number; estimatedRevenue?: number }
+//
+// This report used to show the two typed figures from the project form and a margin computed by
+// subtracting one from the other — presenting a hand-entered guess as fact. It now shows the
+// approved budget baseline *against* what the system derived: BOQ from approved estimates, actual
+// from site spend, contracted from bookings. The interesting number is the gap between them.
+interface Variance {
+  projectId: number; projectCode: string; projectName: string; status: string
+  budgetedCost?: number; budgetedRevenue?: number; budgetApprovedOn?: string
+  estimatedCost: number; actualCost: number
+  inventoryValue: number; contractedRevenue: number
+  costVariance?: number; costVariancePct?: number
+  revenueVariance?: number; revenueVariancePct?: number
+}
 interface Invoice { id: number; totalAmount: number; paidAmount: number; dueAmount: number; status: string; customerName: string }
 
 function ProjectSummaryReport() {
-  const { data: projects = [], isLoading: lP } = useApiData<Project[]>({ url: '/projects', queryKey: ['rep-projects'] })
-  const { data: invoices = [], isLoading: lI } = useApiData<Invoice[]>({ url: '/invoices',  queryKey: ['rep-invoices'] })
+  const { data: rows = [],     isLoading: lP } = useApiData<Variance[]>({ url: '/projects/budget-variance', queryKey: ['rep-variance'] })
+  const { data: invoices = [], isLoading: lI } = useApiData<Invoice[]> ({ url: '/invoices',                 queryKey: ['rep-invoices'] })
 
   if (lP || lI) return <Spinner />
 
-  const totalCost      = projects.reduce((s, p) => s + (p.estimatedCost ?? 0), 0)
-  const totalRevenue   = projects.reduce((s, p) => s + (p.estimatedRevenue ?? 0), 0)
+  const totalBudget    = rows.reduce((s, r) => s + (r.budgetedCost ?? 0), 0)
+  const totalActual    = rows.reduce((s, r) => s + r.actualCost, 0)
   const totalBilled    = invoices.reduce((s, i) => s + i.totalAmount, 0)
   const totalCollected = invoices.reduce((s, i) => s + i.paidAmount, 0)
+  const totalVariance  = totalBudget - totalActual
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Est. Cost',    value: fmtL(totalCost),      color: 'text-danger'   },
-          { label: 'Total Est. Revenue', value: fmtL(totalRevenue),   color: 'text-primary'  },
-          { label: 'Total Billed',       value: fmt(totalBilled),     color: 'text-success' },
-          { label: 'Total Collected',    value: fmt(totalCollected),  color: 'text-success'  },
+          { label: 'Approved Budget',  value: fmtL(totalBudget),    color: 'text-content' },
+          { label: 'Actual Cost',      value: fmtL(totalActual),    color: 'text-danger'  },
+          { label: 'Budget Remaining', value: fmtL(totalVariance),  color: totalVariance >= 0 ? 'text-success' : 'text-danger' },
+          { label: 'Collected',        value: fmt(totalCollected),  color: 'text-success' },
         ].map(k => (
           <div key={k.label} className="bg-surface-muted rounded-xl border border-border-default p-4">
             <p className="text-xs text-content-muted">{k.label}</p>
@@ -62,55 +75,69 @@ function ProjectSummaryReport() {
           </div>
         ))}
       </div>
+      <p className="text-xs text-content-muted">
+        Billed to date: {fmt(totalBilled)}. Budget is the approved baseline; BOQ, actual and
+        contracted revenue are derived from estimates, site spend and bookings.
+      </p>
 
-      {projects.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-sm text-content-muted text-center py-8">No projects found.</p>
       ) : (
         <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
-          <Table minW={640}>
+          <Table minW={860}>
             <thead className="bg-surface-muted border-b border-border-default">
               <tr>
                 {[
-                  { h: 'Project' }, { h: 'Status' }, { h: 'Est. Cost', num: true },
-                  { h: 'Est. Revenue', num: true }, { h: 'Net', num: true },
+                  { h: 'Project' }, { h: 'Status' }, { h: 'Budget', num: true },
+                  { h: 'BOQ Approved', num: true }, { h: 'Actual', num: true },
+                  { h: 'Variance', num: true }, { h: 'Contracted', num: true },
                 ].map(({ h, num }) => (
                   <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border-default">
-              {projects.map(p => {
-                const net = (p.estimatedRevenue ?? 0) - (p.estimatedCost ?? 0)
-                return (
-                  <tr key={p.id} className="hover:bg-surface-muted">
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-content text-xs">{p.projectName}</p>
-                      <p className="text-[10px] text-content-muted font-mono">{p.projectCode}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[p.status] ?? 'bg-surface-muted text-content-muted'}`}>{p.status}</span>
-                    </td>
-                    <td className="px-4 py-3 text-danger font-medium text-xs text-right tabular-nums">{p.estimatedCost   ? fmtL(p.estimatedCost)   : '—'}</td>
-                    <td className="px-4 py-3 text-primary font-medium text-xs text-right tabular-nums">{p.estimatedRevenue ? fmtL(p.estimatedRevenue) : '—'}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      {p.estimatedRevenue && p.estimatedCost
-                        ? <span className={`text-xs font-bold ${net >= 0 ? 'text-success' : 'text-danger'}`}>{net >= 0 ? '+' : ''}{fmtL(net)}</span>
-                        : <span className="text-content-muted text-xs">—</span>}
-                    </td>
-                  </tr>
-                )
-              })}
+              {rows.map(r => (
+                <tr key={r.projectId} className="hover:bg-surface-muted">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-content text-xs">{r.projectName}</p>
+                    <p className="text-[10px] text-content-muted font-mono">
+                      {r.projectCode}
+                      {/* An unapproved baseline is still a draft — say so rather than letting the
+                          variance column imply it was signed off. */}
+                      {!r.budgetApprovedOn && <span className="ml-1 text-warning">draft budget</span>}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLORS[r.status] ?? 'bg-surface-muted text-content-muted'}`}>{r.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-content font-medium text-xs text-right tabular-nums">{r.budgetedCost ? fmtL(r.budgetedCost) : '—'}</td>
+                  <td className="px-4 py-3 text-content-muted text-xs text-right tabular-nums">{r.estimatedCost ? fmtL(r.estimatedCost) : '—'}</td>
+                  <td className="px-4 py-3 text-danger font-medium text-xs text-right tabular-nums">{r.actualCost ? fmtL(r.actualCost) : '—'}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {r.costVariance == null
+                      ? <span className="text-content-muted text-xs">—</span>
+                      : <span className={`text-xs font-bold ${r.costVariance >= 0 ? 'text-success' : 'text-danger'}`}>
+                          {r.costVariance >= 0 ? '+' : ''}{fmtL(r.costVariance)}
+                          <span className="font-normal text-content-muted ml-1">({r.costVariancePct}%)</span>
+                        </span>}
+                  </td>
+                  <td className="px-4 py-3 text-primary font-medium text-xs text-right tabular-nums">{r.contractedRevenue ? fmtL(r.contractedRevenue) : '—'}</td>
+                </tr>
+              ))}
             </tbody>
             <tfoot className="bg-surface-muted border-t border-border-default">
               <tr>
                 <td colSpan={2} className="px-4 py-3 text-xs font-bold text-content uppercase">Totals</td>
-                <td className="px-4 py-3 text-danger font-bold text-xs text-right tabular-nums">{fmtL(totalCost)}</td>
-                <td className="px-4 py-3 text-primary font-bold text-xs text-right tabular-nums">{fmtL(totalRevenue)}</td>
+                <td className="px-4 py-3 text-content font-bold text-xs text-right tabular-nums">{fmtL(totalBudget)}</td>
+                <td className="px-4 py-3 text-content-muted font-bold text-xs text-right tabular-nums">{fmtL(rows.reduce((s, r) => s + r.estimatedCost, 0))}</td>
+                <td className="px-4 py-3 text-danger font-bold text-xs text-right tabular-nums">{fmtL(totalActual)}</td>
                 <td className="px-4 py-3 font-bold text-xs text-right tabular-nums">
-                  <span className={totalRevenue - totalCost >= 0 ? 'text-success' : 'text-danger'}>
-                    {totalRevenue - totalCost >= 0 ? '+' : ''}{fmtL(totalRevenue - totalCost)}
+                  <span className={totalVariance >= 0 ? 'text-success' : 'text-danger'}>
+                    {totalVariance >= 0 ? '+' : ''}{fmtL(totalVariance)}
                   </span>
                 </td>
+                <td className="px-4 py-3 text-primary font-bold text-xs text-right tabular-nums">{fmtL(rows.reduce((s, r) => s + r.contractedRevenue, 0))}</td>
               </tr>
             </tfoot>
           </Table>

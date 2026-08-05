@@ -8,7 +8,7 @@ import { AlertTriangle } from 'lucide-react'
 
 interface BalanceRow { warehouseId: number | null; warehouseName: string; balance: number; lowStock: boolean }
 interface Rollup {
-  resourceId: number; resourceName: string; unit: string; reorder: number
+  resourceId: number; resourceName: string; unit: string; category?: string | null; reorder: number
   companyTotal: number; lowStock: boolean; warehouses: BalanceRow[]
 }
 interface Warehouse { id: number; name: string }
@@ -44,7 +44,7 @@ export function WarehouseStockLevelsPage() {
             <table className="w-full min-w-[640px] text-sm">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>{[
-                  { h: 'Material' }, { h: 'Per-warehouse' }, { h: 'Company Total', num: true },
+                  { h: 'Material' }, { h: 'Category' }, { h: 'Per-warehouse' }, { h: 'Company Total', num: true },
                   { h: 'Reorder', num: true }, { h: 'Status' },
                 ].map(({ h, num }) =>
                   <th key={h} className={`px-4 py-3 text-xs font-semibold text-content-muted uppercase tracking-wide ${num ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr>
@@ -53,6 +53,7 @@ export function WarehouseStockLevelsPage() {
                 {rollups.map(r => (
                   <tr key={r.resourceId} className="hover:bg-surface-muted">
                     <td className="px-4 py-3 font-medium text-content">{r.resourceName}<span className="text-xs text-content-muted ml-1">({r.unit})</span></td>
+                    <td className="px-4 py-3 text-content-muted text-xs">{r.category || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {r.warehouses.length === 0 && <span className="text-xs text-content-muted">—</span>}

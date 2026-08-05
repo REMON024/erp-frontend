@@ -6,9 +6,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useApiData } from '@/hooks/useApiData'
 import { ArrowLeftRight, CheckCircle, AlertCircle } from 'lucide-react'
+import { ResourcePicker } from '@/components/pickers/ResourcePicker'
+import { CategorySelect } from '@/components/pickers/CategorySelect'
 import api from '@/lib/api'
 
-interface Material { id: number; resourceName: string; unit: string }
 interface Warehouse { id: number; name: string }
 
 const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
@@ -17,10 +18,11 @@ function isoToday() { return new Date().toISOString().split('T')[0] }
 
 export function StockTransferPage() {
   const qc = useQueryClient()
-  const { data: materials = [] }  = useApiData<Material[]>({ url: '/resources', params: { types: 'Material' }, queryKey: ['materials-list'] })
   const { data: warehouses = [] } = useApiData<Warehouse[]>({ url: '/warehouses', params: { activeOnly: true }, queryKey: ['warehouses-list'] })
 
-  const [resourceId, setMaterialId] = useState('')
+  // Category narrows the material list; the transfer still records the specific resource.
+  const [categoryId, setCategoryId] = useState<number | ''>('')
+  const [resourceId, setMaterialId] = useState<number | ''>('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [qty, setQty] = useState('')
@@ -58,11 +60,14 @@ export function StockTransferPage() {
           </div>
         )}
         <div>
+          <label className={lbl}>Resource Category</label>
+          <CategorySelect value={categoryId} resourceType="Material" placeholder="All categories"
+            onChange={id => { setCategoryId(id); setMaterialId('') }} />
+        </div>
+        <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
-          <Select value={resourceId} onChange={e => setMaterialId(e.target.value)}>
-            <option value="">Select material</option>
-            {materials.map(m => <option key={m.id} value={m.id}>{m.resourceName} ({m.unit})</option>)}
-          </Select>
+          <ResourcePicker value={resourceId} types={['Material']} categoryId={categoryId}
+            onChange={id => setMaterialId(id)} placeholder="Select material" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
           <div>

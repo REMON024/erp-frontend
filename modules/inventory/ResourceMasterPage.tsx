@@ -10,6 +10,7 @@ import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
 import { CategorySelect } from '@/components/pickers/CategorySelect'
 import { CategoryQuickCreateModal } from '@/components/pickers/CategoryQuickCreateModal'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -32,7 +33,9 @@ export interface Resource {
   ownershipType?: string; assetTag?: string; skillLevel?: string
 }
 
-const TYPES: ResourceType[] = ['Material', 'Equipment', 'Service', 'Labour']
+/** The single source of truth for the type list — mirrors Domain/Constants/ResourceTypes.All. */
+export const RESOURCE_TYPES: ResourceType[] = ['Material', 'Equipment', 'Service', 'Labour']
+const TYPES = RESOURCE_TYPES
 const RATE_BASES = ['Unit', 'Hour', 'Day', 'Month', 'Shift', 'Lumpsum', 'Sqft', 'Percent']
 
 const TYPE_META: Record<ResourceType, { icon: typeof Boxes; tone: string; blurb: string }> = {
@@ -284,10 +287,12 @@ export function ResourceMasterPage() {
         title="Resource Master"
         subtitle="Materials, equipment, services and labour in one catalogue"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Resource
-          </button>
+          <PermissionGate module="RESOURCE_MASTER" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Resource
+            </button>
+          </PermissionGate>
         }
       />
 

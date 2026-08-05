@@ -92,8 +92,16 @@ nominee, status. Create/edit clients.
 
 ### Units — `/projects/units`
 Sellable units (flats/apartments) inside a project's block. Unit no, floor (picked from
-the block's floors), type, facing, area (sqft), base price + additional price = total
-price. Status: Available → Booked → Sold → Cancelled.
+the block's floors), type, facing, area (sqft). Base price is computed as area × the
+selling rate per sqft from the rate card, not typed — tick Override for a negotiated
+one-off, which is recorded and flagged as such. Additional charges are named lines
+(parking, utility, corner, floor premium) whose sum is the additional price; base +
+additional = total. Status: Available → Booked → Sold → Cancelled.
+
+The **Rate Cards** button manages the selling rates. A rate is scoped to a project and
+can be narrowed to a block, floor or unit type — the most specific card wins. Rates are
+effective-dated, and publishing a new one closes the previous, so past prices stay
+explainable. A project with no rate card cannot price units.
 
 ### Bookings — `/sales/bookings`
 Records a customer booking a unit. Captures booking amount, discount, net amount,

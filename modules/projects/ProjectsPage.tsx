@@ -17,6 +17,7 @@ import { Input, Field } from '@/components/ui/Input'
 import { Card, StatCard } from '@/components/ui/Card'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { AreaBreakdownFields } from '@/components/ui/AreaBreakdownFields'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { formatArea } from '@/utils/format'
 import api from '@/lib/api'
 
@@ -25,7 +26,11 @@ interface Project {
   projectType?: string; landArea?: number; address?: string
   areaSqFt?: number; commonAreaSqFt?: number; serviceAreaSqFt?: number; netAreaSqFt?: number
   startDate?: string; endDate?: string
-  estimatedCost?: number; estimatedRevenue?: number; status: string
+  // The approved budget baseline. budgetApprovedOn being set means it is frozen — the figures
+  // stop being editable here and only a deliberate revise reopens them.
+  budgetedCost?: number; budgetedRevenue?: number
+  budgetApprovedOn?: string; budgetApprovedBy?: string
+  status: string
 }
 
 // Domain tones rather than the shared statusTone(): "OnHold" and "Planning" have specific
@@ -51,8 +56,8 @@ const schema = z.object({
   serviceAreaSqFt:  z.coerce.number().min(0).optional(),
   startDate:        z.string().optional(),
   endDate:          z.string().optional(),
-  estimatedCost:    z.coerce.number().optional(),
-  estimatedRevenue: z.coerce.number().optional(),
+  budgetedCost:     z.coerce.number().optional(),
+  budgetedRevenue:  z.coerce.number().optional(),
   status:           z.string().min(1, 'Required'),
 }).refine(
   d => d.areaSqFt == null || (d.commonAreaSqFt ?? 0) + (d.serviceAreaSqFt ?? 0) <= d.areaSqFt,
@@ -64,8 +69,10 @@ function ProjectModal({ project, onClose, onSaved }: {
   project?: Project; onClose: () => void; onSaved: () => void
 }) {
   const isEdit = !!project
-  const [saving, setSaving] = useState(false)
-  const [err, setErr]       = useState('')
+  const [saving, setSaving]     = useState(false)
+  const [approving, setApproving] = useState(false)
+  const [err, setErr]           = useState('')
+  const isApproved = !!project?.budgetApprovedOn
   const { register, handleSubmit, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: project ?? { status: 'Planning' },
@@ -80,6 +87,18 @@ function ProjectModal({ project, onClose, onSaved }: {
     } catch (e: any) {
       setErr(e.response?.data?.errors?.[0] ?? 'Save failed')
     } finally { setSaving(false) }
+  }
+
+  // Approving freezes the figures; revising reopens them. Both close the modal so the form
+  // reloads against the new state rather than showing inputs whose editability just changed.
+  const onToggleApproval = async () => {
+    setApproving(true); setErr('')
+    try {
+      await api.post(`/projects/${project!.id}/budget/${isApproved ? 'revise' : 'approve'}`)
+      onSaved(); onClose()
+    } catch (e: any) {
+      setErr(e.response?.data?.errors?.[0] ?? 'Could not update the budget approval')
+    } finally { setApproving(false) }
   }
 
   return (
@@ -121,13 +140,38 @@ function ProjectModal({ project, onClose, onSaved }: {
           serviceAreaSqFt={watch('serviceAreaSqFt')}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Estimated Cost (৳)">
-            <Input type="number" {...register('estimatedCost')} placeholder="10000000" />
-          </Field>
-          <Field label="Estimated Revenue (৳)">
-            <Input type="number" {...register('estimatedRevenue')} placeholder="14000000" />
-          </Field>
+        {/* The budget baseline. Deliberately typed rather than derived — it is set at feasibility,
+            before any block, unit or BOQ exists — then frozen so variance has a fixed yardstick. */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-content">Approved Budget</p>
+            {isApproved && (
+              <Badge tone="success">Approved {project!.budgetApprovedOn}</Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Budgeted Cost (৳)">
+              <Input type="number" {...register('budgetedCost')} disabled={isApproved}
+                placeholder="10000000" />
+            </Field>
+            <Field label="Budgeted Revenue (৳)">
+              <Input type="number" {...register('budgetedRevenue')} disabled={isApproved}
+                placeholder="14000000" />
+            </Field>
+          </div>
+          <p className="text-xs text-content-muted">
+            {isApproved
+              ? `Frozen baseline${project!.budgetApprovedBy ? ` — approved by ${project!.budgetApprovedBy}` : ''}. Revise to change it.`
+              : 'The baseline actuals are measured against. Actual cost comes from approved BOQs and site spend; actual revenue from bookings.'}
+          </p>
+          {isEdit && (
+            <PermissionGate module="PROJECTS" action="edit">
+              <button type="button" onClick={onToggleApproval} disabled={approving}
+                className="text-xs font-medium text-primary hover:underline disabled:opacity-60">
+                {approving ? 'Working…' : isApproved ? 'Revise budget' : 'Approve budget'}
+              </button>
+            </PermissionGate>
+          )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Start Date">
@@ -161,9 +205,11 @@ function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: (
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge tone={STATUS_TONES[project.status] ?? 'neutral'}>{project.status}</Badge>
-          <button onClick={onEdit} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Edit project">
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
+          <PermissionGate module="PROJECTS" action="edit">
+            <button onClick={onEdit} aria-label={`Edit ${project.projectName}`} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Edit project">
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+          </PermissionGate>
           <button onClick={onSetup} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Setup checklist">
             <ClipboardList className="w-3.5 h-3.5" />
           </button>
@@ -172,11 +218,11 @@ function ProjectCard({ project, onEdit, onSetup }: { project: Project; onEdit: (
       <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border-default">
         <div className="flex items-center gap-2 text-xs text-content-muted">
           <TrendingUp className="w-3.5 h-3.5 text-info" />
-          <span>Cost: <span className="font-medium text-content">{fmt(project.estimatedCost)}</span></span>
+          <span>Budget: <span className="font-medium text-content">{fmt(project.budgetedCost)}</span></span>
         </div>
         <div className="flex items-center gap-2 text-xs text-content-muted">
           <Building2 className="w-3.5 h-3.5 text-success" />
-          <span>Revenue: <span className="font-medium text-content">{fmt(project.estimatedRevenue)}</span></span>
+          <span>Target: <span className="font-medium text-content">{fmt(project.budgetedRevenue)}</span></span>
         </div>
         {/* Gross and net built-up area; the full breakdown lives in the modal. */}
         <div className="flex items-center gap-2 text-xs text-content-muted">
@@ -240,10 +286,12 @@ export function ProjectsPage() {
         title="Housing Projects"
         subtitle="Track all residential development projects"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Project
-          </button>
+          <PermissionGate module="PROJECTS" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Project
+            </button>
+          </PermissionGate>
         }
       />
 

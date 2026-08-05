@@ -6,6 +6,7 @@ import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -162,10 +163,12 @@ export function VendorsPage() {
         title="Vendors"
         subtitle="Manage suppliers and contractors"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Vendor
-          </button>
+          <PermissionGate module="VENDORS" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Vendor
+            </button>
+          </PermissionGate>
         }
       />
 
@@ -230,9 +233,11 @@ export function VendorsPage() {
                         <button onClick={() => setHistory(v)} title="View History" className="text-content-muted hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg">
                           <History className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => { setTarget(v); setModal('edit') }} title="Edit" className="text-content-muted hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
+                        <PermissionGate module="VENDORS" action="edit">
+                          <button onClick={() => { setTarget(v); setModal('edit') }} title="Edit" aria-label={`Edit ${v.vendorName}`} className="text-content-muted hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg">
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        </PermissionGate>
                       </div>
                     </td>
                   </tr>

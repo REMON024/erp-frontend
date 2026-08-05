@@ -22,6 +22,8 @@ interface Props {
   onChange: (resourceId: number | '', resource?: Resource) => void
   /** Restrict the list, e.g. ['Material'] on stock screens. Omit for all types. */
   types?: ResourceType[]
+  /** Narrows the list to one resource category. Omit/null for every category. */
+  categoryId?: number | '' | null
   /** Vendor context so vendor-specific rates resolve. */
   vendorId?: number | null
   /** Document date, so back-dated documents get period-correct rates. */
@@ -43,15 +45,16 @@ interface Props {
  * never silently overwritten.
  */
 export function ResourcePicker({
-  value, onChange, types, vendorId, asOf, onResolved,
+  value, onChange, types, categoryId, vendorId, asOf, onResolved,
   placeholder = 'Select a resource…', className, disabled, invalid,
 }: Props) {
   const typeParam = types?.length ? types.join(',') : undefined
+  const catParam  = categoryId ? Number(categoryId) : undefined
 
   const { data: resources = [] } = useApiData<Resource[]>({
     url: '/resources',
-    params: { types: typeParam },
-    queryKey: ['resources-picker', typeParam ?? 'all'],
+    params: { types: typeParam, categoryId: catParam },
+    queryKey: ['resources-picker', typeParam ?? 'all', catParam ?? 'all'],
   })
 
   const resourceId = value ? Number(value) : 0

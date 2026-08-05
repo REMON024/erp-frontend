@@ -28,6 +28,27 @@ export interface OrderListItem {
   advanceAmount?: number | null
   retentionPercent?: number | null
   lineCount: number
+  // Which part of the build the order covers. Both types store the full ancestor chain.
+  blockId?: number | null
+  blockName?: string | null
+  floorId?: number | null
+  floorName?: string | null
+  unitId?: number | null
+  unitNo?: string | null
+  scopeLevel: ScopeLevel
+  /** Pre-rendered, e.g. "Block A / Level 3 / A-101" — or "Whole project" / "General stock". */
+  scopeLabel: string
+}
+
+/** "General" is purchase-only: stock bought against no project at all. */
+export type ScopeLevel = 'Project' | 'Block' | 'Floor' | 'Unit' | 'General'
+
+export const SCOPE_COLORS: Record<ScopeLevel, string> = {
+  General: 'bg-surface-muted text-content-muted',
+  Project: 'bg-surface-muted text-content-muted',
+  Block:   'bg-info/10 text-info',
+  Floor:   'bg-primary/10 text-primary',
+  Unit:    'bg-success/10 text-success',
 }
 
 export interface OrderCapabilities {
@@ -42,6 +63,8 @@ export interface DraftOrderLine {
   key: string
   resourceId?: number
   resourceType: ResourceType
+  /** Narrowing step between type and resource; not sent to the API — the resource carries it. */
+  categoryId?: number
   description: string
   unit: string
   quantity: number
@@ -53,7 +76,7 @@ export interface DraftOrderLine {
 export function newOrderLine(): DraftOrderLine {
   return {
     key: Math.random().toString(36).slice(2),
-    resourceId: undefined, resourceType: 'Material',
+    resourceId: undefined, resourceType: 'Material', categoryId: undefined,
     description: '', unit: '', quantity: 1, unitRate: 0, unmatchedReason: '',
   }
 }

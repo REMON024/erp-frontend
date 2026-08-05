@@ -10,12 +10,14 @@ import { useApiData } from '@/hooks/useApiData'
 import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2, Upload } from 'lucide-react'
 import api from '@/lib/api'
 import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
+import { CategorySelect } from '@/components/pickers/CategorySelect'
 import { ScopePicker, scopeToPayload, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 import { Input, Field } from '@/components/ui/Input'
 import { Table, TH, TR, TD } from '@/components/ui/Table'
 import { StatCard } from '@/components/ui/Card'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
-import type { Resource, ResourceType } from '@/modules/inventory/ResourceMasterPage'
+import { PermissionGate } from '@/components/ui/PermissionGate'
+import { RESOURCE_TYPES, type Resource, type ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type BOQCategory = 'Civil' | 'Structural' | 'Architectural' | 'Electrical' | 'Plumbing' | 'HVAC' | 'Finishing' | 'Miscellaneous'
@@ -65,16 +67,20 @@ function isoToday()      { return new Date().toISOString().split('T')[0] }
 const tinp = 'border border-border-default rounded px-2 py-1 text-xs focus:ring-1 focus:ring-primary/40 focus:outline-none w-full'
 
 // ── BOQ line-item editor ───────────────────────────────────────────────────────
+/**
+ * `resourceCategoryId` narrows the resource picker only — it is never sent, because the chosen
+ * resource already carries its category. Not to be confused with `category`, which is this line's
+ * BOQ discipline (Civil/Structural/…).
+ */
 type DraftItem = Omit<BOQItem, 'id' | 'estimatedAmount' | 'actualAmount' | 'resourceName'>
-  & { key: string; resourceType: ResourceType }
+  & { key: string; resourceType: ResourceType; resourceCategoryId?: number }
 
 function newLine(): DraftItem {
   // Default to Material so existing habits are unaffected; the type narrows the resource list.
   return { key: Math.random().toString(36).slice(2), resourceId: undefined, resourceType: 'Material',
+           resourceCategoryId: undefined,
            category: 'Civil', description: '', unit: 'LS', quantity: 1, unitRate: 0 }
 }
-
-const RESOURCE_TYPES: ResourceType[] = ['Material', 'Equipment', 'Service', 'Labour']
 
 function BOQEditor({ items, onChange }: {
   items: DraftItem[]
@@ -103,9 +109,20 @@ function BOQEditor({ items, onChange }: {
     }
   }
 
-  // Changing the type invalidates the picked resource, its unit and its suggested rate.
+  // Changing the type invalidates everything downstream — category, resource, unit, rate.
   const handleTypeChange = (key: string, resourceType: ResourceType) => {
-    update(key, { resourceType, resourceId: undefined, description: '', unit: '', unitRate: 0 })
+    update(key, {
+      resourceType, resourceCategoryId: undefined, resourceId: undefined,
+      description: '', unit: '', unitRate: 0,
+    })
+    clearRate(key)
+  }
+
+  const handleCategoryChange = (key: string, categoryId: number | '') => {
+    update(key, {
+      resourceCategoryId: categoryId || undefined, resourceId: undefined,
+      description: '', unit: '', unitRate: 0,
+    })
     clearRate(key)
   }
 
@@ -131,12 +148,13 @@ function BOQEditor({ items, onChange }: {
       {/* Hand-rolled rather than <Table>: this is a dense editable grid with fixed column
           widths and an input in every cell — the primitive's row padding fights it. */}
       <div className="border border-border-default rounded-lg overflow-x-auto">
-        <table className="w-full min-w-[980px] text-xs">
+        <table className="w-full min-w-[1120px] text-xs">
           <thead className="bg-surface-muted border-b border-border-default">
             <tr>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-28">Type <span className="text-primary">*</span></th>
+              <th className="px-2 py-2 text-left font-semibold text-content-muted w-40">Resource Category</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-52">Resource <span className="text-primary">*</span></th>
-              <th className="px-2 py-2 text-left font-semibold text-content-muted w-32">Category</th>
+              <th className="px-2 py-2 text-left font-semibold text-content-muted w-32">BOQ Category</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-16">Unit</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-20">Qty</th>
@@ -158,9 +176,19 @@ function BOQEditor({ items, onChange }: {
                     </Select>
                   </td>
                   <td className="px-2 py-1.5">
+                    <CategorySelect
+                      value={item.resourceCategoryId ?? ''}
+                      resourceType={item.resourceType}
+                      onChange={id => handleCategoryChange(item.key, id)}
+                      placeholder="All categories"
+                      className="text-xs py-1"
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
                     <ResourcePicker
                       value={item.resourceId ?? ''}
                       types={[item.resourceType]}
+                      categoryId={item.resourceCategoryId}
                       onChange={(id, resource) => handleResourceChange(item.key, id, resource)}
                       onResolved={resolved => handleResolved(item.key, resolved)}
                       placeholder={`Select ${item.resourceType.toLowerCase()}…`}
@@ -214,7 +242,7 @@ function BOQEditor({ items, onChange }: {
           </tbody>
           <tfoot className="bg-surface-muted border-t border-border-default">
             <tr>
-              <td colSpan={7} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Estimated</td>
+              <td colSpan={8} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Estimated</td>
               <td className="px-2 py-2 text-right font-bold text-content pr-3">{fmt(totalEstimated)}</td>
               <td />
             </tr>
@@ -494,10 +522,12 @@ export function CostEstimatesPage() {
         title="Cost Estimates (BOQ)"
         subtitle="Bill of Quantities and budget estimates per project"
         action={
-          <button onClick={() => setModal('new')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> New Estimate
-          </button>
+          <PermissionGate module="COST_ESTIMATES" action="create">
+            <button onClick={() => setModal('new')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> New Estimate
+            </button>
+          </PermissionGate>
         }
       />
 

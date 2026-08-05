@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -101,10 +102,12 @@ export function FiscalYearsPage() {
         title="Fiscal Years"
         subtitle="Manage accounting periods — open new fiscal years and close completed ones"
         action={
-          <button onClick={() => setShowAdd(true)}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Open New Year
-          </button>
+          <PermissionGate module="FISCAL_YEARS" action="create">
+            <button onClick={() => setShowAdd(true)}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Open New Year
+            </button>
+          </PermissionGate>
         }
       />
 

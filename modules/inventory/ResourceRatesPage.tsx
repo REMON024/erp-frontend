@@ -6,13 +6,16 @@ import { Modal } from '@/components/ui/Modal'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
+import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Edit2, Ban, Tags } from 'lucide-react'
 import api from '@/lib/api'
-import type { Resource } from './ResourceMasterPage'
+import { ResourcePicker } from '@/components/pickers/ResourcePicker'
+import { CategorySelect } from '@/components/pickers/CategorySelect'
+import { RESOURCE_TYPES, type Resource, type ResourceType } from './ResourceMasterPage'
 
 interface ResourceRate {
   id: number
@@ -51,7 +54,10 @@ function RateModal({ rate, resources, vendors, onClose, onSaved }: {
   const isEdit = !!rate
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const { register, handleSubmit, formState: { errors } } = useForm<Form>({
+  // Type and category narrow the resource list; only resourceId is part of the form.
+  const [type, setType]             = useState<ResourceType>('Material')
+  const [categoryId, setCategoryId] = useState<number | ''>('')
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: rate
       ? {
@@ -87,16 +93,43 @@ function RateModal({ rate, resources, vendors, onClose, onSaved }: {
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
 
-        <div>
-          <label className={lbl}>Resource <span className="text-danger">*</span></label>
-          <Select {...register('resourceId')} disabled={isEdit}>
-            <option value="">Select a resource…</option>
-            {resources.map(r => (
-              <option key={r.id} value={r.id}>{r.resourceCode} — {r.resourceName} ({r.resourceType})</option>
-            ))}
-          </Select>
-          {errors.resourceId && <p className="text-xs text-danger mt-1">{errors.resourceId.message}</p>}
-        </div>
+        {/* Resource is fixed on an edit — it identifies which price history this row belongs to,
+            so there is nothing to narrow and the three-step picker would only mislead. */}
+        {isEdit ? (
+          <div>
+            <label className={lbl}>Resource</label>
+            <input value={`${rate!.resourceCode} — ${rate!.resourceName} (${rate!.resourceType})`}
+              readOnly disabled className={inp} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className={lbl}>Type</label>
+              <Select value={type} onChange={e => {
+                setType(e.target.value as ResourceType); setCategoryId(''); setValue('resourceId', 0)
+              }}>
+                {RESOURCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </Select>
+            </div>
+            <div>
+              <label className={lbl}>Category</label>
+              <CategorySelect value={categoryId} resourceType={type} placeholder="All categories"
+                onChange={id => { setCategoryId(id); setValue('resourceId', 0) }} />
+            </div>
+            <div>
+              <label className={lbl}>Resource <span className="text-danger">*</span></label>
+              <ResourcePicker
+                value={Number(watch('resourceId')) || ''}
+                types={[type]}
+                categoryId={categoryId}
+                onChange={id => setValue('resourceId', Number(id) || 0, { shouldValidate: true })}
+                invalid={!!errors.resourceId}
+              />
+            </div>
+          </div>
+        )}
+        <input type="hidden" {...register('resourceId')} />
+        {errors.resourceId && <p className="text-xs text-danger -mt-2">{errors.resourceId.message}</p>}
 
         <div>
           <label className={lbl}>Vendor</label>
@@ -166,6 +199,7 @@ export function ResourceRatesPage() {
   const qc = useQueryClient()
   const [search, setSearch]     = useState('')
   const [resourceId, setResourceId] = useState('')
+  const [categoryId, setCategoryId] = useState<number | ''>('')
   const [vendorId, setVendorId] = useState('')
   const [currentOnly, setCurrentOnly] = useState(false)
   const [modal, setModal]   = useState<'add' | 'edit' | null>(null)
@@ -192,13 +226,22 @@ export function ResourceRatesPage() {
     catch (e: any) { window.alert(e.response?.data?.errors?.[0] ?? 'Could not deactivate.') }
   }
 
+  // The rate rows carry no category of their own — it belongs to the resource, so the filter
+  // resolves through the resource list rather than asking the API for it.
+  const resourcesInCategory = categoryId
+    ? new Set(resources.filter(r => r.categoryId === categoryId).map(r => r.id))
+    : null
+
   const term = search.trim().toLowerCase()
+  const byCategory = resourcesInCategory
+    ? rates.filter(r => resourcesInCategory.has(r.resourceId))
+    : rates
   const shown = term
-    ? rates.filter(r =>
+    ? byCategory.filter(r =>
         r.resourceName.toLowerCase().includes(term) ||
         r.resourceCode.toLowerCase().includes(term) ||
         (r.vendorName ?? '').toLowerCase().includes(term))
-    : rates
+    : byCategory
 
   const currentCount = rates.filter(r => r.isCurrent).length
   const vendorCount  = rates.filter(r => r.vendorId).length
@@ -209,10 +252,12 @@ export function ResourceRatesPage() {
         title="Resource Rates"
         subtitle="Effective-dated rates, optionally scoped to a vendor"
         action={
-          <button onClick={() => setModal('add')}
-            className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Add Rate
-          </button>
+          <PermissionGate module="RESOURCE_RATES" action="create">
+            <button onClick={() => setModal('add')}
+              className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 font-medium flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add Rate
+            </button>
+          </PermissionGate>
         }
       />
 
@@ -232,9 +277,13 @@ export function ResourceRatesPage() {
       </div>
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search resource or vendor…" onRefresh={refetch}>
+        <CategorySelect value={categoryId} placeholder="All categories" className="min-w-[160px]"
+          onChange={id => { setCategoryId(id); setResourceId('') }} />
         <Select value={resourceId} onChange={e => setResourceId(e.target.value)} className="min-w-[180px]">
           <option value="">All resources</option>
-          {resources.map(r => <option key={r.id} value={r.id}>{r.resourceCode} — {r.resourceName}</option>)}
+          {resources
+            .filter(r => !resourcesInCategory || resourcesInCategory.has(r.id))
+            .map(r => <option key={r.id} value={r.id}>{r.resourceCode} — {r.resourceName}</option>)}
         </Select>
         <Select value={vendorId} onChange={e => setVendorId(e.target.value)} className="min-w-[150px]">
           <option value="">All vendors</option>
