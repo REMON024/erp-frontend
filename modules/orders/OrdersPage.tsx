@@ -7,7 +7,9 @@ import { SearchBar } from '@/components/ui/SearchBar'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { ScopePicker, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
-import { Plus, ShoppingCart, ClipboardList, CheckCircle, Receipt, Undo2, ListTree } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
+import { AttachmentPanel } from '@/components/pickers/AttachmentPanel'
+import { Plus, ShoppingCart, ClipboardList, CheckCircle, Receipt, Undo2, ListTree, Paperclip } from 'lucide-react'
 import api from '@/lib/api'
 import { NewOrderModal } from './NewOrderModal'
 import { BillsModal } from './BillsModal'
@@ -32,6 +34,9 @@ export function OrdersPage() {
   const [creating, setCreating] = useState(false)
   const [billsFor, setBillsFor] = useState<OrderListItem | null>(null)
   const [itemsFor, setItemsFor] = useState<OrderListItem | null>(null)
+  // Purchase orders have no detail screen of their own, so files hang off the list row — and the
+  // same action serves work orders, which keeps one place to look for an order's paperwork.
+  const [filesFor, setFilesFor] = useState<OrderListItem | null>(null)
   const [err,      setErr]      = useState('')
 
   const { data: capabilities } = useApiData<OrderCapabilities>({
@@ -168,6 +173,10 @@ export function OrdersPage() {
                             <CheckCircle className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        <button onClick={() => setFilesFor(o)} title="Attachments"
+                          className="p-1 text-content-muted hover:text-primary hover:bg-primary/10 rounded transition-colors">
+                          <Paperclip className="w-3.5 h-3.5" />
+                        </button>
                         {/* Line-level receipt history: work orders carry resource lines that
                             stock-in books against, so only they have a history to show. */}
                         {isWork && (
@@ -209,6 +218,14 @@ export function OrdersPage() {
       )}
       {itemsFor && (
         <ItemsModal wo={itemsFor} onClose={() => setItemsFor(null)} />
+      )}
+      {filesFor && (
+        <Modal open onClose={() => setFilesFor(null)} title={`Attachments — ${filesFor.orderNo}`} size="md">
+          <AttachmentPanel
+            entityType={filesFor.orderType === 'Work' ? 'WorkOrder' : 'PurchaseOrder'}
+            entityId={filesFor.id}
+          />
+        </Modal>
       )}
       {billsFor && (
         <BillsModal wo={billsFor} onClose={() => setBillsFor(null)} onChanged={invalidate} />

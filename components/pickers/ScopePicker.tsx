@@ -53,8 +53,10 @@ export function ScopePicker({ value, onChange, mode = 'form', className }: {
   value: ScopeValue
   onChange: (next: ScopeValue) => void
   /** 'form' requires a project and disables each child until its parent is set.
-   *  'filter' offers "All …" options and never disables. */
-  mode?: 'form' | 'filter'
+   *  'filter' offers "All …" options and never disables.
+   *  'inline' is 'form' semantics with no labels, wrapper or hint — four bare selects for a
+   *  table row, where there is no space for the labelled grid. */
+  mode?: 'form' | 'filter' | 'inline'
   className?: string
 }) {
   const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
@@ -62,7 +64,9 @@ export function ScopePicker({ value, onChange, mode = 'form', className }: {
   const { data: floors = [] }   = useApiData<Floor[]>({ url: '/floors', queryKey: ['floors-list'] })
   const { data: units = [] }    = useApiData<Unit[]>({ url: '/units', queryKey: ['units-list'] })
 
-  const isForm = mode === 'form'
+  // 'inline' shares every rule with 'form' — required project, cascade disabling, "Whole project"
+  // wording — and differs only in what wraps the selects, which is decided at the return below.
+  const isForm = mode === 'form' || mode === 'inline'
 
   // In filter mode an unset parent shows everything, so you can narrow by floor without
   // first picking a block. In form mode the child is disabled until its parent is chosen.
@@ -80,7 +84,10 @@ export function ScopePicker({ value, onChange, mode = 'form', className }: {
 
   const set = (patch: Partial<ScopeValue>) => onChange({ ...value, ...patch })
 
-  const selectCls = isForm ? undefined : 'min-w-[150px]'
+  const selectCls =
+    mode === 'inline' ? className
+  : mode === 'filter' ? 'min-w-[150px]'
+  :                     undefined
 
   const project = (
     <Select
@@ -137,7 +144,8 @@ export function ScopePicker({ value, onChange, mode = 'form', className }: {
     </Select>
   )
 
-  if (!isForm) return <>{project}{block}{floor}{unit}</>
+  // Both 'filter' and 'inline' hand back bare selects; the caller owns the layout.
+  if (mode !== 'form') return <>{project}{block}{floor}{unit}</>
 
   return (
     <div className={className}>

@@ -21,6 +21,8 @@ interface WorkOrderResourceLine {
   unit: string; quantity: number; receivedQty: number
 }
 interface WorkOrder { id: number; workOrderNo: string; projectName: string; status: string; resources?: WorkOrderResourceLine[] }
+interface PoLine { id: number; resourceId: number; resourceName: string; qty: number; receivedQty?: number; unitPrice: number }
+interface PurchaseOrderRow { id: number; poNumber: string; status: string; projectName?: string | null; items: PoLine[] }
 interface StockTxn {
   id: number; resourceName: string; unit: string; transactionType: string
   qty: number; unitCost: number; totalCost: number
@@ -33,16 +35,28 @@ function isoToday() { return new Date().toISOString().split('T')[0] }
 const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
 const lbl = 'block text-sm font-medium text-content mb-1'
 
+/** Which document the delivery arrived against. One of the two is always required. */
+type ReceiptAgainst = 'WorkOrder' | 'PurchaseOrder'
+
 const schema = z.object({
+  against:         z.enum(['WorkOrder', 'PurchaseOrder']),
   resourceId:      z.coerce.number().min(1, 'Required'),
   warehouseId:     z.coerce.number().optional(),
-  workOrderId:     z.coerce.number().min(1, 'Required'),
+  workOrderId:     z.coerce.number().optional(),
+  purchaseOrderItemId: z.coerce.number().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   unitCost:        z.coerce.number().min(0, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
   notes:           z.string().optional(),
 })
+  .refine(d => d.against !== 'WorkOrder' || !!d.workOrderId, {
+    message: 'Required', path: ['workOrderId'],
+  })
+  .refine(d => d.against !== 'PurchaseOrder' || !!d.purchaseOrderItemId, {
+    message: 'Select the purchase order line this delivery is against.',
+    path: ['purchaseOrderItemId'],
+  })
 type Form = z.infer<typeof schema>
 
 function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
@@ -54,8 +68,25 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
   const [category, setCategory] = useState('')
   const { register, handleSubmit, setValue, watch, resetField, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { transactionDate: isoToday() },
+    defaultValues: { transactionDate: isoToday(), against: 'PurchaseOrder' },
   })
+
+  const against = watch('against') ?? 'PurchaseOrder'
+  const fromPo  = against === 'PurchaseOrder'
+
+  // Approved/received orders with something still outstanding. Receiving a purchase order used to
+  // be impossible — stock-in demanded a work order that budgeted the same material.
+  const { data: purchaseOrders = [] } = useApiData<PurchaseOrderRow[]>({
+    url: '/purchase-orders',
+    queryKey: ['stockin-po-lines'],
+    enabled: fromPo,
+  })
+  const poLines = purchaseOrders
+    .filter(po => po.status === 'Approved' || po.status === 'Received')
+    .flatMap(po => po.items.map(i => ({
+      ...i, poNumber: po.poNumber, pending: i.qty - (i.receivedQty ?? 0),
+    })))
+    .filter(l => l.pending > 0)
 
   // A budget line is receivable when it links a stock-tracked material master and isn't fully
   // received yet. Equipment/Service/Labour lines never enter inventory — the backend rejects them.
@@ -80,10 +111,13 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
   const onSubmit = async (d: Form) => {
     setSaving(true); setErr('')
     try {
+      // Only the chosen document is sent — carrying both over would attach the delivery to a
+      // stale order the user switched away from.
       const payload = {
         ...d,
         warehouseId: d.warehouseId ? Number(d.warehouseId) : undefined,
-        workOrderId: d.workOrderId ? Number(d.workOrderId) : undefined,
+        workOrderId: !fromPo && d.workOrderId ? Number(d.workOrderId) : undefined,
+        purchaseOrderItemId: fromPo && d.purchaseOrderItemId ? Number(d.purchaseOrderItemId) : undefined,
       }
       await api.post('/stock-transactions/in', payload)
       onSaved(); onClose()
@@ -96,29 +130,96 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
     <Modal open onClose={onClose} title="Stock In (Goods Received)" size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
+        {/* Every receipt names the document it arrived against. Requiring a WORK order
+            specifically is what used to make a purchase order impossible to receive. */}
         <div>
-          <label className={lbl}>Work Order <span className="text-danger">*</span></label>
-          <Select {...register('workOrderId', {
-            onChange: () => {
-              // Reset the category and material when the work order changes so a stale
-              // selection can't survive.
-              setCategory('')
-              resetField('resourceId')
-            },
-          })}>
-            <option value="">Select work order</option>
-            {selectableWorkOrders.map(w => <option key={w.id} value={w.id}>{w.workOrderNo} — {w.projectName}</option>)}
-          </Select>
-          {/* An empty dropdown with no explanation is how "no material can be received at all"
-              went unnoticed — say which precondition is missing. */}
-          {selectableWorkOrders.length === 0 && (
-            <p className="text-xs text-warning mt-1">
-              No Active work order has unreceived material lines. Add material lines to a work order and
-              approve it before receiving stock.
-            </p>
-          )}
-          {errors.workOrderId && <p className="text-xs text-danger mt-1">{errors.workOrderId.message}</p>}
+          <label className={lbl}>Received Against <span className="text-danger">*</span></label>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { key: 'PurchaseOrder', title: 'Purchase Order', blurb: 'Goods bought from a supplier' },
+              { key: 'WorkOrder',     title: 'Work Order',     blurb: 'Material budgeted on a contract' },
+            ] as { key: ReceiptAgainst; title: string; blurb: string }[]).map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  setValue('against', opt.key, { shouldValidate: false })
+                  setCategory('')
+                  for (const k of ['resourceId', 'workOrderId', 'purchaseOrderItemId'] as const)
+                    setValue(k, undefined as any, { shouldValidate: false })
+                }}
+                className={`text-left border rounded-lg p-2.5 transition-colors ${
+                  against === opt.key
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border-default hover:border-primary/50'
+                }`}
+              >
+                <span className="block text-sm font-medium text-content">{opt.title}</span>
+                <span className="block text-xs text-content-muted">{opt.blurb}</span>
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-content-muted mt-1">
+            Opening balances and stock-take corrections go through{' '}
+            <a href="/inventory/adjustment" className="underline">Stock Adjustment</a> instead.
+          </p>
         </div>
+
+        {fromPo ? (
+          <div>
+            <label className={lbl}>Purchase Order Line <span className="text-danger">*</span></label>
+            <Select {...register('purchaseOrderItemId', {
+              onChange: e => {
+                // The line fixes both the material and the price that was agreed for it.
+                const line = poLines.find(l => l.id === Number(e.target.value))
+                setValue('resourceId', (line?.resourceId ?? undefined) as any, { shouldValidate: false })
+                if (line) setValue('unitCost', line.unitPrice as any, { shouldValidate: false })
+              },
+            })}>
+              <option value="">Select PO line</option>
+              {poLines.map(l => (
+                <option key={l.id} value={l.id}>
+                  {l.poNumber} · {l.resourceName} — {l.pending.toLocaleString()} pending @ {fmt(l.unitPrice)}
+                </option>
+              ))}
+            </Select>
+            {poLines.length === 0 && (
+              <p className="text-xs text-warning mt-1">
+                No approved purchase order has anything outstanding to receive.
+              </p>
+            )}
+            {errors.purchaseOrderItemId && (
+              <p className="text-xs text-danger mt-1">{errors.purchaseOrderItemId.message}</p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <label className={lbl}>Work Order <span className="text-danger">*</span></label>
+            <Select {...register('workOrderId', {
+              onChange: () => {
+                // Reset the category and material when the work order changes so a stale
+                // selection can't survive.
+                setCategory('')
+                resetField('resourceId')
+              },
+            })}>
+              <option value="">Select work order</option>
+              {selectableWorkOrders.map(w => <option key={w.id} value={w.id}>{w.workOrderNo} — {w.projectName}</option>)}
+            </Select>
+            {/* An empty dropdown with no explanation is how "no material can be received at all"
+                went unnoticed — say which precondition is missing. */}
+            {selectableWorkOrders.length === 0 && (
+              <p className="text-xs text-warning mt-1">
+                No Active work order has unreceived material lines. Add material lines to a work order and
+                approve it before receiving stock.
+              </p>
+            )}
+            {errors.workOrderId && <p className="text-xs text-danger mt-1">{errors.workOrderId.message}</p>}
+          </div>
+        )}
+        {/* On the purchase-order path the line already fixes the material, so these two are only
+            the work-order path's way of narrowing to a budgeted line. */}
+        {!fromPo && (
         <div>
           <label className={lbl}>Resource Category</label>
           <Select value={category} disabled={!selectedWorkOrder}
@@ -127,6 +228,8 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
             {categories.map(c => <option key={c} value={c}>{c}</option>)}
           </Select>
         </div>
+        )}
+        {!fromPo && (
         <div>
           <label className={lbl}>Material <span className="text-danger">*</span></label>
           <Select {...register('resourceId', {
@@ -146,6 +249,7 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
             <p className="text-xs text-content-muted mt-1">This work order has no budgeted materials linked to the material master.</p>}
           {errors.resourceId && <p className="text-xs text-danger mt-1">{errors.resourceId.message}</p>}
         </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={lbl}>Warehouse</label>

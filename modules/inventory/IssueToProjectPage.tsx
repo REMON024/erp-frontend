@@ -15,6 +15,9 @@ import { ScopePicker } from '@/components/pickers/ScopePicker'
 import api from '@/lib/api'
 
 interface BudgetLine { resourceId: number; budgetedQty: number; issuedQty: number; unit: string }
+interface PoLine { id: number; resourceId: number; resourceName: string; qty: number; receivedQty?: number; unitPrice: number }
+interface PurchaseOrderRow { id: number; poNumber: string; status: string; items: PoLine[] }
+interface WorkOrderRow { id: number; orderNo: string; scope?: string | null }
 interface StockBalanceRow { warehouseId: number | null; balance: number }
 interface MaterialRollup { resourceId: number; resourceName: string; unit: string; category?: string | null; warehouses: StockBalanceRow[] }
 interface StockTxn {
@@ -28,8 +31,18 @@ function isoToday() { return new Date().toISOString().split('T')[0] }
 const inp = 'w-full border border-border-default rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none'
 const lbl = 'block text-sm font-medium text-content mb-1'
 
+/**
+ * Where the goods come from. A work order is not a source — it says which contract the
+ * consumption is charged against, so it applies to either of these.
+ */
+type IssueSource = 'Stock' | 'PurchaseOrder'
+
 const schema = z.object({
-  warehouseId:     z.coerce.number().min(1, 'Required'),
+  source:          z.enum(['Stock', 'PurchaseOrder']),
+  // Only a draw from the store has a warehouse; a direct delivery never enters one.
+  warehouseId:     z.coerce.number().optional(),
+  purchaseOrderItemId: z.coerce.number().optional(),
+  workOrderId:     z.coerce.number().optional(),
   resourceId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
   // Which part of the project consumed the material. Required unless the issue is declared
@@ -43,10 +56,19 @@ const schema = z.object({
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
   notes:           z.string().optional(),
-}).refine(d => d.projectWide || d.blockId || d.floorId || d.unitId, {
-  message: 'Pick the block, floor or unit that consumed this — or tick "Project-wide".',
-  path: ['blockId'],
 })
+  .refine(d => d.projectWide || d.blockId || d.floorId || d.unitId || d.workOrderId, {
+    // A work order carries its own scope, so naming one satisfies this too.
+    message: 'Pick the block, floor or unit that consumed this — or tick "Project-wide".',
+    path: ['blockId'],
+  })
+  .refine(d => d.source !== 'Stock' || !!d.warehouseId, {
+    message: 'Required', path: ['warehouseId'],
+  })
+  .refine(d => d.source !== 'PurchaseOrder' || !!d.purchaseOrderItemId, {
+    message: 'Select the purchase order line this delivery is against.',
+    path: ['purchaseOrderItemId'],
+  })
 type Form = z.infer<typeof schema>
 
 function IssueModal({ warehouses, onClose, onSaved }: {
@@ -58,13 +80,40 @@ function IssueModal({ warehouses, onClose, onSaved }: {
   const [category, setCategory] = useState('')
   const { register, handleSubmit, watch, setValue, resetField, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
-    defaultValues: { transactionDate: isoToday() },
+    defaultValues: { transactionDate: isoToday(), source: 'Stock' },
   })
 
+  const source       = watch('source') ?? 'Stock'
+  const fromPo       = source === 'PurchaseOrder'
   const watchedWh    = Number(watch('warehouseId'))
   const watchedMat   = Number(watch('resourceId'))
   const watchedProj  = Number(watch('projectId'))
   const watchedQty   = Number(watch('qty')) || 0
+  const watchedPoLine = Number(watch('purchaseOrderItemId'))
+
+  // Approved/received orders on the chosen project, with the pending qty per line — a direct
+  // delivery can only be booked against a line that still has something outstanding.
+  const { data: purchaseOrders = [] } = useApiData<PurchaseOrderRow[]>({
+    url: '/purchase-orders',
+    params: { projectId: watchedProj || undefined },
+    queryKey: ['issue-po-lines', String(watchedProj)],
+    enabled: fromPo && !!watchedProj,
+  })
+  const poLines = purchaseOrders
+    .filter(po => po.status === 'Approved' || po.status === 'Received')
+    .flatMap(po => po.items.map(i => ({
+      ...i, poNumber: po.poNumber, pending: i.qty - (i.receivedQty ?? 0),
+    })))
+    .filter(l => l.pending > 0)
+  const selectedPoLine = poLines.find(l => l.id === watchedPoLine)
+
+  // Attribution is optional and independent of the source, so this loads for both.
+  const { data: workOrders = [] } = useApiData<WorkOrderRow[]>({
+    url: '/orders',
+    params: { type: 'Work', status: 'Active', projectId: watchedProj || undefined },
+    queryKey: ['issue-work-orders', String(watchedProj)],
+    enabled: !!watchedProj,
+  })
 
   // Per-warehouse stock for the selected warehouse; drives the material list and "Available".
   const { data: rollups = [] } = useApiData<MaterialRollup[]>({
@@ -108,41 +157,119 @@ function IssueModal({ warehouses, onClose, onSaved }: {
     <Modal open onClose={onClose} title="Issue Material to Project" size="md">
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4">
         {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
+        {/* Where the goods come from. Straight from the supplier they never enter the store, so
+            they carry the order's price rather than the warehouse's weighted average. */}
         <div>
-          <label className={lbl}>Warehouse <span className="text-danger">*</span></label>
-          <Select {...register('warehouseId', {
-            onChange: () => { setCategory(''); resetField('resourceId') },
-          })}>
-            <option value="">Select warehouse</option>
-            {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </Select>
-          {errors.warehouseId && <p className="text-xs text-danger mt-1">{errors.warehouseId.message}</p>}
-        </div>
-        <div>
-          <label className={lbl}>Resource Category</label>
-          <Select value={category} disabled={!watchedWh}
-            onChange={e => { setCategory(e.target.value); resetField('resourceId') }}>
-            <option value="">All categories</option>
-            {categories.map(c => <option key={c} value={c}>{c}</option>)}
-          </Select>
-        </div>
-        <div>
-          <label className={lbl}>Material <span className="text-danger">*</span></label>
-          <Select {...register('resourceId')} disabled={!watchedWh}>
-            <option value="">{watchedWh ? 'Select material' : 'Select a warehouse first'}</option>
-            {availableMaterials.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.name}{m.category ? ` · ${m.category}` : ''} — {m.balance.toLocaleString()} {m.unit} available
-              </option>
+          <label className={lbl}>Source <span className="text-danger">*</span></label>
+          <div className="grid grid-cols-2 gap-2">
+            {([
+              { key: 'Stock',         title: 'From Stock',      blurb: 'Draw from a warehouse balance' },
+              { key: 'PurchaseOrder', title: 'Direct from PO',  blurb: 'Supplier delivers to site' },
+            ] as { key: IssueSource; title: string; blurb: string }[]).map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => {
+                  setValue('source', opt.key, { shouldValidate: false })
+                  // Each source owns different fields; carrying one over into the other is how a
+                  // stale warehouse or PO line ends up on the request.
+                  setCategory('')
+                  for (const k of ['resourceId', 'warehouseId', 'purchaseOrderItemId'] as const)
+                    setValue(k, undefined as any, { shouldValidate: false })
+                }}
+                className={`text-left border rounded-lg p-2.5 transition-colors ${
+                  source === opt.key
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border-default hover:border-primary/50'
+                }`}
+              >
+                <span className="block text-sm font-medium text-content">{opt.title}</span>
+                <span className="block text-xs text-content-muted">{opt.blurb}</span>
+              </button>
             ))}
-          </Select>
-          {watchedWh && availableMaterials.length === 0 &&
-            <p className="text-xs text-content-muted mt-1">No materials in stock in this warehouse.</p>}
-          {errors.resourceId && <p className="text-xs text-danger mt-1">{errors.resourceId.message}</p>}
+          </div>
         </div>
-        {selectedMat && (
-          <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
-            Available: <strong>{selectedMat.balance.toLocaleString()} {selectedMat.unit}</strong>
+
+        {!fromPo && (
+          <>
+            <div>
+              <label className={lbl}>Warehouse <span className="text-danger">*</span></label>
+              <Select {...register('warehouseId', {
+                onChange: () => { setCategory(''); resetField('resourceId') },
+              })}>
+                <option value="">Select warehouse</option>
+                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </Select>
+              {errors.warehouseId && <p className="text-xs text-danger mt-1">{errors.warehouseId.message}</p>}
+            </div>
+            <div>
+              <label className={lbl}>Resource Category</label>
+              <Select value={category} disabled={!watchedWh}
+                onChange={e => { setCategory(e.target.value); resetField('resourceId') }}>
+                <option value="">All categories</option>
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </Select>
+            </div>
+            <div>
+              <label className={lbl}>Material <span className="text-danger">*</span></label>
+              <Select {...register('resourceId')} disabled={!watchedWh}>
+                <option value="">{watchedWh ? 'Select material' : 'Select a warehouse first'}</option>
+                {availableMaterials.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}{m.category ? ` · ${m.category}` : ''} — {m.balance.toLocaleString()} {m.unit} available
+                  </option>
+                ))}
+              </Select>
+              {watchedWh && availableMaterials.length === 0 &&
+                <p className="text-xs text-content-muted mt-1">No materials in stock in this warehouse.</p>}
+              {errors.resourceId && <p className="text-xs text-danger mt-1">{errors.resourceId.message}</p>}
+            </div>
+            {selectedMat && (
+              <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
+                Available: <strong>{selectedMat.balance.toLocaleString()} {selectedMat.unit}</strong>
+              </div>
+            )}
+          </>
+        )}
+
+        {fromPo && (
+          <div>
+            <label className={lbl}>Purchase Order Line <span className="text-danger">*</span></label>
+            {/* The material comes from the chosen line, so it is never picked separately here. */}
+            <Select
+              {...register('purchaseOrderItemId', {
+                onChange: e => {
+                  const line = poLines.find(l => l.id === Number(e.target.value))
+                  setValue('resourceId', (line?.resourceId ?? undefined) as any, { shouldValidate: false })
+                },
+              })}
+              disabled={!watchedProj}
+            >
+              <option value="">{watchedProj ? 'Select PO line' : 'Choose the project first'}</option>
+              {poLines.map(l => (
+                <option key={l.id} value={l.id}>
+                  {l.poNumber} · {l.resourceName} — {l.pending.toLocaleString()} pending @ {fmt(l.unitPrice)}
+                </option>
+              ))}
+            </Select>
+            {watchedProj && poLines.length === 0 && (
+              <p className="text-xs text-content-muted mt-1">
+                No approved purchase order on this project has anything outstanding.
+              </p>
+            )}
+            {errors.purchaseOrderItemId && (
+              <p className="text-xs text-danger mt-1">{errors.purchaseOrderItemId.message}</p>
+            )}
+            {selectedPoLine && (
+              <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted mt-2">
+                Pending: <strong>{selectedPoLine.pending.toLocaleString()}</strong> ·
+                {' '}Unit price <strong>{fmt(selectedPoLine.unitPrice)}</strong>
+                <span className="block mt-0.5">
+                  Goes straight to site — stock levels are unaffected and the order's price is used,
+                  not the store's average.
+                </span>
+              </div>
+            )}
           </div>
         )}
         <div className="rounded-lg border border-border-default p-3">
@@ -190,6 +317,27 @@ function IssueModal({ warehouses, onClose, onSaved }: {
           </label>
           {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
           {errors.blockId   && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
+
+          {/* Attribution, not a source: it charges the consumption against the order's material
+              budget and supplies the scope when none is picked above. */}
+          <div className="mt-3">
+            <label className={lbl}>
+              Against Work Order
+              <span className="text-xs text-content-muted font-normal"> — optional</span>
+            </label>
+            <Select {...register('workOrderId')} disabled={!watchedProj}>
+              <option value="">{watchedProj ? 'Not against a work order' : 'Choose the project first'}</option>
+              {workOrders.map(w => (
+                <option key={w.id} value={w.id}>
+                  {w.orderNo}{w.scope ? ` — ${w.scope}` : ''}
+                </option>
+              ))}
+            </Select>
+            <p className="text-xs text-content-muted mt-1">
+              Draws down that order's material budget. The material must be budgeted on it, and its
+              block/floor/unit is used when none is chosen above.
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>

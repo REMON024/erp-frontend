@@ -17,6 +17,7 @@ import { Table, TH, TR, TD } from '@/components/ui/Table'
 import { StatCard } from '@/components/ui/Card'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { PermissionGate } from '@/components/ui/PermissionGate'
+import { AttachmentPanel } from '@/components/pickers/AttachmentPanel'
 import { RESOURCE_TYPES, type Resource, type ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -341,6 +342,10 @@ function EstimateModal({ estimate, onClose, onSaved }: {
         )}
 
         <BOQEditor items={items} onChange={setItems} />
+
+        {/* Only on an existing estimate — a file needs a record to hang off, and the panel says so
+            rather than silently dropping the upload. */}
+        <AttachmentPanel entityType="CostEstimate" entityId={estimate?.id} />
 
         {totalEstimated > 0 && (
           <div className="bg-primary/10 border border-info/20 rounded-lg px-4 py-2 flex justify-between text-sm">

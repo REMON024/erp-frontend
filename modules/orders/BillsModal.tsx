@@ -7,6 +7,7 @@ import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { Plus, CreditCard } from 'lucide-react'
 import api from '@/lib/api'
+import { AttachmentPanel } from '@/components/pickers/AttachmentPanel'
 import { type OrderListItem, fmt, isoToday, inp, lbl } from './types'
 
 // Progress billing, retention and advance recovery belong to work orders only — a purchase
@@ -156,6 +157,9 @@ export function BillsModal({ wo, onClose, onChanged }: {
             <span>Contract: <strong>{fmt(wo.amount)}</strong></span>
             <span>Retention: <strong>{retentionPercent}%</strong></span>
           </div>
+
+          {/* The signed work order, variation letters, site photographs. */}
+          <AttachmentPanel entityType="WorkOrder" entityId={wo.id} />
 
           {err && <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">{err}</p>}
 

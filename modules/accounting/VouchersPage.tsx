@@ -10,10 +10,13 @@ import { DataState } from '@/components/ui/DataState'
 import { PermissionGate } from '@/components/ui/PermissionGate'
 import { useApiData } from '@/hooks/useApiData'
 import { useForm, useFieldArray } from 'react-hook-form'
+import { ScopePicker, type ScopeValue } from '@/components/pickers/ScopePicker'
+import { AttachmentPanel } from '@/components/pickers/AttachmentPanel'
+import { ResourcePicker } from '@/components/pickers/ResourcePicker'
 import { Plus, Trash2, CheckCircle, AlertCircle, Eye } from 'lucide-react'
 import api from '@/lib/api'
 
-interface Account { id: number; accountCode: string; accountName: string; isPosting: boolean }
+interface Account { id: number; accountCode: string; accountName: string; isPosting: boolean; accountType: string }
 interface VLine {
   id: number; accountId: number; accountCode: string; accountName: string
   projectId?: number; debitAmount: number; creditAmount: number; description?: string
@@ -50,6 +53,10 @@ function ViewModal({ voucher, onClose }: { voucher: Voucher; onClose: () => void
           </div>
         </div>
         {voucher.narration && <p className="text-sm text-content-muted bg-surface-muted rounded-lg px-3 py-2">{voucher.narration}</p>}
+
+        {/* The bill, receipt or challan behind the entry — the supporting document an auditor asks
+            for when a voucher is questioned. */}
+        <AttachmentPanel entityType="Voucher" entityId={voucher.id} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px] text-sm border border-border-default rounded-lg overflow-hidden">
             <thead className="bg-surface-muted">
@@ -83,24 +90,33 @@ function ViewModal({ voucher, onClose }: { voucher: Voucher; onClose: () => void
 }
 
 // ── New voucher modal ──────────────────────────────────────────────────────────
+interface NewLine {
+  accountId: string; debit: string; credit: string; description: string
+  // Which part of the build bore this cost. Left shallow the amount is shared and the rollup
+  // apportions it down by area; pinned to a unit it is charged there directly.
+  projectId: string; blockId: string; floorId: string; unitId: string
+  /** Optional BOQ resource, so the spend lands on its own estimate line instead of being spread. */
+  resourceId: string
+}
 interface NewForm {
   voucherType: string; voucherDate: string; referenceNo: string; narration: string
-  lines: { accountId: string; projectId: string; debit: string; credit: string; description: string }[]
+  lines: NewLine[]
 }
-interface Project { id: number; projectCode: string; projectName: string }
+
+const emptyLine = (): NewLine => ({
+  accountId: '', debit: '', credit: '', description: '',
+  projectId: '', blockId: '', floorId: '', unitId: '', resourceId: '',
+})
 
 function NewVoucherModal({ accounts, onClose, onSaved }: {
   accounts: Account[]; onClose: () => void; onSaved: () => void
 }) {
   const [err, setErr] = useState('')
   const [saving, setSaving] = useState(false)
-  const { register, control, handleSubmit, watch } = useForm<NewForm>({
+  const { register, control, handleSubmit, watch, setValue } = useForm<NewForm>({
     defaultValues: {
       voucherType: 'JV', voucherDate: isoToday(), referenceNo: '', narration: '',
-      lines: [
-        { accountId: '', projectId: '', debit: '', credit: '', description: '' },
-        { accountId: '', projectId: '', debit: '', credit: '', description: '' },
-      ],
+      lines: [emptyLine(), emptyLine()],
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'lines' })
@@ -109,7 +125,7 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
   const totalCredit = lines.reduce((s, l) => s + (parseFloat(l.credit) || 0), 0)
   const balanced = totalDebit > 0 && Math.round(totalDebit * 100) === Math.round(totalCredit * 100)
 
-  const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+  // No projects fetch here — ScopePicker pulls the list itself off the shared cache key.
 
   const onSubmit = async (d: NewForm) => {
     if (!balanced) { setErr('Debit and credit totals must be equal and non-zero.'); return }
@@ -123,6 +139,10 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
         lines: validLines.map(l => ({
           accountId:    Number(l.accountId),
           projectId:    l.projectId ? Number(l.projectId) : undefined,
+          blockId:      l.blockId   ? Number(l.blockId)   : undefined,
+          floorId:      l.floorId   ? Number(l.floorId)   : undefined,
+          unitId:       l.unitId    ? Number(l.unitId)    : undefined,
+          resourceId:   l.resourceId ? Number(l.resourceId) : undefined,
           debitAmount:  parseFloat(l.debit) || 0,
           creditAmount: parseFloat(l.credit) || 0,
           description:  l.description || undefined,
@@ -135,6 +155,26 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
   }
 
   const postingAccounts = accounts.filter(a => a.isPosting)
+  const expenseAccountIds = new Set(accounts.filter(a => a.accountType === 'Expense').map(a => a.id))
+
+  // Only an expense debit against a named project can reach a BOQ line, which is exactly what the
+  // server enforces — so offer the resource picker on those lines and nowhere else.
+  const canTagResource = (l: NewLine) =>
+    !!l.projectId && expenseAccountIds.has(Number(l.accountId)) && (parseFloat(l.debit) || 0) > 0
+
+  const scopeOf = (l: NewLine): ScopeValue => ({
+    projectId: l.projectId, blockId: l.blockId, floorId: l.floorId, unitId: l.unitId,
+  })
+
+  const setScope = (i: number, next: ScopeValue) => {
+    setValue(`lines.${i}.projectId`, next.projectId)
+    setValue(`lines.${i}.blockId`,   next.blockId)
+    setValue(`lines.${i}.floorId`,   next.floorId)
+    setValue(`lines.${i}.unitId`,    next.unitId)
+    // A resource is only meaningful with a project behind it; clearing the project must not leave
+    // a tag the server will reject.
+    if (!next.projectId) setValue(`lines.${i}.resourceId`, '')
+  }
 
   return (
     <Modal open onClose={onClose} title="New Voucher Entry" size="lg">
@@ -168,23 +208,26 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-content">Transaction Lines</label>
-            <button type="button" onClick={() => append({ accountId: '', projectId: '', debit: '', credit: '', description: '' })}
+            <button type="button" onClick={() => append(emptyLine())}
               className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Add Line</button>
           </div>
           <div className="border border-border-default rounded-lg overflow-x-auto">
-            <table className="w-full min-w-[700px] text-xs">
+            <table className="w-full min-w-[1200px] text-xs">
               <thead className="bg-surface-muted border-b border-border-default">
                 <tr>
-                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[28%]">Account</th>
-                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[18%]">Project</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[18%]">Account</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[30%]">Scope</th>
+                  <th className="px-2 py-2 text-left font-semibold text-content-muted w-[16%]">Budget Line</th>
                   <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
-                  <th className="px-2 py-2 text-right font-semibold text-content-muted w-[14%]">Debit</th>
-                  <th className="px-2 py-2 text-right font-semibold text-content-muted w-[14%]">Credit</th>
+                  <th className="px-2 py-2 text-right font-semibold text-content-muted w-[12%]">Debit</th>
+                  <th className="px-2 py-2 text-right font-semibold text-content-muted w-[12%]">Credit</th>
                   <th className="px-2 py-2 w-8" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-default">
-                {fields.map((field, i) => (
+                {fields.map((field, i) => {
+                  const line = lines[i] ?? emptyLine()
+                  return (
                   <tr key={field.id}>
                     <td className="px-2 py-1.5">
                       <Select {...register(`lines.${i}.accountId`)} className="text-xs py-1.5">
@@ -193,10 +236,30 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
                       </Select>
                     </td>
                     <td className="px-2 py-1.5">
-                      <Select {...register(`lines.${i}.projectId`)} className="text-xs py-1.5">
-                        <option value="">— None —</option>
-                        {projects.map(p => <option key={p.id} value={p.id}>{p.projectCode}</option>)}
-                      </Select>
+                      {/* Leave a level blank to cover everything below it — the rollup then shares
+                          that cost down to the flats by area. */}
+                      <div className="flex flex-wrap gap-1">
+                        <ScopePicker
+                          value={scopeOf(line)}
+                          onChange={next => setScope(i, next)}
+                          mode="inline"
+                          className="text-xs py-1.5 min-w-[92px] flex-1"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      {canTagResource(line) ? (
+                        <ResourcePicker
+                          value={line.resourceId ? Number(line.resourceId) : ''}
+                          onChange={id => setValue(`lines.${i}.resourceId`, id ? String(id) : '')}
+                          placeholder="Spread across BOQ"
+                          className="text-xs py-1.5"
+                        />
+                      ) : (
+                        <span className="text-[11px] text-content-muted/70">
+                          Expense debit on a project only
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-1.5"><input {...register(`lines.${i}.description`)} className={inp + ' text-xs py-1.5'} placeholder="Note…" /></td>
                     <td className="px-2 py-1.5 text-right"><input type="number" step="any" {...register(`lines.${i}.debit`)} className={inp + ' text-xs py-1.5 text-right tabular-nums'} placeholder="0" /></td>
@@ -205,11 +268,12 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
                       {fields.length > 2 && <button type="button" onClick={() => remove(i)} className="text-content-muted/50 hover:text-danger"><Trash2 className="w-3.5 h-3.5" /></button>}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
               <tfoot className="bg-surface-muted border-t border-border-default">
                 <tr>
-                  <td colSpan={3} className="px-2 py-2 text-xs font-semibold text-content-muted">Total</td>
+                  <td colSpan={4} className="px-2 py-2 text-xs font-semibold text-content-muted">Total</td>
                   <td className="px-2 py-2 text-xs font-bold text-content text-right tabular-nums">{fmt(totalDebit)}</td>
                   <td className="px-2 py-2 text-xs font-bold text-content text-right tabular-nums">{fmt(totalCredit)}</td>
                   <td />

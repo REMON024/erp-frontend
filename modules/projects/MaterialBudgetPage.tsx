@@ -207,7 +207,9 @@ export function MaterialBudgetPage() {
                   <div className="flex items-center justify-between px-4 py-3 bg-surface-muted border-b border-border-default">
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${catColor(category)}`}>{category}</span>
-                      <span className="text-xs text-content-muted">{items.length} material{items.length !== 1 ? 's' : ''}</span>
+                      {/* "resource", not "material": this report has listed equipment, services
+                          and labour alongside materials since the Resource module landed. */}
+                      <span className="text-xs text-content-muted">{items.length} resource{items.length !== 1 ? 's' : ''}</span>
                     </div>
                     <div className="flex items-center gap-4 text-xs">
                       <span className="text-content-muted">Budget: <span className="font-semibold text-content">{fmt(catBudget)}</span></span>
@@ -224,7 +226,7 @@ export function MaterialBudgetPage() {
                     <table className="w-full min-w-[900px] text-sm">
                       <thead className="bg-surface-muted border-b border-border-default">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-content-muted">Material</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-content-muted">Resource</th>
                           <th className="px-4 py-2 text-left text-xs font-semibold text-content-muted">Unit</th>
                           <th className="px-4 py-2 text-right text-xs font-semibold text-content-muted">Budget Qty</th>
                           <th className="px-4 py-2 text-right text-xs font-semibold text-content-muted">Budget Cost</th>
@@ -254,9 +256,13 @@ export function MaterialBudgetPage() {
                               <td className="px-4 py-2.5 text-content-muted">{item.unit}</td>
                               <td className="px-4 py-2.5 text-right text-content-muted">{fmtQ(item.budgetedQty)}</td>
                               <td className="px-4 py-2.5 text-right font-medium text-content">{fmt(item.budgetedCost)}</td>
-                              <td className="px-4 py-2.5 text-right text-warning">{fmtQ(item.orderedQty)}</td>
-                              <td className="px-4 py-2.5 text-right font-medium text-warning">{fmt(item.committedCost)}</td>
-                              <td className="px-4 py-2.5 text-right text-primary">{fmtQ(item.issuedQty)}</td>
+                              {/* Only materials are bought on a PO or issued from stock, so for
+                                  every other type these are structurally zero — a dash is honest,
+                                  a ৳0 reads as "nothing was spent". Actual Cost still shows,
+                                  because a service's actual comes from the BOQ line instead. */}
+                              <td className="px-4 py-2.5 text-right text-warning">{item.isStockTracked ? fmtQ(item.orderedQty) : '—'}</td>
+                              <td className="px-4 py-2.5 text-right font-medium text-warning">{item.isStockTracked ? fmt(item.committedCost) : '—'}</td>
+                              <td className="px-4 py-2.5 text-right text-primary">{item.isStockTracked ? fmtQ(item.issuedQty) : '—'}</td>
                               <td className="px-4 py-2.5 text-right font-semibold text-primary">{fmt(item.actualCost)}</td>
                               <td className={`px-4 py-2.5 text-right font-semibold ${over ? 'text-danger' : item.variance < 0 ? 'text-success' : 'text-content-muted'}`}>
                                 {item.variance !== 0 ? (item.variance > 0 ? '+' : '') + fmt(item.variance) : '—'}
