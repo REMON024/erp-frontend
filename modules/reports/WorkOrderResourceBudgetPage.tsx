@@ -7,30 +7,30 @@ import { useApiData } from '@/hooks/useApiData'
 
 interface Project { id: number; projectCode: string; projectName: string }
 interface WorkOrder { id: number; workOrderNo: string; projectName: string }
-interface WorkOrderMaterialBudgetRow {
+interface WorkOrderResourceBudgetRow {
   workOrderId: number; workOrderNo: string; projectName: string
   resourceName: string; unit: string
   budgetQty: number; receivedQty: number; remainingQty: number
   unitRate: number; budgetAmount: number; receivedValue: number; receivedPct: number
 }
-interface WorkOrderMaterialBudgetDto {
-  rows: WorkOrderMaterialBudgetRow[]
+interface WorkOrderResourceBudgetDto {
+  rows: WorkOrderResourceBudgetRow[]
   totalBudgetAmount: number; totalReceivedValue: number
 }
 
 function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
 function fmtQ(n: number) { return n.toLocaleString('en-BD', { maximumFractionDigits: 3 }) }
 
-export function WorkOrderMaterialBudgetPage() {
+export function WorkOrderResourceBudgetPage() {
   const [projectId, setProjectId]     = useState('')
   const [workOrderId, setWorkOrderId] = useState('')
 
   const { data: projects = [] }   = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
   const { data: workOrders = [] } = useApiData<WorkOrder[]>({ url: '/work-orders', queryKey: ['work-orders-list'] })
-  const { data, isLoading, error, refetch } = useApiData<WorkOrderMaterialBudgetDto>({
-    url: '/reports/work-order-material-budget',
+  const { data, isLoading, error, refetch } = useApiData<WorkOrderResourceBudgetDto>({
+    url: '/reports/work-order-resource-budget',
     params: { projectId: projectId || undefined, workOrderId: workOrderId || undefined },
-    queryKey: ['work-order-material-budget', projectId, workOrderId],
+    queryKey: ['work-order-resource-budget', projectId, workOrderId],
   })
 
   const totalRemaining = (data?.totalBudgetAmount ?? 0) - (data?.totalReceivedValue ?? 0)

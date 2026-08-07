@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, PackageCheck, AlertTriangle } from 'lucide-react'
-import { ScopePicker } from '@/components/pickers/ScopePicker'
+import { ScopePicker, type ScopeNode } from '@/components/pickers/ScopePicker'
 import api from '@/lib/api'
 
 interface BudgetLine { resourceId: number; budgetedQty: number; issuedQty: number; unit: string }
@@ -37,37 +37,42 @@ const lbl = 'block text-sm font-medium text-content mb-1'
  */
 type IssueSource = 'Stock' | 'PurchaseOrder'
 
+/**
+ * Material is consumed by construction area, so it can only be issued to a node whose level
+ * bears area. Issuing to a mandays or per-bay node would enter area-based allocation with no
+ * area to divide by — the server rejects it, and this keeps it out of the picker too.
+ */
+const areaBearingOnly = (n: ScopeNode) => n.isAreaBearing
+
 const schema = z.object({
   source:          z.enum(['Stock', 'PurchaseOrder']),
   // Only a draw from the store has a warehouse; a direct delivery never enters one.
   warehouseId:     z.coerce.number().optional(),
-  purchaseOrderItemId: z.coerce.number().optional(),
+  orderLineId: z.coerce.number().optional(),
   workOrderId:     z.coerce.number().optional(),
   resourceId:      z.coerce.number().min(1, 'Required'),
   projectId:       z.coerce.number().min(1, 'Required'),
   // Which part of the project consumed the material. Required unless the issue is declared
   // project-wide: the scope is write-once, so an unattributed issue can never afterwards be
   // traced back to the flat it was spent on.
-  blockId:         z.coerce.number().optional(),
-  floorId:         z.coerce.number().optional(),
-  unitId:          z.coerce.number().optional(),
+  nodeId:          z.coerce.number().optional(),
   projectWide:     z.boolean().optional(),
   qty:             z.coerce.number().min(0.01, 'Required'),
   transactionDate: z.string().min(1, 'Required'),
   referenceNo:     z.string().optional(),
   notes:           z.string().optional(),
 })
-  .refine(d => d.projectWide || d.blockId || d.floorId || d.unitId || d.workOrderId, {
+  .refine(d => d.projectWide || d.nodeId || d.workOrderId, {
     // A work order carries its own scope, so naming one satisfies this too.
-    message: 'Pick the block, floor or unit that consumed this — or tick "Project-wide".',
-    path: ['blockId'],
+    message: 'Pick the part of the project that consumed this — or tick "Project-wide".',
+    path: ['nodeId'],
   })
   .refine(d => d.source !== 'Stock' || !!d.warehouseId, {
     message: 'Required', path: ['warehouseId'],
   })
-  .refine(d => d.source !== 'PurchaseOrder' || !!d.purchaseOrderItemId, {
+  .refine(d => d.source !== 'PurchaseOrder' || !!d.orderLineId, {
     message: 'Select the purchase order line this delivery is against.',
-    path: ['purchaseOrderItemId'],
+    path: ['orderLineId'],
   })
 type Form = z.infer<typeof schema>
 
@@ -89,7 +94,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
   const watchedMat   = Number(watch('resourceId'))
   const watchedProj  = Number(watch('projectId'))
   const watchedQty   = Number(watch('qty')) || 0
-  const watchedPoLine = Number(watch('purchaseOrderItemId'))
+  const watchedPoLine = Number(watch('orderLineId'))
 
   // Approved/received orders on the chosen project, with the pending qty per line — a direct
   // delivery can only be booked against a line that still has something outstanding.
@@ -135,8 +140,8 @@ function IssueModal({ warehouses, onClose, onSaved }: {
   const selectedMat = inStock.find(m => m.id === watchedMat)
 
   const { data: budgetLines = [] } = useApiData<BudgetLine[]>({
-    url: `/cost-estimates/material-budget/${watchedProj || '0'}`,
-    queryKey: ['material-budget-v2', String(watchedProj)],
+    url: `/cost-estimates/resource-budget/${watchedProj || '0'}`,
+    queryKey: ['resource-budget', String(watchedProj)],
     enabled: !!watchedProj,
   })
   const budgetLine   = budgetLines.find(l => l.resourceId === watchedMat)
@@ -174,7 +179,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
                   // Each source owns different fields; carrying one over into the other is how a
                   // stale warehouse or PO line ends up on the request.
                   setCategory('')
-                  for (const k of ['resourceId', 'warehouseId', 'purchaseOrderItemId'] as const)
+                  for (const k of ['resourceId', 'warehouseId', 'orderLineId'] as const)
                     setValue(k, undefined as any, { shouldValidate: false })
                 }}
                 className={`text-left border rounded-lg p-2.5 transition-colors ${
@@ -237,7 +242,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
             <label className={lbl}>Purchase Order Line <span className="text-danger">*</span></label>
             {/* The material comes from the chosen line, so it is never picked separately here. */}
             <Select
-              {...register('purchaseOrderItemId', {
+              {...register('orderLineId', {
                 onChange: e => {
                   const line = poLines.find(l => l.id === Number(e.target.value))
                   setValue('resourceId', (line?.resourceId ?? undefined) as any, { shouldValidate: false })
@@ -257,8 +262,8 @@ function IssueModal({ warehouses, onClose, onSaved }: {
                 No approved purchase order on this project has anything outstanding.
               </p>
             )}
-            {errors.purchaseOrderItemId && (
-              <p className="text-xs text-danger mt-1">{errors.purchaseOrderItemId.message}</p>
+            {errors.orderLineId && (
+              <p className="text-xs text-danger mt-1">{errors.orderLineId.message}</p>
             )}
             {selectedPoLine && (
               <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted mt-2">
@@ -277,24 +282,22 @@ function IssueModal({ warehouses, onClose, onSaved }: {
           <ScopePicker
             value={{
               projectId: watch('projectId') ? String(watch('projectId')) : '',
-              blockId:   watch('blockId')   ? String(watch('blockId'))   : '',
-              floorId:   watch('floorId')   ? String(watch('floorId'))   : '',
-              unitId:    watch('unitId')    ? String(watch('unitId'))    : '',
+              nodeId:    watch('nodeId')    ? String(watch('nodeId'))    : '',
             }}
             onChange={next => {
               // Empty string clears the field so zod's optional() sees undefined, not NaN.
-              const set = (k: 'projectId' | 'blockId' | 'floorId' | 'unitId', v: string) =>
+              const set = (k: 'projectId' | 'nodeId', v: string) =>
                 setValue(k, (v ? Number(v) : undefined) as any, { shouldValidate: false })
               set('projectId', next.projectId)
-              set('blockId',   next.blockId)
-              set('floorId',   next.floorId)
-              set('unitId',    next.unitId)
+              set('nodeId',    next.nodeId)
               // Naming a scope and calling it project-wide contradict each other, so picking
               // one clears the other — in both directions.
-              if (next.blockId || next.floorId || next.unitId)
-                setValue('projectWide', false, { shouldValidate: false })
+              if (next.nodeId) setValue('projectWide', false, { shouldValidate: false })
             }}
             mode="form"
+            // Material is consumed by construction area. A node measured in mandays or bays has
+            // no area to absorb it, so the server rejects such an issue — don't offer it here.
+            nodeFilter={areaBearingOnly}
           />
           <label className="flex items-start gap-2 mt-3 cursor-pointer">
             <input
@@ -303,8 +306,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
               {...register('projectWide', {
                 onChange: e => {
                   if (!e.target.checked) return
-                  for (const k of ['blockId', 'floorId', 'unitId'] as const)
-                    setValue(k, undefined as any, { shouldValidate: false })
+                  setValue('nodeId', undefined as any, { shouldValidate: false })
                 },
               })}
             />
@@ -316,7 +318,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
             </span>
           </label>
           {errors.projectId && <p className="text-xs text-danger mt-1">{errors.projectId.message}</p>}
-          {errors.blockId   && <p className="text-xs text-danger mt-1">{errors.blockId.message}</p>}
+          {errors.nodeId    && <p className="text-xs text-danger mt-1">{errors.nodeId.message}</p>}
 
           {/* Attribution, not a source: it charges the consumption against the order's material
               budget and supplies the scope when none is picked above. */}
@@ -396,8 +398,8 @@ export function IssueToProjectPage() {
     qc.invalidateQueries({ queryKey: ['stock-out'] })
     qc.invalidateQueries({ queryKey: ['materials'] })
     qc.invalidateQueries({ queryKey: ['materials-list'] })
-    qc.invalidateQueries({ queryKey: ['material-budget-v2'] })
-    qc.invalidateQueries({ queryKey: ['material-budget-summary'] })
+    qc.invalidateQueries({ queryKey: ['resource-budget'] })
+    qc.invalidateQueries({ queryKey: ['resource-budget-summary'] })
     qc.invalidateQueries({ queryKey: ['cost-estimates'] })
     qc.invalidateQueries({ queryKey: ['project-setup-checklist'] })
   }

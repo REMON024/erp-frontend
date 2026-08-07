@@ -13,7 +13,7 @@ import {
   type OrderCapabilities, newOrderLine, fmt, isoToday, inp, lbl,
 } from './types'
 
-interface MaterialBudgetLine { resourceId: number; budgetedCost: number; committedCost: number; actualCost: number }
+interface ResourceBudgetLine { resourceId: number; budgetedCost: number; committedCost: number; actualCost: number }
 
 /**
  * One creation flow for both order types. The user picks the type first; everything below —
@@ -118,9 +118,9 @@ function OrderForm({ orderType, canSwitchType, onBack, vendors, materials, onClo
   const total = lines.reduce((s, l) => s + (Number(l.quantity) || 0) * (Number(l.unitRate) || 0), 0)
 
   // ── Purchase-only budget + EPL context (PRD-04) ────────────────────────────
-  const { data: budgetLines = [] } = useApiData<MaterialBudgetLine[]>({
-    url: `/cost-estimates/material-budget/${projectId || '0'}`,
-    queryKey: ['material-budget-v2', projectId],
+  const { data: budgetLines = [] } = useApiData<ResourceBudgetLine[]>({
+    url: `/cost-estimates/resource-budget/${projectId || '0'}`,
+    queryKey: ['resource-budget', projectId],
     enabled: !isWork && !!projectId,
   })
   const budgetByMaterial = Object.fromEntries(budgetLines.map(l => [l.resourceId, l]))
@@ -209,9 +209,7 @@ function OrderForm({ orderType, canSwitchType, onBack, vendors, materials, onClo
               // Not scopeToPayload: it coerces an empty projectId to 0, and a purchase order is
               // allowed to carry no project at all.
               projectId: projectId ? Number(projectId) : undefined,
-              blockId:   scope.blockId ? Number(scope.blockId) : undefined,
-              floorId:   scope.floorId ? Number(scope.floorId) : undefined,
-              unitId:    scope.unitId  ? Number(scope.unitId)  : undefined,
+              nodeId:    scope.nodeId ? Number(scope.nodeId) : undefined,
               poDate: orderDate,
               deliveryDate: deliveryDate || undefined,
               items: valid.map(l => {

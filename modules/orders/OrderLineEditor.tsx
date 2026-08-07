@@ -34,7 +34,7 @@ export function OrderLineEditor({
   rateLabel?: string
   /** Purchase only: true when this line has no approved-EPL match and needs a typed reason. */
   needsUnmatchedReason?: (item: DraftOrderLine) => boolean
-  /** Optional per-line message, e.g. a material-budget overrun. */
+  /** Optional per-line message, e.g. a resource-budget overrun. */
   warningFor?: (item: DraftOrderLine) => string | null
 }) {
   const [rateInfo, setRateInfo] = useState<Record<string, ResolvedRate>>({})

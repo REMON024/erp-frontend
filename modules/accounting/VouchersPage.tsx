@@ -94,7 +94,7 @@ interface NewLine {
   accountId: string; debit: string; credit: string; description: string
   // Which part of the build bore this cost. Left shallow the amount is shared and the rollup
   // apportions it down by area; pinned to a unit it is charged there directly.
-  projectId: string; blockId: string; floorId: string; unitId: string
+  projectId: string; nodeId: string
   /** Optional BOQ resource, so the spend lands on its own estimate line instead of being spread. */
   resourceId: string
 }
@@ -105,7 +105,7 @@ interface NewForm {
 
 const emptyLine = (): NewLine => ({
   accountId: '', debit: '', credit: '', description: '',
-  projectId: '', blockId: '', floorId: '', unitId: '', resourceId: '',
+  projectId: '', nodeId: '', resourceId: '',
 })
 
 function NewVoucherModal({ accounts, onClose, onSaved }: {
@@ -139,9 +139,7 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
         lines: validLines.map(l => ({
           accountId:    Number(l.accountId),
           projectId:    l.projectId ? Number(l.projectId) : undefined,
-          blockId:      l.blockId   ? Number(l.blockId)   : undefined,
-          floorId:      l.floorId   ? Number(l.floorId)   : undefined,
-          unitId:       l.unitId    ? Number(l.unitId)    : undefined,
+          nodeId:       l.nodeId    ? Number(l.nodeId)    : undefined,
           resourceId:   l.resourceId ? Number(l.resourceId) : undefined,
           debitAmount:  parseFloat(l.debit) || 0,
           creditAmount: parseFloat(l.credit) || 0,
@@ -163,14 +161,12 @@ function NewVoucherModal({ accounts, onClose, onSaved }: {
     !!l.projectId && expenseAccountIds.has(Number(l.accountId)) && (parseFloat(l.debit) || 0) > 0
 
   const scopeOf = (l: NewLine): ScopeValue => ({
-    projectId: l.projectId, blockId: l.blockId, floorId: l.floorId, unitId: l.unitId,
+    projectId: l.projectId, nodeId: l.nodeId,
   })
 
   const setScope = (i: number, next: ScopeValue) => {
     setValue(`lines.${i}.projectId`, next.projectId)
-    setValue(`lines.${i}.blockId`,   next.blockId)
-    setValue(`lines.${i}.floorId`,   next.floorId)
-    setValue(`lines.${i}.unitId`,    next.unitId)
+    setValue(`lines.${i}.nodeId`,    next.nodeId)
     // A resource is only meaningful with a project behind it; clearing the project must not leave
     // a tag the server will reject.
     if (!next.projectId) setValue(`lines.${i}.resourceId`, '')
@@ -392,7 +388,11 @@ export function VouchersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <button onClick={() => setViewing(v)} className="p-1.5 text-content-muted hover:text-primary hover:bg-primary/10 rounded-lg"><Eye className="w-3.5 h-3.5" /></button>
-                        {!v.isPosted && <button onClick={() => post(v.id)} className="text-xs text-success hover:text-success font-medium hover:underline">Post</button>}
+                        {!v.isPosted && (
+                          <PermissionGate module="VOUCHERS" action="approve">
+                            <button onClick={() => post(v.id)} className="text-xs text-success hover:text-success font-medium hover:underline">Post</button>
+                          </PermissionGate>
+                        )}
                       </div>
                     </td>
                   </tr>

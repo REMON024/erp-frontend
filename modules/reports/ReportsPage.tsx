@@ -42,7 +42,10 @@ interface Variance {
   projectId: number; projectCode: string; projectName: string; status: string
   budgetedCost?: number; budgetedRevenue?: number; budgetApprovedOn?: string
   estimatedCost: number; actualCost: number
+  /** Computed sell prices, not a stored figure. Items with no margin contribute 0 — see unpricedCount. */
   inventoryValue: number; contractedRevenue: number
+  /** Sellable items with no margin configured; a non-zero value means inventoryValue understates. */
+  unpricedCount: number
   costVariance?: number; costVariancePct?: number
   revenueVariance?: number; revenueVariancePct?: number
 }

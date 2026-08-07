@@ -17,7 +17,7 @@ import { ItemsModal } from './ItemsModal'
 import {
   type OrderListItem, type OrderType, type OrderCapabilities,
   type Vendor, type Material,
-  STATUS_COLORS, SCOPE_COLORS, ORDER_TYPE_LABEL, fmt,
+  STATUS_COLORS, scopeColor, ORDER_TYPE_LABEL, fmt,
 } from './types'
 
 /**
@@ -53,7 +53,7 @@ export function OrdersPage() {
       status: status || undefined, ...scopeToParams(scope),
     },
     queryKey: ['orders', search, type, status,
-               scope.projectId, scope.blockId, scope.floorId, scope.unitId],
+               scope.projectId, scope.nodeId],
   })
 
   const invalidate = () => {
@@ -153,7 +153,7 @@ export function OrdersPage() {
                     <td className="px-3 py-2 text-content text-xs">{o.vendorName}</td>
                     <td className="px-3 py-2 text-content-muted text-xs">{o.projectName ?? '—'}</td>
                     <td className="px-3 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${SCOPE_COLORS[o.scopeLevel] ?? 'bg-surface-muted text-content-muted'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${scopeColor(o.scopeLevel)}`}>
                         {o.scopeLabel}
                       </span>
                     </td>
@@ -167,7 +167,7 @@ export function OrdersPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1 justify-end">
-                        {o.status === 'Draft' && (
+                        {o.status === 'Draft' && (isWork ? capabilities?.canApproveWork : capabilities?.canApprovePurchase) && (
                           <button onClick={() => approve(o)} title={isWork ? 'Approve → Active' : 'Approve'}
                             className="p-1 text-content-muted hover:text-success hover:bg-success/10 rounded transition-colors">
                             <CheckCircle className="w-3.5 h-3.5" />

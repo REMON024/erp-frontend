@@ -26,7 +26,7 @@ export function CostVariancePage() {
   const { data, isLoading, error, refetch } = useApiData<CostVarianceDto>({
     url: `/reports/cost-variance`,
     params: scopeToParams(filter),
-    queryKey: ['cost-variance', projectId, filter.blockId, filter.floorId, filter.unitId],
+    queryKey: ['cost-variance', projectId, filter.nodeId],
     enabled: !!projectId,
   })
 

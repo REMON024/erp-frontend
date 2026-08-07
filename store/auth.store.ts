@@ -33,9 +33,10 @@ export interface MenuPermission {
   canCreate: boolean
   canEdit: boolean
   canDelete: boolean
+  canApprove: boolean
 }
 
-export type PermissionAction = 'view' | 'create' | 'edit' | 'delete'
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete' | 'approve'
 
 // Routes always reachable regardless of menu config (no data-scoped content).
 const ALWAYS_ALLOWED = ['/dashboard', '/', '/settings']
@@ -157,9 +158,10 @@ export const useAuthStore = create<AuthState>()(
         if (!p) return false
         switch (action) {
           case 'create': return p.canCreate
-          case 'edit':   return p.canEdit
-          case 'delete': return p.canDelete
-          default:       return p.canView
+          case 'edit':    return p.canEdit
+          case 'delete':  return p.canDelete
+          case 'approve': return p.canApprove
+          default:        return p.canView
         }
       },
 

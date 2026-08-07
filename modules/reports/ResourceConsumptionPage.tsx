@@ -2,14 +2,17 @@
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { DateField } from '@/components/ui/DateField'
+import { Select } from '@/components/ui/Select'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 import { ScopePicker, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 
-interface MaterialConsumptionRow {
+interface ResourceConsumptionRow {
   resourceId: number; resourceCode: string; resourceName: string
   category: string; unit: string
+  /** Material, Equipment, Service or Labour — which pool the actual came from. */
+  resourceType: string
   receivedQty: number; issuedQty: number; balanceQty: number
   avgCost: number; issuedValue: number
 }
@@ -22,8 +25,8 @@ interface ScopeCrumb { level: string; id: number | null; name: string }
 interface MaterialSourceRow {
   level: string; id: number | null; name: string; amountIntoScope: number
 }
-interface MaterialConsumptionDto {
-  rows: MaterialConsumptionRow[]
+interface ResourceConsumptionDto {
+  rows: ResourceConsumptionRow[]
   totalIssuedValue: number
   scopeLevel: string
   breadcrumb: ScopeCrumb[]
@@ -41,47 +44,46 @@ function fmt(n: number) { return `৳${n.toLocaleString('en-BD', { minimumFracti
 function fmtQ(n: number) { return n.toLocaleString('en-BD', { maximumFractionDigits: 3 }) }
 function fmtArea(n: number) { return `${n.toLocaleString('en-BD', { maximumFractionDigits: 0 })} sqft` }
 
+const RESOURCE_TYPES = ['Material', 'Equipment', 'Service', 'Labour']
 const STOCK_COLS = ['Received', 'Balance']
 const NUMERIC = ['Received', 'Issued', 'Balance', 'Avg Cost', 'Issued Value']
 
-export function MaterialConsumptionPage() {
+export function ResourceConsumptionPage() {
   const [scope, setScope]   = useState<ScopeValue>(EMPTY_SCOPE)
   const [dateFrom, setFrom] = useState('')
   const [dateTo,   setTo]   = useState('')
   const [mode, setMode]     = useState<'direct' | 'absorbed'>('direct')
+  const [type, setType]     = useState('')
 
-  const { data, isLoading, error, refetch } = useApiData<MaterialConsumptionDto>({
-    url: '/reports/material-consumption',
-    params: { ...scopeToParams(scope), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, mode },
-    queryKey: ['material-consumption', scope.projectId, scope.blockId, scope.floorId, scope.unitId, dateFrom, dateTo, mode],
+  const { data, isLoading, error, refetch } = useApiData<ResourceConsumptionDto>({
+    url: '/reports/resource-consumption',
+    params: { ...scopeToParams(scope), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined, mode,
+              resourceType: type || undefined },
+    queryKey: ['resource-consumption', scope.projectId, scope.nodeId, dateFrom, dateTo, mode, type],
   })
 
   // The dropdowns above and the rollup rows below write the same scope, so there is never a
   // second "drill state" to keep in sync with the filter bar.
+  // Levels are user-defined now, so there is no ladder of cases to enumerate: any row below
+  // the project is a node, and selecting it is the same operation whatever level it sits at.
   const drill = (level: string, id: number | null) => {
     if (id === null) return
     const v = String(id)
-    setScope(s =>
-      level === 'Project' ? { projectId: v, blockId: '', floorId: '', unitId: '' }
-    : level === 'Block'   ? { ...s, blockId: v, floorId: '', unitId: '' }
-    : level === 'Floor'   ? { ...s, floorId: v, unitId: '' }
-    : level === 'Unit'    ? { ...s, unitId: v }
-    : s)
+    setScope(s => level === 'Project' ? { projectId: v, nodeId: '' } : { ...s, nodeId: v })
   }
 
-  /** Clicking a crumb drops every level below it. */
-  const jumpTo = (level: string) => {
+  /** Clicking a crumb jumps back to it, dropping everything below. */
+  const jumpTo = (level: string, id: number | null) => {
     setScope(s =>
       level === 'All'     ? EMPTY_SCOPE
-    : level === 'Project' ? { ...s, blockId: '', floorId: '', unitId: '' }
-    : level === 'Block'   ? { ...s, floorId: '', unitId: '' }
-    : level === 'Floor'   ? { ...s, unitId: '' }
-    : s)
+    : level === 'Project' ? { ...s, nodeId: '' }
+    : id === null         ? s
+    :                       { ...s, nodeId: String(id) })
   }
 
   const categories = [...new Set(data?.rows.map(r => r.category) ?? [])]
   const showStock  = data?.showStockColumns ?? true
-  const headers    = ['Code', 'Material', 'Category', 'Unit', 'Received', 'Issued', 'Balance', 'Avg Cost', 'Issued Value']
+  const headers    = ['Code', 'Resource', 'Type', 'Category', 'Unit', 'Received', 'Issued', 'Balance', 'Avg Cost', 'Issued Value']
     .filter(h => showStock || !STOCK_COLS.includes(h))
 
   const here          = data?.breadcrumb[data.breadcrumb.length - 1]
@@ -101,8 +103,8 @@ export function MaterialConsumptionPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Material Consumption Report"
-        subtitle="Material issued per project, block, floor and unit — with cost per square foot"
+        title="Resource Consumption Report"
+        subtitle="What each part of the project consumed — materials from stock issues, labour, plant and services from posted spend"
       />
 
       <div className="flex items-end gap-3 flex-wrap">
@@ -116,13 +118,20 @@ export function MaterialConsumptionPage() {
           <label className="block text-xs font-medium text-content mb-1">To</label>
           <DateField value={dateTo} onChange={e => setTo(e.target.value)} className="min-w-[150px]" />
         </div>
+        <div>
+          <label className="block text-xs font-medium text-content mb-1">Type</label>
+          <Select value={type} onChange={e => setType(e.target.value)} className="min-w-[150px]">
+            <option value="">All types</option>
+            {RESOURCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </Select>
+        </div>
         {scoped && (
           <div>
             <label className="block text-xs font-medium text-content mb-1">Basis</label>
             <div className="inline-flex rounded-lg border border-border-default overflow-hidden">
               {([
-                ['direct',   'Direct',   'Only material issued naming this exact level'],
-                ['absorbed', 'Absorbed', "Adds this level's share, by area, of material issued above it"],
+                ['direct',   'Direct',   'Only spend naming this exact level'],
+                ['absorbed', 'Absorbed', "Adds this level's share, by area, of spend booked above it"],
               ] as const).map(([value, label, hint]) => (
                 <button key={value} type="button" title={hint} onClick={() => setMode(value)}
                   className={`px-3 py-2 text-sm ${mode === value
@@ -138,7 +147,7 @@ export function MaterialConsumptionPage() {
 
       {isAbsorbed && (
         <p className="text-xs text-info bg-info/10 border border-info/20 rounded-lg px-3 py-2">
-          Showing what {scopeName} <strong>absorbed</strong>: material issued here, plus its share by floor
+          Showing what {scopeName} <strong>absorbed</strong>: spend booked here, plus its share by floor
           area of everything issued above it. This is the figure that matches the Cost Rollup for the
           same scope. Switch to <em>Direct</em> to see only what was booked at this level.
         </p>
@@ -148,8 +157,8 @@ export function MaterialConsumptionPage() {
         loading={isLoading} error={error ? 'Failed to load.' : null} onRetry={refetch}
         empty={!isLoading && (data?.rows.length ?? 0) === 0}
         emptyMessage={isAbsorbed
-          ? 'No material has reached this scope in the selected period.'
-          : 'No material has been issued to this scope in the selected period. Higher-level material is excluded — switch to Absorbed to include its share.'}
+          ? 'Nothing has reached this scope in the selected period.'
+          : 'Nothing was booked directly to this scope in the selected period. Spend booked higher up is excluded — switch to Absorbed to include its share.'}
       >
         <>
           {data && data.breadcrumb.length > 1 && (
@@ -161,7 +170,7 @@ export function MaterialConsumptionPage() {
                     {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-content-muted/60" />}
                     {last
                       ? <span className="font-semibold text-content">{c.name}</span>
-                      : <button onClick={() => jumpTo(c.level)} className="text-primary hover:underline">{c.name}</button>}
+                      : <button onClick={() => jumpTo(c.level, c.id)} className="text-primary hover:underline">{c.name}</button>}
                   </span>
                 )
               })}
@@ -329,6 +338,7 @@ export function MaterialConsumptionPage() {
                     <tr key={r.resourceId} className={showStock && r.balanceQty < 0 ? 'bg-danger/10' : 'hover:bg-surface-muted'}>
                       <td className="px-3 py-2 text-xs text-content-muted">{r.resourceCode}</td>
                       <td className="px-3 py-2 font-medium text-content">{r.resourceName}</td>
+                      <td className="px-3 py-2 text-xs text-content-muted">{r.resourceType}</td>
                       <td className="px-3 py-2 text-xs text-content-muted">{r.category}</td>
                       <td className="px-3 py-2 text-content-muted">{r.unit}</td>
                       {showStock && <td className="px-3 py-2 text-right text-success">{fmtQ(r.receivedQty)}</td>}

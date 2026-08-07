@@ -217,7 +217,7 @@ export function BudgetTrackerPage() {
   const { data: estimates = [], isLoading, error, refetch } = useApiData<CostEstimate[]>({
     url: '/cost-estimates',
     params: { ...scopeToParams(filter), status: 'Approved' },
-    queryKey: ['budget-estimates', filter.projectId, filter.blockId, filter.floorId, filter.unitId],
+    queryKey: ['budget-estimates', filter.projectId, filter.nodeId],
   })
 
   const invalidate = () => {

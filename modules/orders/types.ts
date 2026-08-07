@@ -28,27 +28,35 @@ export interface OrderListItem {
   advanceAmount?: number | null
   retentionPercent?: number | null
   lineCount: number
-  // Which part of the build the order covers. Both types store the full ancestor chain.
-  blockId?: number | null
-  blockName?: string | null
-  floorId?: number | null
-  floorName?: string | null
-  unitId?: number | null
-  unitNo?: string | null
-  scopeLevel: ScopeLevel
+  // Which part of the build the order covers — one node, at whatever depth the project defines.
+  nodeId?: number | null
+  nodeName?: string | null
+  /** The node's level name, or "Project" / "General" when there is no node. */
+  scopeLevel: string
   /** Pre-rendered, e.g. "Block A / Level 3 / A-101" — or "Whole project" / "General stock". */
   scopeLabel: string
 }
 
-/** "General" is purchase-only: stock bought against no project at all. */
-export type ScopeLevel = 'Project' | 'Block' | 'Floor' | 'Unit' | 'General'
-
-export const SCOPE_COLORS: Record<ScopeLevel, string> = {
-  General: 'bg-surface-muted text-content-muted',
-  Project: 'bg-surface-muted text-content-muted',
-  Block:   'bg-info/10 text-info',
-  Floor:   'bg-primary/10 text-primary',
-  Unit:    'bg-success/10 text-success',
+/**
+ * Levels are user-defined data now, so the badge colour cannot be a fixed map. The two
+ * no-node cases keep their muted styling; everything else is coloured by depth-in-name so
+ * a project that renames "Floor" to "Storey" still reads consistently.
+ *
+ * "General" is purchase-only: stock bought against no project at all.
+ */
+export function scopeColor(level: string): string {
+  const known: Record<string, string> = {
+    General: 'bg-surface-muted text-content-muted',
+    Project: 'bg-surface-muted text-content-muted',
+    Block:   'bg-info/10 text-info',
+    Floor:   'bg-primary/10 text-primary',
+    Wing:    'bg-primary/10 text-primary',
+    Unit:    'bg-success/10 text-success',
+    Parking: 'bg-success/10 text-success',
+  }
+  // An unrecognised custom level is still a real scope — colour it like the deepest known one
+  // rather than dropping it to the muted "whole project" styling, which would misread.
+  return known[level] ?? 'bg-success/10 text-success'
 }
 
 export interface OrderCapabilities {
@@ -56,6 +64,9 @@ export interface OrderCapabilities {
   canCreateWork: boolean
   canViewPurchase: boolean
   canViewWork: boolean
+  /** Approving is a separate grant from creating — a drafter must not sign off their own order. */
+  canApprovePurchase: boolean
+  canApproveWork: boolean
 }
 
 /** A line being edited, before it is shaped into the payload its order type expects. */

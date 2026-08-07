@@ -14,7 +14,7 @@ interface RoleDto {
 
 interface MenuPermissionDto {
   menuId: number; menuName: string; menuCode: string
-  canView: boolean; canCreate: boolean; canEdit: boolean; canDelete: boolean
+  canView: boolean; canCreate: boolean; canEdit: boolean; canDelete: boolean; canApprove: boolean
 }
 
 interface RolePermissionsDto {
@@ -99,7 +99,7 @@ function PermissionsModal({ role, onClose, onSaved }: {
       .finally(() => setLoading(false))
   }, [role.id])
 
-  const toggle = (menuId: number, field: keyof Pick<MenuPermissionDto, 'canView'|'canCreate'|'canEdit'|'canDelete'>) =>
+  const toggle = (menuId: number, field: keyof Pick<MenuPermissionDto, 'canView'|'canCreate'|'canEdit'|'canDelete'|'canApprove'>) =>
     setPerms(prev => prev.map(p => p.menuId === menuId ? { ...p, [field]: !p[field] } : p))
 
   const save = async () => {
@@ -112,6 +112,7 @@ function PermissionsModal({ role, onClose, onSaved }: {
           canCreate: p.canCreate,
           canEdit:   p.canEdit,
           canDelete: p.canDelete,
+          canApprove: p.canApprove,
         })),
       })
       onSaved(); onClose()
@@ -141,7 +142,7 @@ function PermissionsModal({ role, onClose, onSaved }: {
               <thead className="bg-surface-muted sticky top-0">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-content-muted uppercase">Menu</th>
-                  {['View','Create','Edit','Delete'].map(h => (
+                  {['View','Create','Edit','Delete','Approve'].map(h => (
                     <th key={h} className="px-3 py-2 text-center text-xs font-semibold text-content-muted uppercase w-16">{h}</th>
                   ))}
                 </tr>
@@ -154,6 +155,7 @@ function PermissionsModal({ role, onClose, onSaved }: {
                     <td className="px-3 py-2 text-center"><Chk checked={p.canCreate} onClick={() => toggle(p.menuId,'canCreate')} /></td>
                     <td className="px-3 py-2 text-center"><Chk checked={p.canEdit}   onClick={() => toggle(p.menuId,'canEdit')}   /></td>
                     <td className="px-3 py-2 text-center"><Chk checked={p.canDelete} onClick={() => toggle(p.menuId,'canDelete')} /></td>
+                    <td className="px-3 py-2 text-center"><Chk checked={p.canApprove} onClick={() => toggle(p.menuId,'canApprove')} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -325,11 +327,11 @@ export function RolesPage() {
                     <p className="text-sm text-content-muted">Loading…</p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {rp.filter(p => p.canView || p.canCreate || p.canEdit || p.canDelete).map(p => (
+                      {rp.filter(p => p.canView || p.canCreate || p.canEdit || p.canDelete || p.canApprove).map(p => (
                         <div key={p.menuId} className="flex items-center justify-between bg-surface rounded-lg border border-border-default px-3 py-2">
                           <span className="text-xs font-medium text-content">{p.menuName}</span>
                           <div className="flex gap-1">
-                            {([['V', p.canView], ['C', p.canCreate], ['E', p.canEdit], ['D', p.canDelete]] as [string, boolean][]).map(([k, v]) => (
+                            {([['V', p.canView], ['C', p.canCreate], ['E', p.canEdit], ['D', p.canDelete], ['A', p.canApprove]] as [string, boolean][]).map(([k, v]) => (
                               <span key={k} className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center ${v ? 'bg-primary/10 text-primary' : 'bg-surface-muted text-content-muted/50'}`}>{k}</span>
                             ))}
                           </div>

@@ -6,7 +6,7 @@ import { useApiData } from '@/hooks/useApiData'
 import { Package, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react'
 import { ScopePicker, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 
-interface MaterialBudgetV2Line {
+interface ResourceBudgetV2Line {
   resourceId:    number
   resourceName:  string
   resourceCode:  string
@@ -32,7 +32,7 @@ function fmtQ(n: number) {
   return n.toLocaleString('en-BD', { maximumFractionDigits: 3 })
 }
 
-function StatusBadge({ line }: { line: MaterialBudgetV2Line }) {
+function StatusBadge({ line }: { line: ResourceBudgetV2Line }) {
   if (line.budgetedCost === 0 && line.actualCost === 0) {
     return <span className="text-xs px-2 py-0.5 rounded-full bg-surface-muted text-content-muted">Unbudgeted</span>
   }
@@ -73,19 +73,17 @@ const CATEGORY_COLORS: Record<string, string> = {
 }
 const catColor = (c: string) => CATEGORY_COLORS[c] ?? 'bg-info/10 text-info'
 
-export function MaterialBudgetPage() {
+export function ResourceBudgetPage() {
   const [filter, setFilter] = useState<ScopeValue>(EMPTY_SCOPE)
   const selectedProject = filter.projectId
 
-  const { data: lines = [], isLoading, error, refetch } = useApiData<MaterialBudgetV2Line[]>({
+  const { data: lines = [], isLoading, error, refetch } = useApiData<ResourceBudgetV2Line[]>({
     // Project stays in the path; the sub-scope narrows the budget side via query params.
-    url: `/cost-estimates/material-budget/${selectedProject || '0'}`,
+    url: `/cost-estimates/resource-budget/${selectedProject || '0'}`,
     params: {
-      blockId: filter.blockId || undefined,
-      floorId: filter.floorId || undefined,
-      unitId:  filter.unitId  || undefined,
+      nodeId: filter.nodeId || undefined,
     },
-    queryKey: ['material-budget-v2', selectedProject, filter.blockId, filter.floorId, filter.unitId],
+    queryKey: ['resource-budget', selectedProject, filter.nodeId],
     enabled: !!selectedProject,
   })
 
@@ -95,7 +93,7 @@ export function MaterialBudgetPage() {
   const totalVariance  = totalActual - totalBudget
   const overBudgetCount = lines.filter(l => l.actualCost > l.budgetedCost && l.budgetedCost > 0).length
 
-  const byCategory: Record<string, MaterialBudgetV2Line[]> = {}
+  const byCategory: Record<string, ResourceBudgetV2Line[]> = {}
   lines.forEach(l => {
     if (!byCategory[l.category]) byCategory[l.category] = []
     byCategory[l.category].push(l)
@@ -104,7 +102,7 @@ export function MaterialBudgetPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Material Budget vs Actual"
+        title="Resource Budget vs Actual"
         subtitle="Budgeted (BOQ) · Committed (POs) · Actual (stock issues) — per material per project"
       />
 
@@ -114,7 +112,7 @@ export function MaterialBudgetPage() {
         <ScopePicker value={filter} onChange={setFilter} mode="filter" />
       </div>
 
-      {selectedProject && (filter.blockId || filter.floorId || filter.unitId) && (
+      {selectedProject && filter.nodeId && (
         <p className="text-xs text-content-muted bg-surface-muted border border-border-default rounded-lg px-3 py-2">
           Budget and actual are narrowed to this scope. <strong className="font-medium text-content">Committed</strong> is
           not — purchase orders are raised against the project as a whole, so that column stays

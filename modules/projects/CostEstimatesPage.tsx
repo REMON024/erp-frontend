@@ -38,9 +38,7 @@ interface CostEstimate {
   totalEstimated: number; totalActual: number; variance: number
   items: BOQItem[]; createdAt: string
   // Scope covered. All three ids are null for a project-wide estimate.
-  blockId?: number; blockName?: string
-  floorId?: number; floorName?: string
-  unitId?: number;  unitNo?: string
+  nodeId?: number; nodeName?: string
   scopeLevel: 'Project' | 'Block' | 'Floor' | 'Unit'
   scopeLabel: string
 }
@@ -269,9 +267,7 @@ function EstimateModal({ estimate, onClose, onSaved }: {
   const [err,    setErr]    = useState('')
   const [scope,  setScope]  = useState<ScopeValue>({
     projectId: String(estimate?.projectId ?? ''),
-    blockId:   estimate?.blockId ? String(estimate.blockId) : '',
-    floorId:   estimate?.floorId ? String(estimate.floorId) : '',
-    unitId:    estimate?.unitId  ? String(estimate.unitId)  : '',
+    nodeId:    estimate?.nodeId ? String(estimate.nodeId) : '',
   })
   const [title, setTitle] = useState(estimate?.title ?? '')
   const [items, setItems] = useState<DraftItem[]>(
@@ -477,14 +473,14 @@ export function CostEstimatesPage() {
   const { data: estimates = [], isLoading, error, refetch } = useApiData<CostEstimate[]>({
     url: '/cost-estimates',
     params: { search: search || undefined, ...scopeToParams(filter) },
-    queryKey: ['cost-estimates', search, filter.projectId, filter.blockId, filter.floorId, filter.unitId],
+    queryKey: ['cost-estimates', search, filter.projectId, filter.nodeId],
   })
 
   // Four other screens read /cost-estimates under their own keys; clearing only
   // ['cost-estimates'] left the dashboard and projects banners showing stale budgets.
   const invalidate = () => {
     for (const key of [['cost-estimates'], ['projects-estimates'], ['dash-estimates'],
-                       ['budget-estimates'], ['material-budget-v2'], ['material-budget-summary']])
+                       ['budget-estimates'], ['resource-budget'], ['resource-budget-summary']])
       qc.invalidateQueries({ queryKey: key })
   }
 
@@ -611,10 +607,12 @@ export function CostEstimatesPage() {
                                 <input type="file" accept=".csv,text/csv" className="hidden"
                                   onChange={ev => { const f = ev.target.files?.[0]; if (f) importCsv(e.id, f); ev.target.value = '' }} />
                               </label>
-                              <button onClick={() => approve(e.id)} title="Approve"
-                                className="p-1.5 text-content-muted hover:text-success hover:bg-success/10 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => reject(e.id)} title="Reject"
-                                className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg"><XCircle className="w-3.5 h-3.5" /></button>
+                              <PermissionGate module="COST_ESTIMATES" action="approve">
+                                <button onClick={() => approve(e.id)} title="Approve"
+                                  className="p-1.5 text-content-muted hover:text-success hover:bg-success/10 rounded-lg"><CheckCircle className="w-3.5 h-3.5" /></button>
+                                <button onClick={() => reject(e.id)} title="Reject"
+                                  className="p-1.5 text-content-muted hover:text-danger hover:bg-danger/10 rounded-lg"><XCircle className="w-3.5 h-3.5" /></button>
+                              </PermissionGate>
                             </>
                           )}
                         </div>

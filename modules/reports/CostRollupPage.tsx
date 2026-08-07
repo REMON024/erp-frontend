@@ -54,30 +54,26 @@ export function CostRollupPage() {
   const { data, isLoading, error, refetch } = useApiData<CostRollupDto>({
     url: '/reports/cost-rollup',
     params: { ...scopeToParams(scope), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined },
-    queryKey: ['cost-rollup', scope.projectId, scope.blockId, scope.floorId, scope.unitId, dateFrom, dateTo],
+    queryKey: ['cost-rollup', scope.projectId, scope.nodeId, dateFrom, dateTo],
   })
 
   // The dropdowns above and the rollup rows below write the same scope, so there is never a
   // second "drill state" to keep in sync with the filter bar.
+  // Levels are user-defined now, so there is no ladder of cases to enumerate: any row below
+  // the project is a node, and selecting it is the same operation whatever level it sits at.
   const drill = (level: string, id: number | null) => {
     if (id === null) return
     const v = String(id)
-    setScope(s =>
-      level === 'Project' ? { projectId: v, blockId: '', floorId: '', unitId: '' }
-    : level === 'Block'   ? { ...s, blockId: v, floorId: '', unitId: '' }
-    : level === 'Floor'   ? { ...s, floorId: v, unitId: '' }
-    : level === 'Unit'    ? { ...s, unitId: v }
-    : s)
+    setScope(s => level === 'Project' ? { projectId: v, nodeId: '' } : { ...s, nodeId: v })
   }
 
-  /** Clicking a crumb drops every level below it. */
-  const jumpTo = (level: string) => {
+  /** Clicking a crumb jumps back to it, dropping everything below. */
+  const jumpTo = (level: string, id: number | null) => {
     setScope(s =>
       level === 'All'     ? EMPTY_SCOPE
-    : level === 'Project' ? { ...s, blockId: '', floorId: '', unitId: '' }
-    : level === 'Block'   ? { ...s, floorId: '', unitId: '' }
-    : level === 'Floor'   ? { ...s, unitId: '' }
-    : s)
+    : level === 'Project' ? { ...s, nodeId: '' }
+    : id === null         ? s
+    :                       { ...s, nodeId: String(id) })
   }
 
   const here = data?.breadcrumb[data.breadcrumb.length - 1]
@@ -124,7 +120,7 @@ export function CostRollupPage() {
               <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
               <span className="text-content">
                 The levels below do not add up to this level&apos;s total. Some cost may be recorded
-                against a block, floor or unit that no longer exists — treat these figures as indicative
+                against part of the structure that no longer exists — treat these figures as indicative
                 until it is resolved.
               </span>
             </div>
@@ -139,7 +135,7 @@ export function CostRollupPage() {
                     {i > 0 && <ChevronRight className="w-3.5 h-3.5 text-content-muted/60" />}
                     {last
                       ? <span className="font-semibold text-content">{c.name}</span>
-                      : <button onClick={() => jumpTo(c.level)} className="text-primary hover:underline">{c.name}</button>}
+                      : <button onClick={() => jumpTo(c.level, c.id)} className="text-primary hover:underline">{c.name}</button>}
                   </span>
                 )
               })}

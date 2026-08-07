@@ -18,9 +18,14 @@ import api from '@/lib/api'
 interface Installment { installmentNo: number; dueDate: string; amount: number; status: string }
 
 interface Customer { id: number; fullName: string; status: string }
-interface Unit     { id: number; unitNo: string; status: string; totalPrice: number; blockName: string; projectId: number }
+interface Project  { id: number; projectName: string; projectCode: string }
+/** A sellable item as the pricing endpoint returns it — price is computed, never stored. */
+interface Unit {
+  nodeId: number; unitNo: string | null; name: string; status: string
+  sellPrice: number; breadcrumb: string; isPriced: boolean
+}
 interface Booking {
-  id: number; bookingNo: string; projectId: number; unitId: number; unitNo: string
+  id: number; bookingNo: string; projectId: number; nodeId: number | null; unitNo: string; breadcrumb: string
   customerId: number; customerName: string; bookingDate: string
   bookingAmount: number; totalPrice: number; discountAmount: number
   netAmount: number; installmentCount: number; handoverDate?: string; status: string
@@ -38,7 +43,7 @@ const lbl = 'block text-sm font-medium text-content mb-1'
 
 const schema = z.object({
   customerId:       z.coerce.number().min(1, 'Required'),
-  unitId:           z.coerce.number().min(1, 'Required'),
+  nodeId:           z.coerce.number().min(1, 'Required'),
   bookingDate:      z.string().min(1, 'Required'),
   bookingAmount:    z.coerce.number().min(1, 'Required'),
   discountAmount:   z.coerce.number().min(0),
@@ -47,19 +52,33 @@ const schema = z.object({
 })
 type Form = z.infer<typeof schema>
 
-function BookingModal({ customers, units, onClose, onSaved }: {
-  customers: Customer[]; units: Unit[]; onClose: () => void; onSaved: () => void
+function BookingModal({ customers, onClose, onSaved }: {
+  customers: Customer[]; onClose: () => void; onSaved: () => void
 }) {
   const [saving, setSaving] = useState(false)
   const [err, setErr]       = useState('')
+  const [projectId, setProjectId] = useState('')
+
+  const { data: projects = [] } = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
+
+  // What can be sold, and for how much, comes from the pricing endpoint — there is no stored
+  // price to read, so the item list and the quote are the same call.
+  const { data: sellable } = useApiData<{ items: Unit[] }>({
+    url: '/sellable-items',
+    params: { projectId, availableOnly: true },
+    queryKey: ['sellable-items', 'booking', projectId],
+    enabled: !!projectId,
+  })
+  const units = sellable?.items ?? []
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema) as any,
     defaultValues: { bookingDate: isoToday(), discountAmount: 0, installmentCount: 12 },
   })
 
-  const availableUnits = units.filter(u => u.status === 'Available')
-  const selectedUnitId = watch('unitId')
-  const selectedUnit = units.find(u => u.id === Number(selectedUnitId))
+  // Only what is on the market AND has a margin configured: an unpriced item would book at cost.
+  const availableUnits = units.filter(u => u.status === 'Available' && u.isPriced)
+  const selectedUnitId = watch('nodeId')
+  const selectedUnit = units.find(u => u.nodeId === Number(selectedUnitId))
 
   const [schedule, setSchedule] = useState<Installment[] | null>(null)
 
@@ -68,7 +87,7 @@ function BookingModal({ customers, units, onClose, onSaved }: {
   const [lines, setLines] = useState<{ dueDate: string; amount: number }[]>([{ dueDate: isoToday(), amount: 0 }])
   const watchBooking  = Number(watch('bookingAmount')) || 0
   const watchDiscount = Number(watch('discountAmount')) || 0
-  const financed = selectedUnit ? Math.max(0, selectedUnit.totalPrice - watchDiscount - watchBooking) : 0
+  const financed = selectedUnit ? Math.max(0, selectedUnit.sellPrice - watchDiscount - watchBooking) : 0
   const scheduleTotal = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)
   const scheduleMatches = Math.round(scheduleTotal * 100) === Math.round(financed * 100)
 
@@ -154,24 +173,37 @@ function BookingModal({ customers, units, onClose, onSaved }: {
           </div>
         </div>
         <div>
-          <label className={lbl}>Unit <span className="text-content-muted font-normal">(only available units)</span></label>
-          <Select {...register('unitId')}
-            onChange={e => {
-              setValue('unitId', Number(e.target.value))
-              const u = units.find(x => x.id === Number(e.target.value))
-              if (u) setValue('bookingAmount', Math.round(u.totalPrice * 0.1))
-            }}>
-            <option value="">Select unit</option>
-            {availableUnits.map(u => (
-              <option key={u.id} value={u.id}>{u.unitNo} — {u.blockName} | {fmt(u.totalPrice)}</option>
+          <label className={lbl}>Project <span className="text-danger">*</span></label>
+          <Select value={projectId} onChange={e => { setProjectId(e.target.value); setValue('nodeId', 0) }}>
+            <option value="">Select project</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.projectCode} — {p.projectName}</option>
             ))}
           </Select>
-          {availableUnits.length === 0 && <p className="text-xs text-warning mt-1">No available units</p>}
-          {errors.unitId && <p className="text-xs text-danger mt-1">{errors.unitId.message}</p>}
+        </div>
+        <div>
+          <label className={lbl}>Item <span className="text-content-muted font-normal">(available and priced)</span></label>
+          <Select {...register('nodeId')}
+            onChange={e => {
+              setValue('nodeId', Number(e.target.value))
+              const u = units.find(x => x.nodeId === Number(e.target.value))
+              if (u) setValue('bookingAmount', Math.round(u.sellPrice * 0.1))
+            }}>
+            <option value="">Select item</option>
+            {availableUnits.map(u => (
+              <option key={u.nodeId} value={u.nodeId}>{u.unitNo ?? u.name} — {u.breadcrumb} | {fmt(u.sellPrice)}</option>
+            ))}
+          </Select>
+          {availableUnits.length === 0 && (
+            <p className="text-xs text-warning mt-1">
+              Nothing available and priced. Mark items sellable in Project Structure and set a margin in Profit Config.
+            </p>
+          )}
+          {errors.nodeId && <p className="text-xs text-danger mt-1">{errors.nodeId.message}</p>}
         </div>
         {selectedUnit && (
           <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted">
-            Unit price: <strong>{fmt(selectedUnit.totalPrice)}</strong>
+            Price: <strong>{fmt(selectedUnit.sellPrice)}</strong>
           </div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -243,7 +275,8 @@ export function BookingsPage() {
   const [target, setTarget] = useState<Booking | null>(null)
 
   const { data: customers = [] } = useApiData<Customer[]>({ url: '/customers', queryKey: ['customers-list'] })
-  const { data: units = [] }     = useApiData<Unit[]>({ url: '/units', queryKey: ['units-list'] })
+  // The pricing endpoint is the source of truth for what can be sold and for how much.
+
 
   const { data: bookings = [], isLoading, error, refetch } = useApiData<Booking[]>({
     url: '/bookings',
@@ -354,7 +387,7 @@ export function BookingsPage() {
       </DataState>
 
       {modal === 'new' && (
-        <BookingModal customers={customers} units={units} onClose={() => setModal(null)} onSaved={invalidate} />
+        <BookingModal customers={customers} onClose={() => setModal(null)} onSaved={invalidate} />
       )}
 
       {modal === 'cancel' && target && (
@@ -362,7 +395,7 @@ export function BookingsPage() {
           <div className="space-y-4">
             <p className="text-sm text-content-muted">
               Cancel booking <strong>{target.bookingNo}</strong> for <strong>{target.customerName}</strong>?
-              Unit <strong>{target.unitNo}</strong> will be released back to available.
+              <strong>{target.unitNo}</strong> will be released back to available.
             </p>
             <div className="flex justify-end gap-3">
               <button onClick={() => { setModal(null); setTarget(null) }}

@@ -165,7 +165,7 @@ function ProjectModal({ project, onClose, onSaved }: {
               : 'The baseline actuals are measured against. Actual cost comes from approved BOQs and site spend; actual revenue from bookings.'}
           </p>
           {isEdit && (
-            <PermissionGate module="PROJECTS" action="edit">
+            <PermissionGate module="PROJECTS" action="approve">
               <button type="button" onClick={onToggleApproval} disabled={approving}
                 className="text-xs font-medium text-primary hover:underline disabled:opacity-60">
                 {approving ? 'Working…' : isApproved ? 'Revise budget' : 'Approve budget'}
@@ -265,8 +265,8 @@ export function ProjectsPage() {
   })
 
   const { data: matSummary } = useApiData<{ overBudgetCount: number; atRiskCount: number; projectsAffected: number }>({
-    url: '/cost-estimates/material-budget-summary',
-    queryKey: ['material-budget-summary'],
+    url: '/cost-estimates/resource-budget-summary',
+    queryKey: ['resource-budget-summary'],
   })
 
   const invalidate = () => {
@@ -323,7 +323,7 @@ export function ProjectsPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-semibold ${matSummary.overBudgetCount > 0 ? 'text-danger' : 'text-warning'}`}>
-              Material Budget Alert
+              Resource Budget Alert
             </p>
             <div className="flex items-center gap-4 mt-1 flex-wrap">
               {matSummary.overBudgetCount > 0 && (
@@ -342,7 +342,7 @@ export function ProjectsPage() {
               </span>
             </div>
           </div>
-          <a href="/material-budget"
+          <a href="/resource-budget"
             className={`text-xs font-medium shrink-0 underline ${matSummary.overBudgetCount > 0 ? 'text-danger' : 'text-warning'}`}>
             Review →
           </a>
