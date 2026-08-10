@@ -21,8 +21,8 @@ interface WorkOrderResourceLine {
   unit: string; quantity: number; receivedQty: number
 }
 interface WorkOrder { id: number; workOrderNo: string; projectName: string; status: string; resources?: WorkOrderResourceLine[] }
-interface PoLine { id: number; resourceId: number; resourceName: string; qty: number; receivedQty?: number; unitPrice: number }
-interface PurchaseOrderRow { id: number; poNumber: string; status: string; projectName?: string | null; items: PoLine[] }
+interface PoLine { id: number; resourceId: number; resourceName: string; quantity: number; receivedQty?: number; unitRate: number }
+interface PurchaseOrderRow { id: number; orderNo: string; status: string; projectName?: string | null; lines: PoLine[] }
 interface StockTxn {
   id: number; resourceName: string; unit: string; transactionType: string
   qty: number; unitCost: number; totalCost: number
@@ -77,14 +77,15 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
   // Approved/received orders with something still outstanding. Receiving a purchase order used to
   // be impossible — stock-in demanded a work order that budgeted the same material.
   const { data: purchaseOrders = [] } = useApiData<PurchaseOrderRow[]>({
-    url: '/purchase-orders',
+    url: '/orders/with-lines',
+    params: { type: 'Purchase' },
     queryKey: ['stockin-po-lines'],
     enabled: fromPo,
   })
   const poLines = purchaseOrders
     .filter(po => po.status === 'Approved' || po.status === 'Received')
-    .flatMap(po => po.items.map(i => ({
-      ...i, poNumber: po.poNumber, pending: i.qty - (i.receivedQty ?? 0),
+    .flatMap(po => po.lines.map(i => ({
+      ...i, orderNo: po.orderNo, pending: i.quantity - (i.receivedQty ?? 0),
     })))
     .filter(l => l.pending > 0)
 
@@ -173,13 +174,13 @@ function StockInModal({ materials, warehouses, workOrders, onClose, onSaved }: {
                 // The line fixes both the material and the price that was agreed for it.
                 const line = poLines.find(l => l.id === Number(e.target.value))
                 setValue('resourceId', (line?.resourceId ?? undefined) as any, { shouldValidate: false })
-                if (line) setValue('unitCost', line.unitPrice as any, { shouldValidate: false })
+                if (line) setValue('unitCost', line.unitRate as any, { shouldValidate: false })
               },
             })}>
               <option value="">Select PO line</option>
               {poLines.map(l => (
                 <option key={l.id} value={l.id}>
-                  {l.poNumber} · {l.resourceName} — {l.pending.toLocaleString()} pending @ {fmt(l.unitPrice)}
+                  {l.orderNo} · {l.resourceName} — {l.pending.toLocaleString()} pending @ {fmt(l.unitRate)}
                 </option>
               ))}
             </Select>

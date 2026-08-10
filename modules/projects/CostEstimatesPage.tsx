@@ -10,7 +10,7 @@ import { useApiData } from '@/hooks/useApiData'
 import { Plus, Trash2, Edit2, Eye, CheckCircle, XCircle, FileBarChart2, Upload } from 'lucide-react'
 import api from '@/lib/api'
 import { ResourcePicker, RateSourceChip, type ResolvedRate } from '@/components/pickers/ResourcePicker'
-import { CategorySelect } from '@/components/pickers/CategorySelect'
+import { CategorySelect, type ResourceCategory } from '@/components/pickers/CategorySelect'
 import { ScopePicker, scopeToPayload, scopeToParams, EMPTY_SCOPE, type ScopeValue } from '@/components/pickers/ScopePicker'
 import { Input, Field } from '@/components/ui/Input'
 import { Table, TH, TR, TD } from '@/components/ui/Table'
@@ -21,14 +21,14 @@ import { AttachmentPanel } from '@/components/pickers/AttachmentPanel'
 import { RESOURCE_TYPES, type Resource, type ResourceType } from '@/modules/inventory/ResourceMasterPage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-type BOQCategory = 'Civil' | 'Structural' | 'Architectural' | 'Electrical' | 'Plumbing' | 'HVAC' | 'Finishing' | 'Miscellaneous'
 type EstimateStatus = 'Draft' | 'Approved' | 'Revised' | 'Rejected'
 
 interface Project  { id: number; projectCode: string; projectName: string }
 interface Material { id: number; resourceName: string; resourceCode: string; unit: string; category?: string }
 interface BOQItem {
   id?: number; resourceId?: number; resourceName?: string; resourceType?: ResourceType
-  category: BOQCategory; description: string
+  /** Resource category name, carried over from the linked resource — not a separate taxonomy. */
+  category: string; description: string
   unit: string; quantity: number; unitRate: number
   estimatedAmount: number; actualAmount: number
 }
@@ -52,7 +52,8 @@ const SCOPE_TONES: Record<CostEstimate['scopeLevel'], BadgeTone> = {
   Unit:    'success',
 }
 
-const BOQ_CATEGORIES: BOQCategory[] = ['Civil', 'Structural', 'Architectural', 'Electrical', 'Plumbing', 'HVAC', 'Finishing', 'Miscellaneous']
+/** Shown when a resource has no category of its own — the backend requires a non-empty string. */
+const UNCATEGORISED = 'Uncategorised'
 const STATUS_TONES: Record<EstimateStatus, BadgeTone> = {
   Draft:    'neutral',
   Approved: 'success',
@@ -67,9 +68,9 @@ const tinp = 'border border-border-default rounded px-2 py-1 text-xs focus:ring-
 
 // ── BOQ line-item editor ───────────────────────────────────────────────────────
 /**
- * `resourceCategoryId` narrows the resource picker only — it is never sent, because the chosen
- * resource already carries its category. Not to be confused with `category`, which is this line's
- * BOQ discipline (Civil/Structural/…).
+ * `resourceCategoryId` narrows the resource picker; `category` is the resource category *name*
+ * that gets sent and grouped on. There is no separate BOQ taxonomy — a line's category is
+ * whatever category its resource belongs to, so the two can never drift apart.
  */
 type DraftItem = Omit<BOQItem, 'id' | 'estimatedAmount' | 'actualAmount' | 'resourceName'>
   & { key: string; resourceType: ResourceType; resourceCategoryId?: number }
@@ -78,7 +79,7 @@ function newLine(): DraftItem {
   // Default to Material so existing habits are unaffected; the type narrows the resource list.
   return { key: Math.random().toString(36).slice(2), resourceId: undefined, resourceType: 'Material',
            resourceCategoryId: undefined,
-           category: 'Civil', description: '', unit: 'LS', quantity: 1, unitRate: 0 }
+           category: '', description: '', unit: 'LS', quantity: 1, unitRate: 0 }
 }
 
 function BOQEditor({ items, onChange }: {
@@ -99,11 +100,12 @@ function BOQEditor({ items, onChange }: {
 
   const handleResourceChange = (key: string, resourceId: number | '', resource?: Resource) => {
     if (resource) {
-      // Unit always follows the resource; the rate is handled by onResolved so a
+      // Unit and category always follow the resource; the rate is handled by onResolved so a
       // rate the user already typed is not clobbered.
-      update(key, { resourceId: resource.id, description: resource.resourceName, unit: resource.unit })
+      update(key, { resourceId: resource.id, description: resource.resourceName, unit: resource.unit,
+                    category: resource.category || UNCATEGORISED })
     } else {
-      update(key, { resourceId: undefined })
+      update(key, { resourceId: undefined, category: '' })
       clearRate(key)
     }
   }
@@ -112,15 +114,16 @@ function BOQEditor({ items, onChange }: {
   const handleTypeChange = (key: string, resourceType: ResourceType) => {
     update(key, {
       resourceType, resourceCategoryId: undefined, resourceId: undefined,
-      description: '', unit: '', unitRate: 0,
+      category: '', description: '', unit: '', unitRate: 0,
     })
     clearRate(key)
   }
 
-  const handleCategoryChange = (key: string, categoryId: number | '') => {
+  // Picking a category pre-fills the line's category; selecting the resource then confirms it.
+  const handleCategoryChange = (key: string, categoryId: number | '', category?: ResourceCategory) => {
     update(key, {
       resourceCategoryId: categoryId || undefined, resourceId: undefined,
-      description: '', unit: '', unitRate: 0,
+      category: category?.name ?? '', description: '', unit: '', unitRate: 0,
     })
     clearRate(key)
   }
@@ -147,13 +150,12 @@ function BOQEditor({ items, onChange }: {
       {/* Hand-rolled rather than <Table>: this is a dense editable grid with fixed column
           widths and an input in every cell — the primitive's row padding fights it. */}
       <div className="border border-border-default rounded-lg overflow-x-auto">
-        <table className="w-full min-w-[1120px] text-xs">
+        <table className="w-full min-w-[1000px] text-xs">
           <thead className="bg-surface-muted border-b border-border-default">
             <tr>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-28">Type <span className="text-primary">*</span></th>
-              <th className="px-2 py-2 text-left font-semibold text-content-muted w-40">Resource Category</th>
+              <th className="px-2 py-2 text-left font-semibold text-content-muted w-40">Category</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-52">Resource <span className="text-primary">*</span></th>
-              <th className="px-2 py-2 text-left font-semibold text-content-muted w-32">BOQ Category</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted">Description</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-16">Unit</th>
               <th className="px-2 py-2 text-left font-semibold text-content-muted w-20">Qty</th>
@@ -178,7 +180,7 @@ function BOQEditor({ items, onChange }: {
                     <CategorySelect
                       value={item.resourceCategoryId ?? ''}
                       resourceType={item.resourceType}
-                      onChange={id => handleCategoryChange(item.key, id)}
+                      onChange={(id, category) => handleCategoryChange(item.key, id, category)}
                       placeholder="All categories"
                       className="text-xs py-1"
                     />
@@ -197,11 +199,6 @@ function BOQEditor({ items, onChange }: {
                     {!item.resourceId && (
                       <p className="text-[10px] text-warning mt-0.5">Required — every line must reference a resource</p>
                     )}
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <Select value={item.category} onChange={e => update(item.key, { category: e.target.value as BOQCategory })} className="text-xs py-1">
-                      {BOQ_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </Select>
                   </td>
                   <td className="px-2 py-1.5">
                     <input value={item.description} onChange={e => update(item.key, { description: e.target.value })}
@@ -241,7 +238,7 @@ function BOQEditor({ items, onChange }: {
           </tbody>
           <tfoot className="bg-surface-muted border-t border-border-default">
             <tr>
-              <td colSpan={8} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Estimated</td>
+              <td colSpan={7} className="px-2 py-2 text-xs font-bold text-content uppercase">Total Estimated</td>
               <td className="px-2 py-2 text-right font-bold text-content pr-3">{fmt(totalEstimated)}</td>
               <td />
             </tr>
@@ -302,7 +299,7 @@ function EstimateModal({ estimate, onClose, onSaved }: {
         ...scopeToPayload(scope), title,
         items: validItems.map(i => ({
           resourceId:      i.resourceId,
-          category:        i.category,
+          category:        i.category || UNCATEGORISED,
           description:     i.description,
           unit:            i.unit,
           quantity:        Number(i.quantity),

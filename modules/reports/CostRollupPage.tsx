@@ -20,6 +20,8 @@ interface CostPoolRow {
   allocatedIntoScope: number
   unallocated: number
   unallocatedReason: string | null
+  /** What the money was for — the fee's name. Null on material and contractor pools. */
+  label: string | null
 }
 interface ScopeCrumb { level: string; id: number | null; name: string }
 interface CostRollupDto {
@@ -88,6 +90,7 @@ export function CostRollupPage() {
   const scopeName = here?.name ?? 'this scope'
   const poolTotal = (data?.pools ?? []).reduce((s, p) => s + p.allocatedIntoScope, 0)
   const poolsReconcile = Math.abs(poolTotal - (data?.scopeAllocated ?? 0)) < 0.05
+  const atLeaf = !!data && data.childLevel === null
 
   return (
     <div className="space-y-6">
@@ -262,21 +265,30 @@ export function CostRollupPage() {
             <div className="bg-surface rounded-xl border border-border-default overflow-hidden">
               <div className="px-4 py-2.5 bg-surface-muted border-b border-border-default">
                 <span className="text-xs font-semibold text-content uppercase tracking-wide">
-                  Shared cost pools — where {scopeName}&apos;s allocated cost came from
+                  {/* Nothing left to drill into means this is a sellable node — a flat, a parking
+                      bay. At that point the rows stop being "pools somewhere above" and become the
+                      itemised answer to why this unit costs what it does. */}
+                  {atLeaf
+                    ? `What ${scopeName} is carrying — its share of each shared cost`
+                    : `Shared cost pools — where ${scopeName}'s allocated cost came from`}
                 </span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-sm">
+                <table className="w-full min-w-[820px] text-sm">
                   <thead className="bg-surface-muted border-b border-border-default">
                     <tr>
-                      {['Booked at', 'Level', 'Source', `Into ${scopeName}`, 'Not allocated'].map(h => (
-                        <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['Booked at', 'Level', 'Source'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
+                      {['What for', 'Booked at', 'Level', 'Source', `Into ${scopeName}`, 'Not allocated'].map(h => (
+                        <th key={h} className={`px-3 py-2 text-xs font-semibold text-content-muted ${['What for', 'Booked at', 'Level', 'Source'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-default">
                     {data!.pools.map(p => (
-                      <tr key={`${p.level}-${p.id ?? 0}-${p.source}`} className="hover:bg-surface-muted">
+                      <tr key={`${p.level}-${p.id ?? 0}-${p.source}-${p.label ?? ''}`} className="hover:bg-surface-muted">
+                        {/* Material and contractor pools name nothing beyond their source — one
+                            stock issue is not a distinguishable "what for" the way a named fee is —
+                            so they fall back to the source rather than showing a blank cell. */}
+                        <td className="px-3 py-2 font-medium text-content">{p.label ?? p.source}</td>
                         <td className="px-3 py-2 text-content">{p.name}</td>
                         <td className="px-3 py-2 text-content-muted">{p.level}</td>
                         <td className="px-3 py-2 text-content-muted">{p.source}</td>
@@ -293,7 +305,7 @@ export function CostRollupPage() {
                       to it. Shown rather than asserted, like reconciliationOk above. */}
                   <tfoot className="bg-surface-muted border-t border-border-default">
                     <tr>
-                      <td colSpan={3} className="px-3 py-2 text-xs font-bold text-content uppercase">Total allocated</td>
+                      <td colSpan={4} className="px-3 py-2 text-xs font-bold text-content uppercase">Total allocated</td>
                       <td className="px-3 py-2 text-right font-bold text-content tabular-nums">{fmt(poolTotal)}</td>
                       <td />
                     </tr>

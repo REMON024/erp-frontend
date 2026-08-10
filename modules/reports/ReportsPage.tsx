@@ -151,18 +151,19 @@ function ProjectSummaryReport() {
 }
 
 // ─── Tab: Purchase & Vendor Report ───────────────────────────────────────────
-interface PO     { id: number; poNumber: string; vendorName: string; totalAmount: number; status: string; poDate: string }
+/** A purchase order as the merged Orders endpoint returns it. */
+interface PO     { id: number; orderNo: string; vendorName: string; amount: number; status: string; orderDate: string }
 interface Vendor { id: number; vendorName: string; vendorType: string }
 
 function PurchaseVendorReport() {
-  const { data: orders  = [], isLoading: lO } = useApiData<PO[]>    ({ url: '/purchase-orders', queryKey: ['rep-pos'] })
+  const { data: orders  = [], isLoading: lO } = useApiData<PO[]>    ({ url: '/orders', params: { type: 'Purchase' }, queryKey: ['rep-pos'] })
   const { data: vendors = [], isLoading: lV } = useApiData<Vendor[]>({ url: '/vendors',         queryKey: ['rep-vendors'] })
 
   if (lO || lV) return <Spinner />
 
-  const totalAmt   = orders.reduce((s, o) => s + o.totalAmount, 0)
-  const approved   = orders.filter(o => o.status === 'Approved').reduce((s, o) => s + o.totalAmount, 0)
-  const draft      = orders.filter(o => o.status === 'Draft').reduce((s, o) => s + o.totalAmount, 0)
+  const totalAmt   = orders.reduce((s, o) => s + o.amount, 0)
+  const approved   = orders.filter(o => o.status === 'Approved').reduce((s, o) => s + o.amount, 0)
+  const draft      = orders.filter(o => o.status === 'Draft').reduce((s, o) => s + o.amount, 0)
 
   // Vendor spend map
   const vendorSpend: Record<string, { count: number; amount: number; type: string }> = {}
@@ -172,7 +173,7 @@ function PurchaseVendorReport() {
       vendorSpend[o.vendorName] = { count: 0, amount: 0, type: v?.vendorType ?? '—' }
     }
     vendorSpend[o.vendorName].count++
-    vendorSpend[o.vendorName].amount += o.totalAmount
+    vendorSpend[o.vendorName].amount += o.amount
   })
   const vendorRows = Object.entries(vendorSpend).sort((a, b) => b[1].amount - a[1].amount)
 
@@ -252,12 +253,12 @@ function PurchaseVendorReport() {
                   ))}</tr>
                 </thead>
                 <tbody className="divide-y divide-border-default">
-                  {[...orders].sort((a, b) => b.poDate.localeCompare(a.poDate)).slice(0, 8).map(o => (
+                  {[...orders].sort((a, b) => b.orderDate.localeCompare(a.orderDate)).slice(0, 8).map(o => (
                     <tr key={o.id} className="hover:bg-surface-muted">
-                      <td className="px-3 py-2.5 font-mono text-xs text-primary font-semibold">{o.poNumber}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-primary font-semibold">{o.orderNo}</td>
                       <td className="px-3 py-2.5 text-xs text-content">{o.vendorName}</td>
-                      <td className="px-3 py-2.5 text-xs text-content-muted">{o.poDate}</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold text-content text-right tabular-nums">{fmt(o.totalAmount)}</td>
+                      <td className="px-3 py-2.5 text-xs text-content-muted">{o.orderDate}</td>
+                      <td className="px-3 py-2.5 text-xs font-semibold text-content text-right tabular-nums">{fmt(o.amount)}</td>
                       <td className="px-3 py-2.5">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PO_STATUS[o.status] ?? 'bg-surface-muted text-content-muted'}`}>{o.status}</span>
                       </td>

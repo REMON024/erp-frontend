@@ -37,12 +37,39 @@ function base() {
     </div>`
 }
 
+/**
+ * The project and the part of it a document relates to, when known.
+ *
+ * Rendered as two columns to match the surrounding blocks, and omitted entirely when neither is
+ * present — a receipt for a walk-in payment genuinely has no project, and an empty labelled box
+ * reads as missing data rather than as not-applicable.
+ */
+function scopeBlock(projectName?: string, scopeLabel?: string): string {
+  if (!projectName && !scopeLabel) return ''
+  return `
+      <div class="col">
+        <p class="label">Project</p>
+        <p class="val">${projectName || '—'}</p>
+      </div>
+      <div class="col">
+        <p class="label">Item</p>
+        <p class="val">${scopeLabel || '—'}</p>
+      </div>`
+}
+
 export interface InvoicePrint {
   invoiceNo: string; customerName: string; invoiceDate: string; dueDate?: string
   invoiceType: string; subTotal: number; discountAmount: number
   vatAmount: number; taxAmount: number; totalAmount: number
   paidAmount: number; dueAmount: number; status: string
   companyName?: string
+  /**
+   * What the money is for. A printed invoice used to name the company, the customer and the date
+   * and nothing else — so two flats in two different projects produced documents a buyer could not
+   * tell apart. The breadcrumb comes from the server (ScopeLabel), not assembled here.
+   */
+  projectName?: string
+  scopeLabel?: string
 }
 
 export function printInvoice(inv: InvoicePrint) {
@@ -70,6 +97,9 @@ export function printInvoice(inv: InvoicePrint) {
         <p class="label">Due Date</p>
         <p class="val">${inv.dueDate || '—'}</p>
       </div>
+    </div>
+    <div class="row" style="gap:32px;margin-top:8px">
+      ${scopeBlock(inv.projectName, inv.scopeLabel)}
       <div class="col">
         <p class="label">Type</p>
         <p class="val">${inv.invoiceType}</p>
@@ -112,6 +142,9 @@ export interface ReceiptPrint {
   paymentNo: string; customerName: string; paymentDate: string
   amount: number; method: string; referenceNo?: string
   invoiceNo?: string; notes?: string; companyName?: string
+  /** What the money was for — see the note on InvoicePrint. */
+  projectName?: string
+  scopeLabel?: string
 }
 
 export function printReceipt(p: ReceiptPrint) {
@@ -135,6 +168,8 @@ export function printReceipt(p: ReceiptPrint) {
           <tr><td class="label" style="width:40%;padding:6px 0">Received From</td><td class="val" style="padding:6px 0">${p.customerName}</td></tr>
           <tr><td class="label" style="padding:6px 0">Date</td><td class="val" style="padding:6px 0">${p.paymentDate}</td></tr>
           <tr><td class="label" style="padding:6px 0">Payment Method</td><td class="val" style="padding:6px 0">${p.method}</td></tr>
+          ${p.projectName ? `<tr><td class="label" style="padding:6px 0">Project</td><td class="val" style="padding:6px 0">${p.projectName}</td></tr>` : ''}
+          ${p.scopeLabel ? `<tr><td class="label" style="padding:6px 0">Item</td><td class="val" style="padding:6px 0">${p.scopeLabel}</td></tr>` : ''}
           ${p.referenceNo ? `<tr><td class="label" style="padding:6px 0">Reference No.</td><td class="val" style="padding:6px 0">${p.referenceNo}</td></tr>` : ''}
           ${p.invoiceNo ? `<tr><td class="label" style="padding:6px 0">Against Invoice</td><td class="val" style="padding:6px 0">${p.invoiceNo}</td></tr>` : ''}
           ${p.notes ? `<tr><td class="label" style="padding:6px 0">Notes</td><td style="padding:6px 0;font-size:12px">${p.notes}</td></tr>` : ''}

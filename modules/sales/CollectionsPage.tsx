@@ -22,6 +22,7 @@ interface Payment {
   id: number; paymentNo: string; invoiceId?: number; invoiceNo?: string
   customerId: number; customerName: string; paymentDate: string
   amount: number; method: string; referenceNo?: string; notes?: string
+  projectName?: string; scopeLabel?: string
 }
 
 const METHOD_COLORS: Record<string, string> = {
@@ -434,7 +435,7 @@ export function CollectionsPage() {
                     <td className="px-4 py-3 text-content-muted text-xs">{p.referenceNo ?? '—'}</td>
                     <td className="px-4 py-3">
                       <button
-                        onClick={() => printReceipt({ paymentNo: p.paymentNo, customerName: p.customerName, paymentDate: p.paymentDate, amount: p.amount, method: p.method, referenceNo: p.referenceNo, invoiceNo: p.invoiceNo, notes: p.notes })}
+                        onClick={() => printReceipt(p)}
                         title="Print Receipt"
                         className="p-1.5 text-content-muted hover:text-success hover:bg-success/10 rounded-lg transition-colors">
                         <Printer className="w-3.5 h-3.5" />

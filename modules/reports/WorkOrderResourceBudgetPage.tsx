@@ -6,7 +6,8 @@ import { DataState } from '@/components/ui/DataState'
 import { useApiData } from '@/hooks/useApiData'
 
 interface Project { id: number; projectCode: string; projectName: string }
-interface WorkOrder { id: number; workOrderNo: string; projectName: string }
+/** A work order as the merged Orders endpoint returns it — dropdown fields only. */
+interface WorkOrder { id: number; orderNo: string; projectName: string | null }
 interface WorkOrderResourceBudgetRow {
   workOrderId: number; workOrderNo: string; projectName: string
   resourceName: string; unit: string
@@ -26,7 +27,7 @@ export function WorkOrderResourceBudgetPage() {
   const [workOrderId, setWorkOrderId] = useState('')
 
   const { data: projects = [] }   = useApiData<Project[]>({ url: '/projects', queryKey: ['projects-list'] })
-  const { data: workOrders = [] } = useApiData<WorkOrder[]>({ url: '/work-orders', queryKey: ['work-orders-list'] })
+  const { data: workOrders = [] } = useApiData<WorkOrder[]>({ url: '/orders', params: { type: 'Work' }, queryKey: ['work-orders-list'] })
   const { data, isLoading, error, refetch } = useApiData<WorkOrderResourceBudgetDto>({
     url: '/reports/work-order-resource-budget',
     params: { projectId: projectId || undefined, workOrderId: workOrderId || undefined },
@@ -51,7 +52,7 @@ export function WorkOrderResourceBudgetPage() {
           <label className="block text-xs font-medium text-content mb-1">Work Order</label>
           <Select value={workOrderId} onChange={e => setWorkOrderId(e.target.value)} className="min-w-[200px]">
             <option value="">All Work Orders</option>
-            {workOrders.map(w => <option key={w.id} value={w.id}>{w.workOrderNo} — {w.projectName}</option>)}
+            {workOrders.map(w => <option key={w.id} value={w.id}>{w.orderNo} — {w.projectName}</option>)}
           </Select>
         </div>
         <button onClick={() => refetch()}

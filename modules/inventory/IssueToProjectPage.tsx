@@ -15,8 +15,8 @@ import { ScopePicker, type ScopeNode } from '@/components/pickers/ScopePicker'
 import api from '@/lib/api'
 
 interface BudgetLine { resourceId: number; budgetedQty: number; issuedQty: number; unit: string }
-interface PoLine { id: number; resourceId: number; resourceName: string; qty: number; receivedQty?: number; unitPrice: number }
-interface PurchaseOrderRow { id: number; poNumber: string; status: string; items: PoLine[] }
+interface PoLine { id: number; resourceId: number; resourceName: string; quantity: number; receivedQty?: number; unitRate: number }
+interface PurchaseOrderRow { id: number; orderNo: string; status: string; lines: PoLine[] }
 interface WorkOrderRow { id: number; orderNo: string; scope?: string | null }
 interface StockBalanceRow { warehouseId: number | null; balance: number }
 interface MaterialRollup { resourceId: number; resourceName: string; unit: string; category?: string | null; warehouses: StockBalanceRow[] }
@@ -99,15 +99,15 @@ function IssueModal({ warehouses, onClose, onSaved }: {
   // Approved/received orders on the chosen project, with the pending qty per line — a direct
   // delivery can only be booked against a line that still has something outstanding.
   const { data: purchaseOrders = [] } = useApiData<PurchaseOrderRow[]>({
-    url: '/purchase-orders',
-    params: { projectId: watchedProj || undefined },
+    url: '/orders/with-lines',
+    params: { type: 'Purchase', projectId: watchedProj || undefined },
     queryKey: ['issue-po-lines', String(watchedProj)],
     enabled: fromPo && !!watchedProj,
   })
   const poLines = purchaseOrders
     .filter(po => po.status === 'Approved' || po.status === 'Received')
-    .flatMap(po => po.items.map(i => ({
-      ...i, poNumber: po.poNumber, pending: i.qty - (i.receivedQty ?? 0),
+    .flatMap(po => po.lines.map(i => ({
+      ...i, orderNo: po.orderNo, pending: i.quantity - (i.receivedQty ?? 0),
     })))
     .filter(l => l.pending > 0)
   const selectedPoLine = poLines.find(l => l.id === watchedPoLine)
@@ -253,7 +253,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
               <option value="">{watchedProj ? 'Select PO line' : 'Choose the project first'}</option>
               {poLines.map(l => (
                 <option key={l.id} value={l.id}>
-                  {l.poNumber} · {l.resourceName} — {l.pending.toLocaleString()} pending @ {fmt(l.unitPrice)}
+                  {l.orderNo} · {l.resourceName} — {l.pending.toLocaleString()} pending @ {fmt(l.unitRate)}
                 </option>
               ))}
             </Select>
@@ -268,7 +268,7 @@ function IssueModal({ warehouses, onClose, onSaved }: {
             {selectedPoLine && (
               <div className="bg-surface-muted rounded-lg px-3 py-2 text-xs text-content-muted mt-2">
                 Pending: <strong>{selectedPoLine.pending.toLocaleString()}</strong> ·
-                {' '}Unit price <strong>{fmt(selectedPoLine.unitPrice)}</strong>
+                {' '}Unit price <strong>{fmt(selectedPoLine.unitRate)}</strong>
                 <span className="block mt-0.5">
                   Goes straight to site — stock levels are unaffected and the order's price is used,
                   not the store's average.

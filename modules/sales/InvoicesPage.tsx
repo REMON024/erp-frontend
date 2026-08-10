@@ -25,6 +25,7 @@ interface Invoice {
   invoiceDate: string; dueDate?: string
   subTotal: number; discountAmount: number; vatAmount: number; taxAmount: number
   totalAmount: number; paidAmount: number; dueAmount: number; status: string
+  projectName?: string; scopeLabel?: string
 }
 
 const STATUS_COLORS: Record<string, string> = {
