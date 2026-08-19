@@ -7,6 +7,10 @@ module the way they appear in the sidebar. For each page: **what it's for** and
 This is a real-estate / construction ERP (housing developer). Money is shown in
 Bangladeshi Taka (৳); "L" means lakh (1 lakh = 100,000).
 
+
+> Per-module development & business flow docs (one page per `modules/` folder) live in
+> [`modules/README.md`](modules/README.md).
+
 ---
 
 ## Auth

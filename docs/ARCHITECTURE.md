@@ -4,6 +4,10 @@ A polished, layered view of how the modules fit together. Read top-to-bottom:
 **setup** defines the rules, **operations** generate the activity, and everything
 settles into the **accounting ledger** at the bottom.
 
+
+> Per-module development & business flow docs (one page per `modules/` folder) live in
+> [`modules/README.md`](modules/README.md).
+
 ---
 
 ## Layered overview
